@@ -16,6 +16,7 @@ class ServerProxy:
 		self.port = port
 		self._sock = socket.socket (socket.AF_INET, socket.SOCK_DGRAM)
 		self._sock.settimeout (5)
+		self.sensors = {}
 
 	def sendcmd (self, cmd):
 		self._sock.sendto (cmd, (self.address, self.port))
