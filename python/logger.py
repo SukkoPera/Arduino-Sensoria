@@ -6,9 +6,7 @@ import time
 from db import DB
 from Sensoria import *
 
-sensoria = Sensoria ()
-sensoria.discoverServers ()
-sensoria.discoverSensors ()
+sensoria = Sensoria (autodiscover = True)
 
 db = DB ()
 dallas = sensoria.getSensor ("OT")
