@@ -53,30 +53,6 @@ class Sensoria (object):
 			except SensorError as ex:
 				print "  - Cannot retrieve sensors list: %s" % str (ex)
 
-	def __discoverServersOLD (self, firstip, lastip):
-		self.servers = {}
-		sock = socket.socket (socket.AF_INET, socket.SOCK_DGRAM)
-		sock.settimeout (0.1)
-		for ip in xrange (NetUtils.ip2int (firstip), NetUtils.ip2int (lastip) + 1):
-			sock.sendto ("VER", (NetUtils.int2ip (ip), ServerProxy.DEFAULT_LISTEN_PORT))
-			try:
-				reply, addr = sock.recvfrom (512)
-				parts = reply.strip ().split (None, 1)
-				rep0 = parts[0]
-				if len (parts) > 1:
-					model = parts[1]
-				else:
-					model = None
-				#~ print reply, addr
-				#~ print "Found \"%s\" at %s" % (model, addr)
-				if model in self.servers:
-					print "WARNING: Duplicate server, ignoring: %s (%s)" % (model, addr)
-				else:
-					self.servers[model] = addr
-			except socket.error as ex:
-				#~ print "IP %s not responding: %s" % (NetUtils.int2ip (ip), str (ex))
-				pass
-
 	# New discovery method that uses broadcast, much faster!
 	def discoverServers (self):
 		self.servers = {}
