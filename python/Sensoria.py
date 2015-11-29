@@ -42,7 +42,7 @@ class Sensoria (object):
 				for s in sensorList.split ("|"):
 					name, stereotype, desc = s.split (" ", 2)
 					# FIXME: Check for dups
-					if stereotype == "S" or stereotype == "R":
+					if stereotype == "S":
 						print "  - Found Sensor %s: %s" % (name, desc)
 						self.sensors[name] = SensorProxy (name, srv)
 					elif stereotype == "A":
