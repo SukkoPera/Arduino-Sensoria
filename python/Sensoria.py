@@ -7,7 +7,7 @@ import stereotypes
 from ServerProxy import *
 from Proxy import *
 
-class SensoriaError (BaseException):
+class SensoriaError (Exception):
 	pass
 
 class Sensoria (object):

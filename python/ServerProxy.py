@@ -2,7 +2,7 @@
 
 import socket
 
-class SensorError (BaseException):
+class SensorError (Exception):
 	pass
 
 class ServerProxy:
