@@ -7,7 +7,7 @@ class DB (object):
 	def __init__ (self):
 		self._conn = sqlite3.connect ('weather.db', detect_types = sqlite3.PARSE_DECLTYPES)
 		self._conn.row_factory = sqlite3.Row
-		
+
 	def create (self):
 		q = """CREATE TABLE weather_data (
 			date timestamp,
@@ -22,23 +22,28 @@ class DB (object):
 		)"""
 		self._conn.execute (q)
 		self._conn.commit ()
-		
+
 	def insert (self, dt, tdht, tdallas, tbmp, hum, loc_px, sea_px, lux, lv, commit = False):
-		self._conn.execute ("INSERT INTO weather_data VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", (dt, tdht, tdallas, tbmp, hum, loc_px, sea_px, lux, lv))
+		self._conn.execute ("INSERT INTO weather_data (date, temp_dht, temp_dallas, temp_bmp, hum, local_px, sea_px, light_lux, light_v) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", (dt, tdht, tdallas, tbmp, hum, loc_px, sea_px, lux, lv))
+		if commit:
+			self._conn.commit ()
+
+	def insert_old (self, dt, tdht, tdallas, tbmp, hum, loc_px, sea_px, lux, lv, local_px2, lux_ir, tdallas2, ldr2, commit = False):
+		self._conn.execute ("INSERT INTO weather_data VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", (ldr2, local_px2, lux_ir, tdallas2, dt, tdht, tdallas, tbmp, hum, loc_px, sea_px, lux, lv))
 		if commit:
 			self._conn.commit ()
 
 	def close (self):
 		self._conn.commit ()
 		self._conn.close ()
-		
+
 	def get_data_since (self, start):
 		now = datetime.datetime.now ()
 		c = self._conn.cursor ()
 		c.execute ("SELECT * FROM weather_data WHERE date BETWEEN ? AND ? ORDER BY date ASC", (start, now))
 		for row in c.fetchall ():
-			yield dict (zip (row.keys (), row))  
-		
+			yield dict (zip (row.keys (), row))
+
 	def get_data_between (self, start, end):
 		c = self._conn.cursor ()
 		c.execute ("SELECT * FROM weather_data WHERE date BETWEEN ? AND ? ORDER BY date ASC", (start, end))
@@ -47,7 +52,7 @@ class DB (object):
 			yield dict (zip (row.keys (), row))
 		else:
 			yield
-		
+
 	def count (self):
 		c = self._conn.cursor ()
 		c.execute ("SELECT COUNT(*) FROM weather_data")

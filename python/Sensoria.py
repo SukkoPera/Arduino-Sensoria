@@ -11,13 +11,16 @@ class SensoriaError (Exception):
 	pass
 
 class Sensoria (object):
-	def __init__ (self, autodiscover = False):
+	def __init__ (self, servers = [], autodiscover = False):
 		self._load_stereotypes ()
 		self.serverAddresses = {}
 		self.servers = {}
 		self.sensors = {}
+		for srv in servers:
+			self._queryServer (srv)
 		if autodiscover:
-			self.discoverSensors ()
+			self._discoverServers ()
+		self.discoverSensors ()
 
 	def _load_stereotypes (self):
 		# Load stereotypes (Hmmm... A bit of a hack?)
@@ -46,15 +49,19 @@ class Sensoria (object):
 				sensorList = srv.send ("QRY")
 				#~ print sensorList
 				for s in sensorList.split ("|"):
-					name, stereotype, desc = s.split (" ", 2)
+					name, typ, stereotype, desc = s.split (" ", 3)
 					# FIXME: Check for dup transducerss
-					if stereotype == "S":
-						print "  - Found Sensor %s: %s" % (name, desc)
-						newsens = SensorProxy (name, srv)
-						self.sensors[name] = newsens	# Add to all sensors
-						srv.sensors[name] = newsens		# Also add to server
-					elif stereotype == "A":
-						print "  - Found Actuator %s: %s" % (name, desc)
+					if typ == "S":
+						print "  - Found Sensor %s (%s) using stereotype %s" % (name, desc, stereotype)
+						if stereotype in self.stereotypes:
+							newsens = SensorProxy (name, self.stereotypes[stereotype], srv)
+							self.sensors[name] = newsens	# Add to all sensors
+							srv.sensors[name] = newsens		# Also add to server
+						else:
+							print "ERROR: Sensor uses unknown stereotype %s" % stereotype
+					elif typ == "A":
+						# FIXME: Add stereotype support
+						print "  - Found Actuator %s (%s) using stereotype %s" % (name, desc, stereotype)
 						newact = ActuatorProxy (name, srv)
 						self.sensors[name] = newact
 						srv.sensors[name] = newact
@@ -65,9 +72,29 @@ class Sensoria (object):
 			except SensorError as ex:
 				print "  - Cannot retrieve sensors list: %s" % str (ex)
 
+	def _queryServer (self, ip, port = ServerProxy.DEFAULT_LISTEN_PORT):
+		print "Querying %s:%s" % (ip, port)
+		s = socket.socket (socket.AF_INET, socket.SOCK_DGRAM)
+		s.sendto ("VER", (ip, port))
+		s.settimeout (10)
+		reply, addr = s.recvfrom (1024)
+		#~ print "Got '%s' from %s" % (reply.strip (), addr)
+		parts = reply.strip ().split (None, 1)
+		rep0 = parts[0]
+		if len (parts) > 1:
+			model = parts[1]
+		else:
+			model = None
+		#~ print reply, addr
+		#~ print "Found \"%s\" at %s" % (model, addr)
+		if model in self.serverAddresses:
+			print "WARNING: Duplicate server, ignoring: %s (%s)" % (model, addr)
+		else:
+			self.serverAddresses[model] = addr
+
 	# New discovery method that uses broadcast, much faster!
 	def _discoverServers (self):
-		self.serverAddresses = {}
+		#~ self.serverAddresses = {}
 		s = socket.socket (socket.AF_INET, socket.SOCK_DGRAM)
 		s.setsockopt (socket.SOL_SOCKET,socket.SO_BROADCAST, 1)
 		s.sendto ("VER", ('<broadcast>', ServerProxy.DEFAULT_LISTEN_PORT))
@@ -85,7 +112,7 @@ class Sensoria (object):
 					model = None
 				#~ print reply, addr
 				#~ print "Found \"%s\" at %s" % (model, addr)
-				if model in self.serverAddresses:
+				if model in self.serverAddresses and not addr in self.serverAddresses.values ():
 					print "WARNING: Duplicate server, ignoring: %s (%s)" % (model, addr)
 				else:
 					self.serverAddresses[model] = addr
