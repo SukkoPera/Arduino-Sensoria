@@ -9,7 +9,7 @@ private:
 
 public:
 	bool begin (const __FlashStringHelper *name, const __FlashStringHelper *description, DallasTemperature *_sensors, DeviceAddress _sensorAddress) {
-		if (_sensors != NULL && Sensor::begin (name, description, F("20151128"))) {
+		if (_sensors != NULL && Sensor::begin (name, description, F("20160125"))) {
 			sensors = _sensors;
 
 			// Maybe the DallasTemperature library should provide a copyAddress() method...
@@ -30,9 +30,9 @@ public:
 		DPRINT (F("Temp C: "));
 		DPRINTLN (tempC);
 
-		// This doesn't work... why?
-		//snprintf (buf, DALLAS_BUF_SIZE, "%f", tempC);
-		floatToString (tempC, buf);
+		buf[0] = 'T';
+		buf[1] = ':';
+		floatToString (tempC, buf + 2);
 
 		return buf;
 	}

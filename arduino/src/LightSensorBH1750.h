@@ -11,7 +11,7 @@ public:
 	}
 
 	bool begin (const __FlashStringHelper *name, const __FlashStringHelper *description, BH1750& _lightMeter) {
-		if (Sensor::begin (name, description, F("20151128"))) {
+		if (Sensor::begin (name, description, F("20160125"))) {
 			lightMeter = &_lightMeter;
 			return true;
 		} else {
@@ -21,14 +21,15 @@ public:
 
 	char *read (char *buf, const byte size _UNUSED) {
 		uint16_t lux = lightMeter -> readLightLevel ();
-		//~ DPRINT (F("Light: "));
-		//~ DPRINT (lux);
-		//~ DPRINTLN (F(" lx"));
+		DPRINT (F("Light: "));
+		DPRINT (lux);
+		DPRINTLN (F(" lx"));
 
 		// Avoid using sprintf
-		//snprintf (buf, sizeof (buf), "%hu", lux);
-		float f = (float) lux;
-		floatToString (f, buf);
+		buf[0] = 'L';
+		buf[1] = 'X';
+		buf[2] = ':';
+		floatToString ((float) lux, buf + 3);
 
 		return buf;
 	}

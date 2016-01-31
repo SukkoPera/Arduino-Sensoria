@@ -5,9 +5,9 @@ private:
   char *readSerialString () {
     static char buf[100];
     static int i = 0;
-  
+
     char *ret = NULL;
-    
+
     while (Serial.available ()) {
         char c = Serial.read ();
         switch (c) {
@@ -29,11 +29,14 @@ private:
             break;
       }
     }
-  
+
     return ret;
   }
 
 public:
+  SensoriaSerialServer (const char *_serverName, PGM_P _serverVersion): SensoriaServer (_serverName, _serverVersion) {
+  }
+
   boolean begin () {
     Serial.begin (9600);
     return true;
@@ -51,7 +54,7 @@ public:
       Serial.println ("\"");
       process_cmd (str);
     }
-    
+
     return (str != NULL);
   }
 };
