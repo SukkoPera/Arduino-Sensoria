@@ -26,12 +26,14 @@ x = []
 y = []
 yv = []
 ydht = []
+ydht22 = []
 ydallas = []
 ydallas2 = []
 ybmp = []
 ypx = []
 ypx2 = []
 yh = []
+yh2 = []
 ylux = []
 ylux2 = []
 yscale = []	#yldr
@@ -39,16 +41,17 @@ yldr2 = []
 now = datetime.datetime.now ()
 limit = now - datetime.timedelta (hours = args.hours)
 prev = None
-for row in db.get_data_since (limit):
-	dt = row["date"]
+for dt, row in db.get_data_since (limit):
 	if prev is not None and dt - prev > datetime.timedelta (hours = 2):
 		x.append (dt - datetime.timedelta (hours = 1))
 		ydht.append (float ('nan'))
+		ydht22.append (float ('nan'))
 		ydallas.append (float ('nan'))
 		ydallas2.append (float ('nan'))
 		ybmp.append (float ('nan'))
 		ypx2.append (float ('nan'))
 		yh.append (float ('nan'))
+		yh2.append (float ('nan'))
 		ylux.append (float ('nan'))
 		ylux2.append (float ('nan'))
 		yscale.append (float ('nan'))
@@ -56,27 +59,80 @@ for row in db.get_data_since (limit):
 		ypx.append (float ('nan'))
 	prev = dt
 
-	x.append (row["date"])
+	x.append (dt)
 
-	# Temps
-	ydht.append (row["temp_dht"])
-	ydallas.append (row["temp_dallas"])
-	ydallas2.append (row["temp_dallas_2"])
-	ybmp.append (row["temp_bmp"])
+	if "OH" in row:
+		ydht.append (row["OH"].temperature)
+		yh.append (row["OH"].humidity)
+	else:
+		print "No reading for sensor OH in data from %s" % (dt)
+		ydht.append (float ('nan'))
+		yh.append (float ('nan'))
 
-	# Hum
-	yh.append (row["hum"])
+	if "H2" in row:
+		ydht22.append (row["H2"].temperature)
+		yh2.append (row["H2"].humidity)
+	else:
+		print "No reading for sensor H2 in data from %s" % (dt)
+		ydht22.append (float ('nan'))
+		yh2.append (float ('nan'))
 
-	# Light
-	ylux.append (row["light_lux"])
-	#~ ylux2.append (row["light_lux_ir"])
-	yscale.append (row["light_v"])
-	#~ yldr2.append (row["light_lux_2"])	# Column name is misleading!
-	yv.append (row["light_v"])
+	if "OT" in row:
+		ydallas.append (row["OT"].temperature)
+	else:
+		print "No reading for sensor OT in data from %s" % (dt)
+		ydallas.append (float ('nan'))
 
-	# Pressure
-	ypx.append (row["local_px"])
-	#~ ypx2.append (row["local_px_2"])
+	if "T2" in row:
+		ydallas2.append (row["T2"].temperature)
+	else:
+		print "No reading for sensor T2 in data from %s" % (dt)
+		ydallas2.append (float ('nan'))
+
+	if "OP" in row:
+		ypx.append (row["OP"].localPressure)
+		ybmp.append (row["OP"].temperature)
+	else:
+		print "No reading for sensor OP in data from %s" % (dt)
+		ypx.append (float ('nan'))
+		ybmp.append (float ('nan'))
+
+	if "P2" in row:
+		ypx2.append (row["P2"].localPressure)
+		#~ ybmp.append (row["P2"].temperature)
+	else:
+		print "No reading for sensor P2 in data from %s" % (dt)
+		ypx2.append (float ('nan'))
+
+	# Light sensor
+	if "OL" in row:
+		ylux.append (row["OL"].lightLux)
+	else:
+		print "No reading for sensor OL in data from %s" % (dt)
+		ylux.append (float ('nan'))
+
+	# Visible/Infrared light
+	if "OR" in row:
+		ylux2.append (row["OR"].lightLux)
+	else:
+		print "No reading for sensor OR in data from %s" % (dt)
+		ylux2.append (float ('nan'))
+
+	# LDR 1
+	if "PR" in row:
+		yscale.append (row["PR"].light10bit)
+		#~ yv.append (row["light_v"])
+	else:
+		print "No reading for sensor PR in data from %s" % (dt)
+		yscale.append (float ('nan'))
+
+	# LDR 2
+	if "L2" in row:
+		yldr2.append (row["L2"].light10bit)	# Column name is misleading!
+	else:
+		print "No reading for sensor L2 in data from %s" % (dt)
+		yldr2.append (float ('nan'))
+
 
 fig = plt.figure (1, figsize = (16, 9), dpi = 120)
 fig.suptitle ("Weather Data over the last %d hours" % args.hours)
@@ -119,7 +175,8 @@ for celsius, humidity in zip (ydallas, yh):
 
 plt.subplot (2, 2, 1)
 plt.title ("Temperature")
-#~ plt.plot (x, ydht, "r--", label = "DHT11")
+plt.plot (x, ydht, "r--", label = "DHT11")
+plt.plot (x, ydht22, "m--", label = "DHT22")
 plt.plot (x, ydallas, "b-", label = "Temperature")
 plt.plot (x, dp, "g-", label = "Dew Point")
 #~ plt.plot (x, dpfast, "m-", label = "Dew Point (Fast)")
@@ -157,6 +214,7 @@ plt.legend (loc = 'best', fancybox = True, framealpha = 0.5)
 plt.subplot (2, 2, 3)
 plt.title ("Humidity")
 plt.plot (x, yh, "b-")
+plt.plot (x, yh2, "g-")
 #~ plt.xlabel ('Time')
 plt.ylabel ('Percentage')
 plt.grid (True)
@@ -167,7 +225,7 @@ plt.gca ().xaxis.set_major_formatter (xDateFmt)
 plt.subplot (2, 2, 4)
 plt.title ("Light Level")
 plt.plot (x, yscale, "b-", label = "LDR")
-#~ plt.plot (x, yldr2, "m-", label = "LDR 2")
+plt.plot (x, yldr2, "m-", label = "LDR 2")
 #~ plt.xlabel ('Time')
 #~ plt.ylabel ('Light Level')
 plt.grid (True)
