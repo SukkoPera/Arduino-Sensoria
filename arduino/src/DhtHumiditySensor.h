@@ -19,10 +19,10 @@ private:
     RHS += 8.1328e-3 * (pow(10, (-3.49149 * (RATIO - 1))) - 1) ;
     RHS += log10(1013.246);
 
-        // factor -3 is to adjust units - Vapor Pressure SVP * humidity
+	// factor -3 is to adjust units - Vapor Pressure SVP * humidity
     double VP = pow(10, RHS - 3) * humidity;
 
-        // (2) DEWPOINT = F(Vapor Pressure)
+	// (2) DEWPOINT = F(Vapor Pressure)
     double T = log(VP/0.61078);   // temp var
     return (241.88 * T) / (17.558 - T);
 #else
@@ -43,7 +43,7 @@ public:
 	}
 
 	bool begin (const __FlashStringHelper *name, const __FlashStringHelper *description, DHT& _dht) {
-		if (Sensor::begin (name, description, F("20151128"))) {
+		if (Sensor::begin (name, description, F("20160125"))) {
 			dht = &_dht;
 			return true;
 		} else {
@@ -56,11 +56,14 @@ public:
 		float h = dht -> readHumidity();
 		float t = dht -> readTemperature();
 		if (!isnan (h) && !isnan(t)) {
-			//snprintf (buf, sizeof (buf), "%lf %lf", h, t);
-			floatToString (t, buf);
+			buf[0] = 'T';
+			buf[1] = ':';
+			floatToString (t, buf + 2);
 			int l = strlen (buf);
 			buf[l] = ' ';
-			floatToString (h, buf + l + 1);
+			buf[l + 1] = 'H';
+			buf[l + 2] = ':';
+			floatToString (h, buf + l + 3);
 		}
 
 		return buf;

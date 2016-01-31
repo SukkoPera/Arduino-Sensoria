@@ -28,6 +28,8 @@ private:
 	char serverName[MAX_SERVER_NAME];
 	PGM_P serverVersion;
 
+	uint32_t hash;
+
 	inline void clearBuffer () {
 		buf[0] = '\0';
 	}
@@ -47,7 +49,7 @@ private:
 				send_srv (t -> name);
 				send_srv ("|");
 				send_srv (t -> type == Transducer::SENSOR ? "S" : "A");
-				send_srv ("|");
+				send_srv ("|WD|");		// FIXME!
 				send_srv (t -> description);
 				send_srv ("|");
 				send_srv (t -> version, true);
@@ -67,7 +69,7 @@ private:
 				send_srv (t -> name);
 				send_srv (" ");
 				send_srv (t -> type == Transducer::SENSOR ? "S" : "A");
-				send_srv (" ");
+				send_srv (" WD ");		// FIXME!
 				send_srv (t -> description);
 
 				if (i < nTransducers - 1)
@@ -80,7 +82,6 @@ private:
 	}
 
 	void cmd_ver (const char *args _UNUSED) {
-		//~ send_srv (F("VER SukkoMeteoStation 0.1 20151101"), true);
 		send_srv (F("VER "));
 		send_srv (serverName);
 
@@ -104,10 +105,15 @@ private:
 				if (t -> type == Transducer::SENSOR) {
 					Sensor *s = (Sensor *) t;
 					clearSensorBuffer ();
-					send_srv (F("REA "));
-					send_srv (s -> name);
-					send_srv (" ");
-					send_srv (s -> read (sensorBuf, SENSOR_BUF_SIZE), true);
+					char *buf = s -> read (sensorBuf, SENSOR_BUF_SIZE);
+					if (buf) {
+						send_srv (F("REA "));
+						send_srv (s -> name);
+						send_srv (" ");
+						send_srv (buf, true);
+					} else {
+						send_srv (F("ERR Read failed"), true);
+					}
 				} else {
 					send_srv (F("ERR Transducer is not a sensor"), true);
 				}
