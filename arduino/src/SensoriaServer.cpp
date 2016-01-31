@@ -1,7 +1,9 @@
+//~ #include <RokkitHash.h>
 #include "SensoriaServer.h"
 
 SensoriaServer::SensoriaServer (const char *_serverName, PGM_P _serverVersion): nTransducers (0), serverVersion (reinterpret_cast <PGM_P> (_serverVersion)) {
 	clearBuffer ();
+	hash = 42;	// Starting value
 	strlcpy (serverName, _serverName, MAX_SERVER_NAME);
 }
 
@@ -16,6 +18,13 @@ boolean SensoriaServer::stop () {
 int SensoriaServer::addTransducer (Transducer& transducer) {
 	if (nTransducers < MAX_SENSORS) {
 		transducers[nTransducers++] = &transducer;
+
+		// Update hash
+		//~ hash = rokkit (transducer.name, strlen_P (reinterpret_cast<PGM_P> (transducer.name)), hash);
+		//~ hash = rokkit (transducer.type == Transducer::SENSOR ? F("S") : F("A"), 1, hash);
+		//~ hash = rokkit (transducer.description, strlen_P (reinterpret_cast<PGM_P> (transducer.description)), hash);
+		//~ hash = rokkit (transducer.version, strlen_P (reinterpret_cast<PGM_P> (transducer.version)), hash);
+
 		return nTransducers - 1;
 	} else {
 		return -1;

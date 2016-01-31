@@ -15,7 +15,7 @@ LightSensorBH1750 lightSensor1750;
 #include <DallasTemperature.h>
 #include <DallasTemperatureSensor.h>
 
-OneWire oneWire (12);
+OneWire oneWire (7);
 DallasTemperature sensors (&oneWire);
 DallasTemperatureSensor dallasSensor;
 
@@ -24,7 +24,7 @@ DallasTemperatureSensor dallasSensor;
 #include <DHT.h>
 #include <DhtHumiditySensor.h>
 
-DHT dht (11, DHT11);
+DHT dht (8, DHT11);
 DhtHumiditySensor dhtSensor;
 
 
@@ -37,12 +37,14 @@ PressureSensor pressureSensor;
 //DummySensor dummySensor;
 
 // Simple Photoresistor
+#define LDR_PIN A0
+#define LDR_RESISTANCE 3260	// Resistance of other resistor in the divider
 PhotoSensor photoSensor;
 
 
 // Wi-Fi parameters
-#define SSID        ""
-#define PASSWORD    ""
+#define SSID        "SukkoNet-TO"
+#define PASSWORD    "everythingyouknowiswrong"
 
 
 void panic (int interval) {
@@ -86,8 +88,8 @@ void setup (void) {
 
 //  registerSensor (dummySensor);
 
-  pinMode (A0, INPUT);
-  if (photoSensor.begin (F("PR"), F("LDR Light Sensor"), A0))
+  pinMode (LDR_PIN, INPUT);
+  if (photoSensor.begin (F("PR"), F("Outdoor Light (LDR)"), LDR_PIN, LDR_RESISTANCE))
     registerSensor (photoSensor);
 
   /*
@@ -100,7 +102,7 @@ void setup (void) {
     */
 
   lightMeter.begin ();
-  if (lightSensor1750.begin (F("OL"), F("Digital Light Sensor"), lightMeter))
+  if (lightSensor1750.begin (F("OL"), F("Outdoor Light (Lux)"), lightMeter))
     registerSensor (lightSensor1750);
 
 
@@ -126,17 +128,17 @@ void setup (void) {
 
   // Set resolution to 9/10/11/12 bits (better precision = slower)
   sensors.setResolution (outdoorThermometer, 12);
-  
-  if (dallasSensor.begin (F("OT"), F("Outdoor Temp - Dallas"), &sensors, outdoorThermometer))
+
+  if (dallasSensor.begin (F("OT"), F("Outdoor Temperature"), &sensors, outdoorThermometer))
     registerSensor (dallasSensor);
 
 
   dht.begin ();
-  if (dhtSensor.begin (F("OD"), F("Outdoor Temp - DHT11"), dht))
+  if (dhtSensor.begin (F("OH"), F("Outdoor Humidity"), dht))
     registerSensor (dhtSensor);
 
 
-  if (pressure.begin () && pressureSensor.begin (F("PS"), F("Barometric Pressure"), pressure))
+  if (pressure.begin () && pressureSensor.begin (F("OP"), F("Outdoor Pressure"), pressure))
     registerSensor (pressureSensor);
 
   // Signal we're ready!
@@ -153,4 +155,3 @@ void setup (void) {
 void loop (void) {
   srv.receive ();
 }
-

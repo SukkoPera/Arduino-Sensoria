@@ -15,7 +15,7 @@ public:
 	}
 
 	bool begin (const __FlashStringHelper *name, const __FlashStringHelper *description, SFE_BMP180& _sensor) {
-		if (Sensor::begin (name, description, F("20151128"))) {
+		if (Sensor::begin (name, description, F("20160125"))) {
 			sensor = &_sensor;
 			return true;
 		} else {
@@ -95,11 +95,15 @@ public:
 						//Serial.println(" feet");
 
 						if (!isnan (temp) && !isnan (px)) {
-							//snprintf (buf, sizeof (buf), "%lf %lf", h, t);
-							floatToString (temp, buf);
+							buf[0] = 'T';
+							buf[1] = ':';
+							floatToString (temp, buf + 2);
 							int l = strlen (buf);
 							buf[l] = ' ';
-							floatToString (px, buf + l + 1);
+							buf[l + 1] = 'L';
+							buf[l + 2] = 'P';
+							buf[l + 3] = ':';
+							floatToString (px, buf + l + 4);
 						} else {
 							buf[0] = '\0';
 						}
