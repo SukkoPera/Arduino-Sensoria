@@ -1,12 +1,28 @@
 #!/usr/bin/env python
 
+import os
 import sys
 import datetime
+import argparse
+import smtplib
+import tempfile
+
+# Here are the email package modules we'll need
+from email.mime.image import MIMEImage
+from email.mime.multipart import MIMEMultipart
+
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
-import argparse
 
 from db import DB
+
+MAIL_FROM = "noreply@sukkology.net"
+MAIL_SUBJ = "GRAPHs"
+MAIL_SMTP = "mail.sukkology.net"
+MAIL_PORT = 25
+MAIL_TLS = False
+MAIL_USER = None
+MAIL_PASS = None
 
 DEFAULT_HOURS = 48
 
@@ -14,6 +30,8 @@ DEFAULT_HOURS = 48
 parser = argparse.ArgumentParser (description = 'Plot some data')
 parser.add_argument ('--output', "-o", dest = 'file', action = 'store',
                      help = "Don't show graph, save to file")
+parser.add_argument ('--mailto', "-m", dest = 'mailaddr', action = 'store',
+                     help = "Don't show graph, send by e-mail", metavar = "EMAIL_ADDRESS")
 parser.add_argument ('--hours', dest = 'hours', type = int, action='store', default = DEFAULT_HOURS,
                      help = 'Show data for last N hours (default: %d)' % DEFAULT_HOURS)
 
@@ -246,6 +264,48 @@ plt.gca ().annotate('Generated on %s' % now.strftime ("%c"), xy=(1, 0), xycoords
 if args.file is not None:
 	plt.savefig (args.file)
 	#~ print "Wrote graph to file %s" % args.file
+elif args.mailaddr is not None:
+	tempfile = tempfile.mkstemp (suffix = ".png")
+	print "Saving temporary graph to %s" % tempfile[1]
+	plt.savefig (tempfile[1])
+
+	# Create the container (outer) email message.
+	msg = MIMEMultipart()
+	msg['Subject'] = MAIL_SUBJ
+	msg['From'] = MAIL_FROM
+	msg['To'] = args.mailaddr
+
+	# Open the files in binary mode.  Let the MIMEImage class automatically
+	# guess the specific image type.
+	fp = open (tempfile[1], 'rb')
+	img = MIMEImage (fp.read())
+	fp.close ()
+	msg.attach (img)
+
+	# Clean up
+	#~ tempfile[0].close ()
+	os.unlink (tempfile[1])
+
+	attempts = 0
+	done = False
+	while attempts < 3 and not done:
+		try:
+			attempts += 1
+			s = smtplib.SMTP (MAIL_SMTP, MAIL_PORT, timeout = 15)
+			#~ s.set_debuglevel (True)
+			if MAIL_TLS:
+				print "TLS enabled"
+				s.starttls ()
+			if MAIL_USER is not None and MAIL_PASS is not None:
+				print "Attempting login"
+				s.login (MAIL_USER, MAIL_PASS)
+			s.sendmail (MAIL_FROM, args.mailaddr, msg.as_string ())
+			s.quit ()
+			done = True
+		except Exception, ex:
+			print "Attempt %d failed: %s" % (attempts, str (ex))
+	if not done:
+		print "Too many failed attempts, aborting"
 else:
 	plt.show ()
 
