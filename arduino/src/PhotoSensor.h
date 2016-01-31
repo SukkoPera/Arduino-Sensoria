@@ -2,12 +2,13 @@
 
 //~ #define VIN 4.23   // Volt
 //~ #define RX 3270 // Ohm
-#define RX 2170 // Ohm
+//~ #define RX 2170 // Ohm
 #define STEPS 1024
 
 class PhotoSensor: public Sensor {
 private:
 	byte pin;
+	unsigned int resistance;
 
 	// https://code.google.com/p/tinkerit/wiki/SecretVoltmeter
 	long readVcc () {
@@ -27,13 +28,11 @@ private:
 	}
 
 public:
-	bool begin (const __FlashStringHelper *name, const __FlashStringHelper *description, byte _pin) {
-		if (Sensor::begin (name, description, F("20151128"))) {
-			pin = _pin;
-			return true;
-		} else {
-			return false;
-		}
+	bool begin (const __FlashStringHelper *name, const __FlashStringHelper *description, byte _pin, unsigned int _resistance) {
+		pin = _pin;
+		resistance = _resistance;
+
+		return Sensor::begin (name, description, F("20160125"));
 	}
 
 	char *read (char *buf, const byte size _UNUSED) {
@@ -42,20 +41,22 @@ public:
 		// Assume reading extremes indicates some problem. Debatable, yeah.
 		do {
 			reading = analogRead (pin);
+			DPRINT ("Analog reading = ");
+			DPRINTLN (reading);
 		} while (reading == 0 || reading == 1023);
 
-		//~ Serial.print ("Analog reading = ");
-		//~ Serial.println (reading);
+		//~ float v = (float) readVcc () / (float) STEPS * (float) reading / 1000;
+		//~ DPRINT ("Voltage across LDR = ");
+		//~ DPRINTLN (v);
 
-		float v = (float) readVcc () / (float) STEPS * (float) reading / 1000;
-		//~ Serial.print ("Voltage across LDR = ");
-		//~ Serial.println (v);
-
+		buf[0] = 'L';
+		buf[1] = 'U';
+		buf[2] = ':';
 		float rf = (float) reading;
-		floatToString (rf, buf);
-		int l = strlen (buf);
-		buf[l] = ' ';
-		floatToString (v, buf + l + 1);
+		floatToString (rf, buf + 3);
+		//~ int l = strlen (buf);
+		//~ buf[l] = ' ';
+		//~ floatToString (v, buf + l + 1);
 
 		return buf;
 	}
