@@ -1,32 +1,39 @@
 #!/usr/bin/env python
 
+from ServerProxy import *
+
+
 class TransducerProxy (object):
-	def __init__ (self, server, name, stereotype, description, version):
+	def __init__ (self, server, name, stereotype, stereoclass, description, version):
 		assert not "|" in name and not "|" in description
 		self.server = server
 		self.name = name
-		self.description = description
 		self.stereotype = stereotype
+		self.stereoclass = stereoclass
+		self.description = description
 		self.version = version
 
 	def configure (self, name, value):
 		raise NotImplementedError
 
 class SensorProxy (TransducerProxy):
-	def __init__ (self, name, srv):
+	def __init__ (self, name, stereoclass, srv):
 		sdata = srv.send ("QRY %s" % name)
 		name, stereotype, description, version = sdata.split ("|", 3)
-		super (SensorProxy, self).__init__ (srv, name, stereotype, description, version)
+		super (SensorProxy, self).__init__ (srv, name, stereotype, stereoclass, description, version)
 
-	def read (self):
+	def read (self, raw = False):
 		assert self.server is not None
 		reply = self.server.send ("REA %s" % self.name)
 		parts = reply.split (" ", 1)
 		if len (parts) != 2:
-			raise AAAA	# FIXME
+			raise SensorError, "AAAA"	# FIXME
 		name, rest = parts
 		assert name == self.name
-		return rest
+		if raw:
+			return rest
+		else:
+			return self.stereoclass.unmarshalStatic (rest)
 
 class ActuatorProxy (TransducerProxy):
 	def __init__ (self, name, srv):

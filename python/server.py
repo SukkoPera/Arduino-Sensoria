@@ -5,61 +5,64 @@ import sys
 import random
 import datetime
 
+from stereotypes.WeatherData import WeatherData
+
 LISTEN_PORT = 9999
-REPLY_PORT = 8888
 RECV_BUFSIZE = 16384
 
-class Sensor (object):
+class Transducer (object):
 	class Type:
-		READ, WRITE, READ_WRITE = xrange (0, 3)
+		SENSOR, ACTUATOR = xrange (0, 2)
 
-	def __init__ (self, name, typ, description = "", version = ""):
+	def __init__ (self, typ, name, stereotype, description = "", version = ""):
+		assert typ in range (Transducer.Type.SENSOR, Transducer.Type.ACTUATOR)
+		assert len (name) > 0
+		assert len (stereotype) == 2
 		assert not "|" in name and not "|" in description
-		self.name = name
-		self.description = description
 		self.type = typ
+		self.name = name
+		self.stereotype = stereotype
+		self.description = description
 		self.version = version
 
 	def get_type_string (self):
-		if self.type == Sensor.Type.READ:
-			return "R"
-		elif self.type == Sensor.Type.WRITE:
-			return "W"
-		elif self.type == Sensor.Type.READ_WRITE:
-			return "RW"
+		if self.type == Sensor.Type.SENSOR:
+			return "S"
+		elif self.type == Sensor.Type.ACTUATOR:
+			return "A"
 		else:
-			raise ValueError ("Unknown sensor type")
+			raise ValueError ("Unknown transducer type")
 
-class ReadableSensor (Sensor):
-	def __init__ (self, name, description = "", version = ""):
-		super (ReadableSensor, self).__init__ (name, Sensor.Type.READ, description, version)
+class Sensor (Transducer):
+	def __init__ (self, name, stereotype, description = "", version = ""):
+		super (Sensor, self).__init__ (Sensor.Type.SENSOR, name, stereotype, description, version)
 
 	def read (self):
 		raise NotImplementedError
 
-class WritableSensor (Sensor):
-	def __init__ (self, name, description = "", version = ""):
-		super (WritableSensor, self).__init__ (name, Sensor.Type.WRITE, description, version)
+	def configure (self):
+		raise NotImplementedError
+
+class Actuator (Sensor):
+	def __init__ (self, name, stereotype, description = "", version = ""):
+		super (Actuator, self).__init__ (Sensor.Type.ACTUATOR, name, stereotype, description, version)
 
 	def write (self, value):
 		raise NotImplementedError
 
-class ReadableWritableSensor (Sensor):
+	def read (self):
+		raise NotImplementedError
+
+class TemperatureSensor (Sensor):
 	def __init__ (self, name, description = "", version = ""):
-		super (ReadableWritableSensor, self).__init__ (name, Sensor.Type.READ_WRITE, description, version)
+		super (TemperatureSensor, self).__init__ (name, "WD", description, version)
 
 	def read (self):
-		raise NotImplementedError
-
-	def write (self, value):
-		raise NotImplementedError
-
-
-class TemperatureSensor (ReadableSensor):
-	def read (self):
-		val = random.randrange (-10, 35)
-		ts = datetime.datetime.now ().strftime ("%Y-%m-%dT%H:%M:%S")    # ISO 8601
-		return val, ts
+		wd = WeatherData ()
+		wd.temperature = random.randrange (-1000, 3500) / 100.0
+		wd.humidity = random.randrange (-1000, 3500) / 100.0
+		#~ ts = datetime.datetime.now ().strftime ("%Y-%m-%dT%H:%M:%S")    # ISO 8601
+		return wd.marshal ()
 
 class KitchenTemperatureSensor (TemperatureSensor):
 	def __init__ (self):
@@ -70,33 +73,33 @@ class BathroomTemperatureSensor (TemperatureSensor):
 		super (BathroomTemperatureSensor, self).__init__ ("TB", "Bathroom Temperature")
 
 
-class RelaySensor (ReadableWritableSensor):
-	class State:
-		OFF = 0
-		ON = 1
+#~ class RelaySensor (ReadableWritableSensor):
+	#~ class State:
+		#~ OFF = 0
+		#~ ON = 1
 
-	def __init__ (self, name, description = "", version = ""):
-		super (RelaySensor, self).__init__ (name, description, version)
-		self.state = RelaySensor.State.OFF
-##		random.choice (["ON", "OFF"])
+	#~ def __init__ (self, name, description = "", version = ""):
+		#~ super (RelaySensor, self).__init__ (name, description, version)
+		#~ self.state = RelaySensor.State.OFF
+#~ ##		random.choice (["ON", "OFF"])
 
-	def read (self):
-		if self.state == RelaySensor.State.ON:
-			val = "ON"
-		else:
-		    val = "OFF"
-		return val, None
+	#~ def read (self):
+		#~ if self.state == RelaySensor.State.ON:
+			#~ val = "ON"
+		#~ else:
+		    #~ val = "OFF"
+		#~ return val, None
 
-	def write (self, value):
-		if value.upper () == "ON" or int (value) > 0:
-			self.state = RelaySensor.State.ON
-		else:
-			self.state = RelaySensor.State.OFF
-		return True, "Relay is now %s" % self.read ()[0]
+	#~ def write (self, value):
+		#~ if value.upper () == "ON" or int (value) > 0:
+			#~ self.state = RelaySensor.State.ON
+		#~ else:
+			#~ self.state = RelaySensor.State.OFF
+		#~ return True, "Relay is now %s" % self.read ()[0]
 
-class RelayHeater (RelaySensor):
-	def __init__ (self):
-		super (RelayHeater, self).__init__ ("BH", "Bathroom Heater", "20150611 By SukkoPera <software@sukkology.net>")
+#~ class RelayHeater (RelaySensor):
+	#~ def __init__ (self):
+		#~ super (RelayHeater, self).__init__ ("BH", "Bathroom Heater", "20150611 By SukkoPera <software@sukkology.net>")
 
 class CommandListener (object):
 	def __init__ (self, port = LISTEN_PORT):
@@ -105,7 +108,7 @@ class CommandListener (object):
 		self._sock = socket.socket (socket.AF_INET, socket.SOCK_DGRAM)
 		server_address = ('localhost', port)
 
-		print >> sys.stderr, 'starting up on %s port %s' % server_address
+		print >> sys.stderr, 'Starting up on %s port %s' % server_address
 		self._sock.bind (server_address)
 
 	def register_sensor (self, sensor):
@@ -123,29 +126,28 @@ class CommandListener (object):
 			name = args.upper ()
 			try:
 				sensor = self.sensors[name]
-				self._reply (addr, "QRY %s|%s|%s|%s" % (sensor.name, sensor.get_type_string (), sensor.description, sensor.version))
+				self._reply (addr, "QRY %s|%s|%s|%s|%s" % (sensor.name, sensor.get_type_string (), sensor.stereotype, sensor.description, sensor.version))
 			except KeyError:
-				self._reply (addr, "ERR No such sensor: %s" % name)
+				self._reply (addr, "ERR No such transducer: %s" % name)
 		else:
 			# List all sensors
-			self._reply (addr, "|".join ("%s %s %s" % (sensor.name, sensor.get_type_string (), sensor.description) for sensor in self.sensors.itervalues ()))
+			self._reply (addr, "QRY %s" % "|".join ("%s %s %s %s" % (sensor.name, sensor.get_type_string (), sensor.stereotype, sensor.description) for sensor in self.sensors.itervalues ()))
 
 	def _ver (self, addr, args):
-		self._reply (addr, "CLIENT_TEST 0.1 11/06/2015")
+		self._reply (addr, "VER TestSensors 20160122")
 
 	def _rea (self, addr, args):
 		if args is not None and len (args) > 0:
 			name = args.upper ()
 			try:
 				sensor = self.sensors[name]
-				if sensor.type == Sensor.Type.READ or sensor.type == Sensor.Type.READ_WRITE:
-					val, ts = sensor.read ()
-					if ts is not None:
-						self._reply (addr, "REA %s %s %s" % (name, str (val), ts))
-					else:
-						self._reply (addr, "REA %s %s" % (name, str (val)))
-				else:
-					self._reply (addr, "ERR Sensor is not readable")
+				val = sensor.read ()
+				#~ if ts is not None:
+					#~ self._reply (addr, "REA %s %s %s" % (name, str (val), ts))
+				#~ else:
+				self._reply (addr, "REA %s %s" % (name, str (val)))
+				#~ else:
+					#~ self._reply (addr, "ERR Sensor is not readable")
 			except KeyError:
 				self._reply (addr, "ERR No such sensor: %s" % name)
 		else:
@@ -158,7 +160,7 @@ class CommandListener (object):
 			val = parts[1]
 			try:
 				sensor = self.sensors[name]
-				if sensor.type == Sensor.Type.WRITE or sensor.type == Sensor.Type.READ_WRITE:
+				if sensor.type == Sensor.Type.ACTUATOR:
 					ok, msg = sensor.write (val)
 					if ok:
 						st = "OK"
@@ -216,9 +218,9 @@ class CommandListener (object):
 if __name__ == "__main__":
 	tk = KitchenTemperatureSensor ()
 	tb = BathroomTemperatureSensor ()
-	rh = RelayHeater ()
+	#~ rh = RelayHeater ()
 	listener = CommandListener ()
 	listener.register_sensor (tk)
 	listener.register_sensor (tb)
-	listener.register_sensor (rh)
+	#~ listener.register_sensor (rh)
 	listener.go ()

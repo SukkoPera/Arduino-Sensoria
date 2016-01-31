@@ -6,9 +6,7 @@ import time
 from Sensoria import *
 
 
-sensoria = Sensoria ()
-sensoria.discoverServers ()
-sensoria.discoverSensors ()
+sensoria = Sensoria (autodiscover = True)
 
 try:
 	intThermo = sensoria.getSensor ("IT")
@@ -25,14 +23,14 @@ except SensoriaError as ex:
 	extThermo = None
 
 try:
-	hygrometer = sensoria.getSensor ("OD")
+	hygrometer = sensoria.getSensor ("OH")
 	print "Found hygrometer on %s at %s:%s" % (hygrometer.server.name, hygrometer.server.address, hygrometer.server.port)
 except SensoriaError as ex:
 	print "Cannot get hygrometer: %s" % str (ex)
 	hygrometer = None
 
 try:
-	barometer = sensoria.getSensor ("PS")
+	barometer = sensoria.getSensor ("OP")
 	print "Found barometer on %s at %s:%s" % (barometer.server.name, barometer.server.address, barometer.server.port)
 except SensoriaError as ex:
 	print "Cannot get barometer: %s" % str (ex)
