@@ -4,10 +4,9 @@
 #include "Transducer.h"
 #include "Sensor.h"
 #include "Actuator.h"
-#include "internals/utils.h"
-#include "internals/common.h"
-#include "internals/debug.h"
-
+#include "utils.h"
+#include "common.h"
+#include "debug.h"
 
 #define OUT_BUF_SIZE 192
 #define SENSOR_BUF_SIZE 32

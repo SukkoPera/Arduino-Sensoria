@@ -1,7 +1,8 @@
+#include <SensoriaInternals/Sensor.h>
+
 // https://github.com/sparkfun/BMP180_Breakout/
 #include <SFE_BMP180.h>
 #include <Wire.h>
-#include "Sensor.h"
 
 #define ALTITUDE 236.0
 

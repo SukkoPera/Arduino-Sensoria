@@ -1,10 +1,10 @@
 #ifndef _TRANSDUCER_H_INCLUDED
 #define _TRANSDUCER_H_INCLUDED
 
-#include <Arduino.h>
-#include "internals/utils.h"
-#include "internals/common.h"
-#include "internals/debug.h"
+//~ #include <Arduino.h>
+#include "utils.h"
+#include "common.h"
+#include "debug.h"
 
 class Transducer {
 public:

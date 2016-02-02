@@ -1,6 +1,6 @@
 //~ #include <RokkitHash.h>
-#include "SensoriaServer.h"
-#include <internals/common.h>
+#include "Server.h"
+#include "common.h"
 
 
 SensoriaServer::SensoriaServer (): nTransducers (0), hash (42) {
