@@ -9,8 +9,8 @@ DallasTemperature sensors (&oneWire);
 DallasTemperatureSensor dallasSensor;
 
 // Wi-Fi parameters
-#define SSID        "ssid"
-#define PASSWORD    "password"
+#define SSID        ""
+#define PASSWORD    ""
 
 // Pin 2 seems to control the led on my NodeMCU
 #define LED_PIN BUILTIN_LED
