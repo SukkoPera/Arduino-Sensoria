@@ -1,9 +1,6 @@
 #include "Sensor.h"
 
-//~ #define VIN 4.23   // Volt
-//~ #define RX 3270 // Ohm
-//~ #define RX 2170 // Ohm
-#define STEPS 1024
+//~ #define STEPS 1023
 
 class PhotoSensor: public Sensor {
 private:
@@ -28,7 +25,7 @@ private:
 	}
 
 public:
-	bool begin (const __FlashStringHelper *name, const __FlashStringHelper *description, byte _pin, unsigned int _resistance) {
+	bool begin (FlashString name, FlashString description, byte _pin, unsigned int _resistance) {
 		pin = _pin;
 		resistance = _resistance;
 

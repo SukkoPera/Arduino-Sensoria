@@ -59,7 +59,7 @@ void panic (int interval) {
 
 
 #include <WifiServer.h>
-SensoriaWifiServer srv ("OutdoorSensors", NULL, 10, 11, SSID, PASSWORD);
+SensoriaWifiServer srv (10, 11);
 
 //#include <SerialServer.h>
 //SensoriaSerialServer srv;
@@ -82,7 +82,7 @@ void registerSensor (Sensor& sensor) {
 void setup (void) {
   DSTART ();
 
-  if (!srv.begin ()) {
+  if (!srv.begin (F("Outdoor-1"), SSID, PASSWORD)) {
     panic (500);
   }
 
