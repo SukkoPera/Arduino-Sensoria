@@ -19,7 +19,6 @@ parser.add_argument ('--hours', dest = 'hours', type = int, action='store', defa
 parser.add_argument ('sensor', metavar = 'SENSOR', type = str, help = 'Sensor to plot data for')
 
 args = parser.parse_args ()
-print args
 
 xDateFmt = mdates.DateFormatter ('%d/%m/%Y %H:%M:%S')
 
@@ -31,23 +30,29 @@ now = datetime.datetime.now ()
 limit = now - datetime.timedelta (hours = args.hours)
 prev = None
 for dt, row in db.get_data_since (limit):
-	#~ if prev is not None and dt - prev > datetime.timedelta (hours = 2):
-		#~ x.append (dt - datetime.timedelta (hours = 1))
-		#~ ydht.append (float ('nan'))
-	#~ prev = dt
+	if prev is not None and dt - prev > datetime.timedelta (hours = 2):
+		x.append (dt - datetime.timedelta (hours = 1))
+		for name in ys:
+			ys[name].append (float ('nan'))
+	prev = dt
 
+	x.append (dt)
 	if sens in row:
-		x.append (dt)
 		reading = row[sens]
 		for name, val in reading.getData ().iteritems ():
 			if name not in ys:
 				ys[name] = []
 			ys[name].append (val)
 	else:
+		#~ print "No reading for sensor %s on %s" % (sens, dt)
 		for name in ys:
 			ys[name].append (float ('nan'))
-		print "No reading for sensor %s in data from %s" % (sens, dt)
 
+# At this point, if ys[] has less elements than x, that's because those data
+# started later, so prepend nan's as necessary
+for name in ys:
+	while len (ys[name]) < len (x):
+		ys[name].insert (0, float ('nan'))
 
 def subplot (name, i, x, y):
 	plt.title (name)
@@ -58,7 +63,7 @@ def subplot (name, i, x, y):
 	#~ plt.legend (loc = 'best', fancybox = True, framealpha = 0.5)
 
 n = len (ys)
-print "Sensor %s has %d value(s)" % (sens, n)
+#~ print "Sensor %s has %d data items" % (sens, n)
 if n > 0:
 	fig = plt.figure (1, figsize = (16, 9), dpi = 120)
 	fig.suptitle ("Sensor data over the last %d hours" % args.hours)
