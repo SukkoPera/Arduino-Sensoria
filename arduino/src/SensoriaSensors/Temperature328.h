@@ -1,4 +1,4 @@
-#include "Sensor.h"
+#include <SensoriaInternals/Sensor.h>
 
 class TemperatureSensor328: public Sensor {
 private:

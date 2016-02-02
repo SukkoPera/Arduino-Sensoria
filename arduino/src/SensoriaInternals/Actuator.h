@@ -2,7 +2,7 @@
 #define _ACTUATOR_H_INCLUDED
 
 #include "Transducer.h"
-//~ #include "internals/utils.h"
+//~ #include <SensoriaInternals/utils.h>
 
 
 class Actuator: public Transducer {
