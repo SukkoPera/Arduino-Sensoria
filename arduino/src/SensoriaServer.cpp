@@ -8,21 +8,10 @@ SensoriaServer::SensoriaServer (): nTransducers (0), hash (42) {
 }
 
 boolean SensoriaServer::begin (FlashString _serverName, FlashString _serverVersion) {
-//~ #ifdef ENABLE_FLASH_STRINGS
   serverName = _serverName;
   serverVersion = _serverVersion;
 
   return strlen_P (F_TO_PSTR (_serverName)) > 0;
-//~ #else
-	//~ strlcpy (serverName, _serverName, MAX_SERVER_NAME);
-
-  //~ if (_serverVersion != NULL)
-    //~ strlcpy (serverVersion, _serverVersion, MAX_SERVER_NAME);
-  //~ else
-    //~ serverVersion = NULL;
-
-  //~ return strlen (_serverName) > 0;
-//~ #endif
 }
 
 boolean SensoriaServer::stop () {
