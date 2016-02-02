@@ -11,7 +11,7 @@
 
 #ifndef PLATFORM_ESP8266
   // Flash strings don't seem to work very well on ESP8266
-  //~ #define ENABLE_FLASH_STRINGS
+  #define ENABLE_FLASH_STRINGS
 #endif
 
 
