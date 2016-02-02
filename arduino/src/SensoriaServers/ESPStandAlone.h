@@ -1,3 +1,7 @@
+#include <internals/common.h>
+
+#ifdef PLATFORM_ESP8266
+
 #include <ESP8266WiFi.h>
 #include <WiFiUdp.h>
 
@@ -86,3 +90,5 @@ public:
 		//~ }
 	}
 };
+
+#endif    // PLATFORM_ESP8266

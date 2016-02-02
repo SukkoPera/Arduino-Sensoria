@@ -1,15 +1,16 @@
 #include "Sensor.h"
 
-// How many times to read the sensor, to smooth out inaccuracies
-#define N_SAMPLES 5
-
-// How much to wait between two readings (ms)
-#define READ_DELAY 5
-
-#define STEPS_LM35 1023
-
 class TemperatureSensorLM35: public Sensor {
 private:
+  // How many times to read the sensor, to smooth out inaccuracies
+  static const byte N_SAMPLES = 5;
+
+  // How much to wait between two readings (ms)
+  static const byte READ_DELAY = 5;
+
+  // DAC resolution
+  static const unsigned int STEPS = 1023;
+
 	byte pin;
 
 	// https://code.google.com/p/tinkerit/wiki/SecretVoltmeter
@@ -43,7 +44,7 @@ public:
 		  delay (READ_DELAY);
 		}
 		val /= (float) N_SAMPLES;
-		float mv = (float) readVcc () / (float) STEPS_LM35 * (float) val;
+		float mv = (float) readVcc () / (float) STEPS * (float) val;
 		float cel = mv / 10;
 		DPRINT ("Temperature = ");
 		DPRINTLN (cel);
