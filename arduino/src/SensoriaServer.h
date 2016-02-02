@@ -1,21 +1,18 @@
 #ifndef _SENSORIA_H_INCLUDED
 #define _SENSORIA_H_INCLUDED
 
-#include <avr/pgmspace.h>
 #include "Transducer.h"
 #include "Sensor.h"
 #include "Actuator.h"
 #include "internals/utils.h"
+#include "internals/common.h"
 #include "internals/debug.h"
 
 
-#define OUT_BUF_SIZE 128
+#define OUT_BUF_SIZE 192
 #define SENSOR_BUF_SIZE 32
 
 class SensoriaServer {
-public:
-	static const byte MAX_SERVER_NAME = 32;
-
 private:
 	static const byte MAX_SENSORS = 8;
 	byte nTransducers;
@@ -25,199 +22,43 @@ private:
 	char buf[OUT_BUF_SIZE];
 	char sensorBuf[SENSOR_BUF_SIZE];
 
-	char serverName[MAX_SERVER_NAME];
-	PGM_P serverVersion;
+  FlashString serverName;
+  FlashString serverVersion;
 
 	uint32_t hash;
 
-	inline void clearBuffer () {
-		buf[0] = '\0';
-	}
+	void clearBuffer ();
 
 	void clearSensorBuffer ();
 
-	void cmd_qry (char *args) {
-		if (args != NULL) {
-			// Get first arg
-			char *space = strchr (args, ' ');
-			if (space)
-				*space = '\0';
+	void cmd_qry (char *args);
 
-			Transducer *t = getTransducer (args);
-			if (t) {
-				send_srv ("QRY ");
-				send_srv (t -> name);
-				send_srv ("|");
-				send_srv (t -> type == Transducer::SENSOR ? "S" : "A");
-				send_srv ("|WD|");		// FIXME!
-				send_srv (t -> description);
-				send_srv ("|");
-				send_srv (t -> version, true);
-			} else {
-				DPRINT (F("ERR No such transducer: "));
-				DPRINTLN (args);
+	void cmd_ver (const char *args);
 
-				send_srv (F("ERR No such transducer: "));
-				send_srv (args, true);
-			}
-		} else {
-			// List sensors
-			send_srv (F("QRY "));
+	void cmd_rea (char *args);
 
-			for (byte i = 0; i < nTransducers; i++) {
-				Transducer *t = transducers[i];
-				send_srv (t -> name);
-				send_srv (" ");
-				send_srv (t -> type == Transducer::SENSOR ? "S" : "A");
-				send_srv (" WD ");		// FIXME!
-				send_srv (t -> description);
-
-				if (i < nTransducers - 1)
-					send_srv (F("|"));
-			}
-
-			// Send reply
-			send_srv ((char *) NULL, true);
-		}
-	}
-
-	void cmd_ver (const char *args _UNUSED) {
-		send_srv (F("VER "));
-		send_srv (serverName);
-
-		if (serverVersion) {
-			send_srv (F(" "));
-			send_srv (reinterpret_cast<const __FlashStringHelper *> (serverVersion));
-		}
-
-		send_srv ((char *) NULL, true);
-	}
-
-	void cmd_rea (char *args) {
-		// Get first arg
-		if (args != NULL) {
-			char *space = strchr (args, ' ');
-			if (space)
-				*space = '\0';
-
-			Transducer *t = getTransducer (args);
-			if (t) {
-				if (t -> type == Transducer::SENSOR) {
-					Sensor *s = (Sensor *) t;
-					clearSensorBuffer ();
-					char *buf = s -> read (sensorBuf, SENSOR_BUF_SIZE);
-					if (buf) {
-						send_srv (F("REA "));
-						send_srv (s -> name);
-						send_srv (" ");
-						send_srv (buf, true);
-					} else {
-						send_srv (F("ERR Read failed"), true);
-					}
-				} else {
-					send_srv (F("ERR Transducer is not a sensor"), true);
-				}
-			} else {
-				DPRINT (F("ERR No such transducer: "));
-				DPRINTLN (args);
-
-				send_srv (F("ERR No such transducer: "));
-				send_srv (args, true);
-			}
-		} else {
-			DPRINTLN (F("ERR Missing transducer name"));
-			send_srv (F("ERR Missing transducer name"), true);
-		}
-	}
-
-	void cmd_wri (char *args) {
-		// Get first arg
-		if (args != NULL) {
-			char *space = strchr (args, ' ');
-			char *rest = NULL;
-			if (space) {
-				*space = '\0';
-				rest = space + 1;
-			}
-
-			Transducer *t = getTransducer (args);
-			if (t) {
-				if (t -> type == Transducer::ACTUATOR) {
-					Actuator *a = (Actuator *) t;
-					send_srv (F("WRI "));
-					send_srv (a -> name);
-					send_srv (" ");
-					send_srv (a -> write (rest) ? "OK" : "ERR", true);
-				} else {
-					send_srv (F("ERR Transducer is not an actuator"), true);
-				}
-			} else {
-				DPRINT (F("ERR No such transducer: "));
-				DPRINTLN (args);
-
-				send_srv (F("ERR No such transducer: "));
-				send_srv (args, true);
-			}
-		} else {
-			DPRINTLN (F("ERR Missing transducer name"));
-			send_srv (F("ERR Missing transducer name"), true);
-		}
-	}
-
+	void cmd_wri (char *args);
 
 	boolean send_srv (const char *str, boolean cr = false);
+
+#ifdef ENABLE_FLASH_STRINGS
 	boolean send_srv (const __FlashStringHelper *str, boolean cr = false);
+#endif
+
+  // Commodity method to flush data to server
+  boolean send_srv ();
 
 protected:
-	void process_cmd (char *buffer) {
-		char *cmd, *args;
-
-		// Separate command and arguments
-		//char *buffer = reinterpret_cast<char *> (buffer8);
-		strstrip (buffer);
-		char *space = strchr (buffer, ' ');
-		if (space) {
-			*space = '\0';
-			args = space + 1;
-		} else {
-			// Command with no args
-			args = NULL;
-		}
-
-		cmd = buffer;
-		strupr (cmd);	// Done in place
-
-		DPRINT (F("Processing command: \""));
-		DPRINT (cmd);
-		DPRINTLN (F("\""));
-
-		if (strcmp_P (cmd, PSTR ("QRY")) == 0) {
-			cmd_qry (args);
-		} else if (strcmp_P (cmd, PSTR ("REA")) == 0) {
-			cmd_rea (args);
-		} else if (strcmp_P (cmd, PSTR ("VER")) == 0) {
-			cmd_ver (args);
-		} else if (strcmp_P (cmd, PSTR ("WRI")) == 0) {
-			cmd_wri (args);
-		} else {
-			DPRINT (F("Unsupported command: \""));
-			DPRINT (cmd);
-			DPRINTLN (("\""));
-
-			send_srv (F("ERR Unsupported command: \""));
-			send_srv (cmd);
-			send_srv (F("\""), true);
-		}
-	}
+	void process_cmd (char *buffer);
 
 	// Override to implement actual sending of data
 	virtual boolean send (const char *str) = 0;
 
 public:
-	SensoriaServer (const char *_serverName, PGM_P _serverVersion = NULL);
+	SensoriaServer ();
 
-	// Override if needed
-	virtual boolean begin ();
+	// Override if needed, but always call super
+	virtual boolean begin (FlashString _serverName, FlashString _serverVersion);
 
 	// Override if needed
 	virtual boolean stop ();
