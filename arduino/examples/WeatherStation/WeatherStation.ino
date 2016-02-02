@@ -43,8 +43,8 @@ PhotoSensor photoSensor;
 
 
 // Wi-Fi parameters
-#define SSID        "ssid"
-#define PASSWORD    "password"
+#define SSID        ""
+#define PASSWORD    ""
 
 
 void panic (int interval) {
