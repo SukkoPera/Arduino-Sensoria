@@ -14,7 +14,7 @@ public:
 		sensor = NULL;
 	}
 
-	bool begin (const __FlashStringHelper *name, const __FlashStringHelper *description, SFE_BMP180& _sensor) {
+	bool begin (FlashString name, FlashString description, SFE_BMP180& _sensor) {
 		if (Sensor::begin (name, description, F("20160125"))) {
 			sensor = &_sensor;
 			return true;

@@ -50,7 +50,7 @@ public:
 		lightMeter = NULL;
 	}
 
-	bool begin (const __FlashStringHelper *name, const __FlashStringHelper *description, SFE_TSL2561 &_lightMeter, boolean _gain, unsigned int _ms) {
+	bool begin (FlashString name, FlashString description, SFE_TSL2561 &_lightMeter, boolean _gain, unsigned int _ms) {
 		if (Sensor::begin (name, description, F("20151213"))) {
 			lightMeter = &_lightMeter;
 			gain = _gain;

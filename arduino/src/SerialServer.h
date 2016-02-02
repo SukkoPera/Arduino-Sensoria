@@ -34,12 +34,12 @@ private:
   }
 
 public:
-  SensoriaSerialServer (const char *_serverName, PGM_P _serverVersion): SensoriaServer (_serverName, _serverVersion) {
+  SensoriaSerialServer () {
   }
 
-  boolean begin () {
+  boolean begin (FlashString _serverName) {
     Serial.begin (9600);
-    return true;
+    return SensoriaServer::begin (_serverName, F("20160202"));
   }
 
   boolean send (const char *str) {

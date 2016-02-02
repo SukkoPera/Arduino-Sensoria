@@ -3,6 +3,7 @@
 
 #include <Arduino.h>
 #include "internals/utils.h"
+#include "internals/common.h"
 #include "internals/debug.h"
 
 class Transducer {
@@ -14,9 +15,9 @@ public:
 	};
 
 	Type type;
-	const __FlashStringHelper *name;
-	const __FlashStringHelper *description;
-	const __FlashStringHelper *version;
+	FlashString name;
+	FlashString description;
+	FlashString version;
 
 	Transducer (Type _type): type (_type) {
 		name = NULL;
@@ -24,8 +25,8 @@ public:
 		version = NULL;
 	}
 
-	virtual bool begin (const __FlashStringHelper *_name, const __FlashStringHelper *_description, const __FlashStringHelper *_version) {
-		if (_name != NULL && _description != NULL && strlen_P (reinterpret_cast<PGM_P> (_name)) == 2) {
+	virtual bool begin (FlashString _name, FlashString _description, FlashString _version) {
+		if (_name != NULL && _description != NULL && strlen_P (F_TO_PSTR (_name)) == 2) {
 			name = _name;
 			description = _description;
 			version = _version;
@@ -37,13 +38,6 @@ public:
 			return false;
 		}
 	}
-
-	//~ const char *get_type_string () const {
-		//~ if (type < N_TYPES)
-			//~ return type_strings[type];
-		//~ else
-			//~ return NULL;
-	//~ }
 };
 
 #endif

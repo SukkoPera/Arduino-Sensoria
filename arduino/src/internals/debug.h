@@ -1,4 +1,4 @@
-#define NDEBUG
+//~ #define NDEBUG
 
 #ifndef NDEBUG
   #define DSTART(...) Serial.begin (9600);

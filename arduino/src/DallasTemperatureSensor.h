@@ -1,5 +1,6 @@
 #include <DallasTemperature.h>
 #include "Sensor.h"
+#include "internals/common.h"
 #include "internals/debug.h"
 
 class DallasTemperatureSensor: public Sensor {
@@ -8,7 +9,7 @@ private:
 	DeviceAddress sensorAddress;
 
 public:
-	bool begin (const __FlashStringHelper *name, const __FlashStringHelper *description, DallasTemperature *_sensors, DeviceAddress _sensorAddress) {
+	bool begin (FlashString name, FlashString description, DallasTemperature *_sensors, DeviceAddress _sensorAddress) {
 		if (_sensors != NULL && Sensor::begin (name, description, F("20160125"))) {
 			sensors = _sensors;
 

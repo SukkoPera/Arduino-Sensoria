@@ -42,7 +42,7 @@ public:
 		dht = NULL;
 	}
 
-	bool begin (const __FlashStringHelper *name, const __FlashStringHelper *description, DHT& _dht) {
+	bool begin (FlashString name, FlashString description, DHT& _dht) {
 		if (Sensor::begin (name, description, F("20160125"))) {
 			dht = &_dht;
 			return true;
