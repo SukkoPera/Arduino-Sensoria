@@ -10,7 +10,7 @@ public:
 		lightMeter = NULL;
 	}
 
-	bool begin (const __FlashStringHelper *name, const __FlashStringHelper *description, BH1750& _lightMeter) {
+	bool begin (FlashString name, FlashString description, BH1750& _lightMeter) {
 		if (Sensor::begin (name, description, F("20160125"))) {
 			lightMeter = &_lightMeter;
 			return true;

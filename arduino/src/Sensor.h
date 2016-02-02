@@ -2,33 +2,13 @@
 #define _SENSOR_H_INCLUDED
 
 #include "Transducer.h"
+#include "internals/common.h"
 
 
 class Sensor: public Transducer {
-private:
-  //~ static const char *type_strings[];
-
 public:
   Sensor (): Transducer (Transducer::SENSOR) {
   }
-
-
-
-//  virtual ~Sensor () {
-//  }
-
-  //~ const char *get_type_string () const {
-    //~ if (type < N_TYPES)
-      //~ return type_strings[type];
-    //~ else
-      //~ return NULL;
-  //~ }
-
-  // Called automatically by server before read()
-  //~ void clearBuffer () {
-    //~ for (int i = 0; i < BUF_SIZE; i++)
-      //~ buf[i] = '\0';
-  //~ }
 
   /* Override to implement the actual sensor reading and reporting.
    * A buffer that can be used to contain the result is provided, of

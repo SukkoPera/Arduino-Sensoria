@@ -18,10 +18,14 @@ private:
 	uint8_t buffer[IN_BUF_SIZE];
 
 public:
-	SensoriaWifiServer (const char *_serverName, PGM_P _serverVersion, const byte rx, const byte tx, const char *_ssid, const char *_password): SensoriaServer (_serverName, _serverVersion), swSerial (rx, tx), wifi (swSerial), ssid (_ssid), password (_password) {
+	SensoriaWifiServer (const byte rx, const byte tx): swSerial (rx, tx), wifi (swSerial) {
 	}
 
-	boolean begin () {
+	boolean begin (FlashString _serverName, const char *_ssid, const char *_password) {
+    SensoriaServer::begin (_serverName, F("20160202"));
+    ssid = _ssid;
+    password = _password;
+
 		DPRINT (F("FW Version:"));
 		DPRINTLN (wifi.getVersion ().c_str ());
 

@@ -9,7 +9,7 @@ char *strstrip (char *s) {
 	return s;
 }
 
- 
+#ifndef PLATFORM_ESP8266
 // From: http://mirror.fsf.org/pmon2000/3.x/src/sdk/libc/string/strlcpy.c
 size_t strlcpy (char *dst, const char *src, size_t siz) {
 	register char *d = dst;
@@ -34,7 +34,7 @@ size_t strlcpy (char *dst, const char *src, size_t siz) {
 
 	return(s - src - 1);  /* count does not include NUL */
 }
-
+#endif
 
 /* This is a modified version of the floatToString posted by the Arduino forums
  * user "zitron" at http://www.arduino.cc/cgi-bin/yabb2/YaBB.pl?num=1205038401.
@@ -74,11 +74,11 @@ int splitString (char *str, char **parts, size_t n) {
 
 	for (i = 0; i < n - 1; i++) {
 		parts[i] = str;
-		
+
 		// Find next space
 		if ((c = strchr (str, ' '))) {
 			*c = '\0';	// Terminate
-			
+
 			// Find next non-space
 			while (*(str = ++c) == ' ')
 				;
@@ -87,10 +87,32 @@ int splitString (char *str, char **parts, size_t n) {
 			break;
 		}
 	}
-	
+
 	// Last part
 	if (str)
 		parts[i] = str;
 
 	return i + 1;
 }
+
+#ifdef PLATFORM_ESP8266
+
+char *strupr(char *s) {
+  char *t = s;
+
+  if (!s) {
+    return 0;
+  }
+
+  int i = 0;
+  while (*t != '\0') {
+    if (*t >= 'a' && *t <= 'z') {
+      *t = *t - ('a' - 'A');
+    }
+    t++;
+  }
+
+  return s;
+}
+
+#endif  // PLATFORM_ESP8266
