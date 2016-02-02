@@ -1,6 +1,4 @@
-#include "Sensor.h"
-
-//~ #define STEPS 1023
+#include <SensoriaInternals/Sensor.h>
 
 class PhotoSensor: public Sensor {
 private:

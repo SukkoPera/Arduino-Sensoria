@@ -1,4 +1,4 @@
-#include "Sensor.h"
+#include <DallasTemperature.h>
 
 class TemperatureSensorLM35: public Sensor {
 private:

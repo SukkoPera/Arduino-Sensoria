@@ -11,7 +11,7 @@ LightSensorBH1750 lightSensor1750;
 // Dallas Temperature Sensor
 #include <OneWire.h>
 #include <DallasTemperature.h>
-#include <ensoriaSensors/TemperatureDallas.h>
+#include <SensoriaSensors/TemperatureDallas.h>
 
 OneWire oneWire (7);
 DallasTemperature sensors (&oneWire);

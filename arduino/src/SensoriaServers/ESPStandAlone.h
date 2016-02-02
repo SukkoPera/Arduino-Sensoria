@@ -1,11 +1,10 @@
-#include <internals/common.h>
+#include <SensoriaInternals/common.h>
 
 #ifdef PLATFORM_ESP8266
 
+#include <SensoriaInternals/Server.h>
 #include <ESP8266WiFi.h>
 #include <WiFiUdp.h>
-
-#include "SensoriaServer.h"
 
 #define HOST_NAME   "0"
 #define INPUT_PORT 9999

@@ -1,4 +1,4 @@
-#include "SensoriaServer.h"
+#include <SensoriaInternals/Server.h>
 
 class SensoriaSerialServer: public SensoriaServer {
 private:

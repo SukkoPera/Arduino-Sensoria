@@ -1,7 +1,5 @@
+#include <SensoriaInternals/Sensor.h>
 #include <DallasTemperature.h>
-#include "Sensor.h"
-#include "internals/common.h"
-#include "internals/debug.h"
 
 class DallasTemperatureSensor: public Sensor {
 private:
