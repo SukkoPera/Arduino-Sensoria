@@ -1,10 +1,10 @@
-#include <SensoriaServer.h>
+#include <Sensoria.h>
 
 // Arduino "Secret" Temperature Sensor
-#include <TemperatureSensor328.h>
+#include <SensoriaSensors/Temperature328.h>
 TemperatureSensor328 secretSensor;
 
-#include <SerialServer.h>
+#include <SensoriaServers/Serial.h>
 SensoriaSerialServer srv;
 
 void panic (int interval) {
