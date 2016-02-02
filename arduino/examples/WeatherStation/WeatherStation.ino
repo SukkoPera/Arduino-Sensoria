@@ -43,8 +43,8 @@ PhotoSensor photoSensor;
 
 
 // Wi-Fi parameters
-#define SSID        "SukkoNet-TO"
-#define PASSWORD    "everythingyouknowiswrong"
+#define SSID        ""
+#define PASSWORD    ""
 
 
 void panic (int interval) {
