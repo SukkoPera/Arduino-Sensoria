@@ -16,11 +16,11 @@ import matplotlib.dates as mdates
 
 from db import DB
 
-MAIL_FROM = "noreply@sukkology.net"
+MAIL_FROM = None
 MAIL_SUBJ = "GRAPHs"
-MAIL_SMTP = "mail.sukkology.net"
+MAIL_SMTP = None
 MAIL_PORT = 25
-MAIL_TLS = False
+MAIL_TLS = True
 MAIL_USER = None
 MAIL_PASS = None
 
@@ -47,6 +47,7 @@ ydht = []
 ydht22 = []
 ydallas = []
 ydallas2 = []
+y35 = []
 ybmp = []
 ypx = []
 ypx2 = []
@@ -75,6 +76,7 @@ for dt, row in db.get_data_since (limit):
 		yscale.append (float ('nan'))
 		yldr2.append (float ('nan'))
 		ypx.append (float ('nan'))
+		y35.append (float ('nan'))
 	prev = dt
 
 	x.append (dt)
@@ -106,6 +108,12 @@ for dt, row in db.get_data_since (limit):
 	else:
 		print "No reading for sensor T2 in data from %s" % (dt)
 		ydallas2.append (float ('nan'))
+
+	if "T3" in row:
+		y35.append (row["T3"].temperature)
+	else:
+		print "No reading for sensor T3 in data from %s" % (dt)
+		y35.append (float ('nan'))
 
 	if "OP" in row:
 		ypx.append (row["OP"].localPressure)
@@ -166,7 +174,7 @@ fig.suptitle ("Weather Data over the last %d hours" % args.hours)
 import math
 
 dp = []
-for celsius, humidity in zip (ydallas, yh):
+for celsius, humidity in zip (ydallas, yh2):
 	RATIO = 373.15 / (273.15 + celsius)
 	RHS = -7.90298 * (RATIO - 1)
 	RHS += 5.02808 * math.log10 (RATIO)
@@ -196,6 +204,7 @@ plt.title ("Temperature")
 plt.plot (x, ydht, "r--", label = "DHT11")
 plt.plot (x, ydht22, "m--", label = "DHT22")
 plt.plot (x, ydallas, "b-", label = "Temperature")
+plt.plot (x, y35, "c-", label = "LM35")
 plt.plot (x, dp, "g-", label = "Dew Point")
 #~ plt.plot (x, dpfast, "m-", label = "Dew Point (Fast)")
 #~ plt.plot (x, ydallas2, "m-", label = "DS18B20 (2)")
