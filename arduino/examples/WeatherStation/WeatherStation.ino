@@ -1,10 +1,8 @@
-#include <SensoriaServer.h>
-//#include <DummySensor.h>
-#include <PhotoSensor.h>
+#include <Sensoria.h>
 
 // Digital Light Sensor
 #include <BH1750.h>
-#include <LightSensorBH1750.h>
+#include <SensoriaSensors/LightBH1750.h>
 
 BH1750 lightMeter;
 LightSensorBH1750 lightSensor1750;
@@ -13,7 +11,7 @@ LightSensorBH1750 lightSensor1750;
 // Dallas Temperature Sensor
 #include <OneWire.h>
 #include <DallasTemperature.h>
-#include <DallasTemperatureSensor.h>
+#include <ensoriaSensors/TemperatureDallas.h>
 
 OneWire oneWire (7);
 DallasTemperature sensors (&oneWire);
@@ -22,21 +20,21 @@ DallasTemperatureSensor dallasSensor;
 
 // DHT11 Humidity Sensor
 #include <DHT.h>
-#include <DhtHumiditySensor.h>
+#include <SensoriaSensors/HumidityDHT.h>
 
 DHT dht (8, DHT11);
 DhtHumiditySensor dhtSensor;
 
 
 // BMP180 Barometric Pressure Sensor
-#include <PressureSensor.h>
+#include <SensoriaSensors/PressureBMP180.h>
 
 SFE_BMP180 pressure;
 PressureSensor pressureSensor;
 
-//DummySensor dummySensor;
-
 // Simple Photoresistor
+#include <SensoriaSensors/LightLDR.h>
+
 #define LDR_PIN A0
 #define LDR_RESISTANCE 3260	// Resistance of other resistor in the divider
 PhotoSensor photoSensor;
@@ -58,12 +56,8 @@ void panic (int interval) {
 }
 
 
-#include <WifiServer.h>
+#include <SensoriaServers/ESPWifi.h>
 SensoriaWifiServer srv (10, 11);
-
-//#include <SerialServer.h>
-//SensoriaSerialServer srv;
-
 
 void registerSensor (Sensor& sensor) {
   int b = srv.addTransducer (sensor);

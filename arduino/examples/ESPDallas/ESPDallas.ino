@@ -1,18 +1,19 @@
-#include <SensoriaServer.h>
 #include <OneWire.h>
 #include <DallasTemperature.h>
 #include <DallasTemperatureSensor.h>
-#include <ESPServer.h>
+
+#include <Sensoria.h>
+#include <SensoriaServers/ESPStandAlone.h>
 
 OneWire oneWire (D2);
 DallasTemperature sensors (&oneWire);
 DallasTemperatureSensor dallasSensor;
 
 // Wi-Fi parameters
-#define SSID        ""
-#define PASSWORD    ""
+#define SSID        "ssid"
+#define PASSWORD    "password"""
 
-// Pin 2 seems to control the led on my NodeMCU
+// Pin 2 seems to control the ESP module led on my NodeMCU
 #define LED_PIN BUILTIN_LED
 
 ESPServer srv;
