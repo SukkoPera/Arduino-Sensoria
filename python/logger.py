@@ -7,7 +7,7 @@ from db import DB
 from Sensoria import *
 
 #~ sensoria = Sensoria (autodiscover = True)
-sensoria = Sensoria (servers = ["192.168.1.162", "192.168.1.164"])
+sensoria = Sensoria (servers = ["192.168.1.162"], autodiscover = True)
 #~ sensoria = Sensoria (servers = ["192.168.1.164"])
 
 db = DB ()
@@ -23,6 +23,6 @@ while True:
 		print "."
 	except Exception as ex:
 		print "ERROR: %s" % str (ex)
-		raise
+		#~ raise
 
 	time.sleep (5 * 60)
