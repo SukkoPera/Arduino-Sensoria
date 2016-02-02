@@ -1,4 +1,4 @@
-#include <SensoriaServer.h>
+#include <Sensoria.h>
 
 // Digital Light Sensor
 //~ #include <BH1750.h>
@@ -7,9 +7,9 @@
 //~ BH1750 lightMeter;
 //~ LightSensorBH1750 lightSensor1750;
 
-#include <Wire.h>
+//~ #include <Wire.h>
 #include <SparkFunTSL2561.h>
-#include <LightSensorTSL2561.h>
+#include <SensoriaSensors/LightTSL2561.h>
 
 SFE_TSL2561 lightMeter;
 LightSensorTSL2561 lightSensor2561;
@@ -18,7 +18,7 @@ LightSensorTSL2561 lightSensor2561;
 // Dallas Temperature Sensor
 #include <OneWire.h>
 #include <DallasTemperature.h>
-#include <DallasTemperatureSensor.h>
+#include <SensoriaSensors/TemperatureDallas.h>
 
 OneWire oneWire (7);
 DallasTemperature sensors (&oneWire);
@@ -27,27 +27,27 @@ DallasTemperatureSensor dallasSensor;
 
 // DHTxx Humidity Sensor
 #include <DHT.h>
-#include <DhtHumiditySensor.h>
+#include <SensoriaSensors/HumidityDHT.h>
 
 DHT dht (2, DHT22);
 DhtHumiditySensor dhtSensor;
 
 
 // BMP180 Barometric Pressure Sensor
-#include <PressureSensor.h>
+#include <SensoriaSensors/PressureBMP180.h>
 
 SFE_BMP180 pressure;
 PressureSensor pressureSensor;
 
 // Simple Photoresistor
-#include <PhotoSensor.h>
+#include <SensoriaSensors/LightLDR.h>
 
 #define LDR_PIN A0
 #define LDR_RESISTANCE 3240	// Resistance of other resistor in the divider
 PhotoSensor photoSensor;
 
 // LM35 Temperature Sensor
-#include <TemperatureSensorLM35.h>
+#include <SensoriaSensors/TemperatureLM35.h>
 #define LM35_PIN A1
 TemperatureSensorLM35 lm35Sensor;
 
@@ -67,12 +67,8 @@ void panic (int interval) {
 }
 
 
-#include <WifiServer.h>
+#include <SensoriaServers/ESPWifi.h>
 SensoriaWifiServer srv (10, 11);
-
-
-//#include <SerialServer.h>
-//SensoriaSerialServer srv;
 
 
 void registerSensor (Sensor& sensor) {
