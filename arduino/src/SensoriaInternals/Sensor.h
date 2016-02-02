@@ -2,7 +2,7 @@
 #define _SENSOR_H_INCLUDED
 
 #include "Transducer.h"
-#include "internals/common.h"
+#include "common.h"
 
 
 class Sensor: public Transducer {

@@ -1,4 +1,4 @@
-#include "Sensor.h"
+#include <SensoriaInternals/Sensor.h>
 
 class LightSensorBH1750: public Sensor {
 private:

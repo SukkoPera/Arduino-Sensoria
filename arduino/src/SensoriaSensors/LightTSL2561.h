@@ -1,5 +1,5 @@
+#include <SensoriaInternals/Sensor.h>
 #include <SparkFunTSL2561.h>
-#include "Sensor.h"
 
 class LightSensorTSL2561: public Sensor {
 private:

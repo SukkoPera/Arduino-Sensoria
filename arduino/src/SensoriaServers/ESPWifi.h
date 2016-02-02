@@ -1,7 +1,6 @@
+#include <SensoriaInternals/Server.h>
 #include <SoftwareSerial.h>
 #include <ESP8266.h>
-
-#include "SensoriaServer.h"
 
 #define HOST_NAME   "0"
 #define INPUT_PORT 9999
