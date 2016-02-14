@@ -29,7 +29,7 @@ public:
 		DPRINTLN (wifi.getVersion ().c_str ());
 
 		if (!wifi.setOprToStation ()) {
-			DPRINTLN (F("to station + softap err\r\n"));
+			DPRINTLN (F("to station err\r\n"));
 			return false;
 		}
 
