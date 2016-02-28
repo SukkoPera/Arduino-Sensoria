@@ -4,8 +4,8 @@ from ServerProxy import ServerProxy
 from Sensoria import *
 
 #~ sensoria = Sensoria (servers = ["192.168.1.154", "192.168.1.155"], autodiscover = True)
-#~ sensoria = Sensoria (servers = ["192.168.1.168"])
-sensoria = Sensoria (servers = ["192.168.1.162"], autodiscover = True)
+#~ sensoria = Sensoria (servers = ["192.168.1.184"])
+sensoria = Sensoria (servers = [], autodiscover = True)
 #~ sensoria = Sensoria (servers = ["localhost"])
 for sname, server in sensoria.servers.iteritems ():
 	print "- Server: %s (%s:%d)" % (sname, server.address, server.port)

@@ -26,7 +26,7 @@ size_t strlcpy (char *dst, const char *src, size_t siz);
 char *floatToString (double val, char *outstr);
 
 // WARNING: str is updated in-place
-int splitString (char *str, char **parts, size_t n);
+int splitString (char *str, char **parts, size_t n, const char sep = ' ');
 
 #ifdef PLATFORM_ESP8266
 char *strupr(char * s);

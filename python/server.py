@@ -9,13 +9,14 @@ from stereotypes.WeatherData import WeatherData
 
 LISTEN_PORT = 9999
 RECV_BUFSIZE = 16384
+DEBUG = True
 
 class Transducer (object):
 	class Type:
 		SENSOR, ACTUATOR = xrange (0, 2)
 
 	def __init__ (self, typ, name, stereotype, description = "", version = ""):
-		assert typ in range (Transducer.Type.SENSOR, Transducer.Type.ACTUATOR)
+		assert typ in range (Transducer.Type.SENSOR, Transducer.Type.ACTUATOR + 1)
 		assert len (name) > 0
 		assert len (stereotype) == 2
 		assert not "|" in name and not "|" in description
@@ -43,7 +44,7 @@ class Sensor (Transducer):
 	def configure (self):
 		raise NotImplementedError
 
-class Actuator (Sensor):
+class Actuator (Transducer):
 	def __init__ (self, name, stereotype, description = "", version = ""):
 		super (Actuator, self).__init__ (Sensor.Type.ACTUATOR, name, stereotype, description, version)
 
@@ -73,40 +74,41 @@ class BathroomTemperatureSensor (TemperatureSensor):
 		super (BathroomTemperatureSensor, self).__init__ ("TB", "Bathroom Temperature")
 
 
-#~ class RelaySensor (ReadableWritableSensor):
-	#~ class State:
-		#~ OFF = 0
-		#~ ON = 1
+class RelayActuator (Actuator):
+	class State:
+		OFF = 0
+		ON = 1
 
-	#~ def __init__ (self, name, description = "", version = ""):
-		#~ super (RelaySensor, self).__init__ (name, description, version)
-		#~ self.state = RelaySensor.State.OFF
-#~ ##		random.choice (["ON", "OFF"])
+	def __init__ (self, name, description = "", version = ""):
+		super (RelayActuator, self).__init__ (name, "RS", description, version)
+		self.state = RelayActuator.State.OFF
+##		random.choice (["ON", "OFF"])
 
-	#~ def read (self):
-		#~ if self.state == RelaySensor.State.ON:
-			#~ val = "ON"
-		#~ else:
-		    #~ val = "OFF"
-		#~ return val, None
+	def read (self):
+		if self.state == RelayActuator.State.ON:
+			val = "ON"
+		else:
+		    val = "OFF"
+		return val
 
 	#~ def write (self, value):
 		#~ if value.upper () == "ON" or int (value) > 0:
-			#~ self.state = RelaySensor.State.ON
+			#~ self.state = RelayActuator.State.ON
 		#~ else:
-			#~ self.state = RelaySensor.State.OFF
+			#~ self.state = RelayActuator.State.OFF
 		#~ return True, "Relay is now %s" % self.read ()[0]
 
-#~ class RelayHeater (RelaySensor):
-	#~ def __init__ (self):
-		#~ super (RelayHeater, self).__init__ ("BH", "Bathroom Heater", "20150611 By SukkoPera <software@sukkology.net>")
+class RelayHeater (RelayActuator):
+	def __init__ (self):
+		super (RelayHeater, self).__init__ ("BH", "Bathroom Heater", "20160228 By SukkoPera <software@sukkology.net>")
 
 class CommandListener (object):
 	def __init__ (self, port = LISTEN_PORT):
 		self.sensors = {}
 
 		self._sock = socket.socket (socket.AF_INET, socket.SOCK_DGRAM)
-		server_address = ('localhost', port)
+		#server_address = ('localhost', port)
+		server_address = ('0', port)
 
 		print >> sys.stderr, 'Starting up on %s port %s' % server_address
 		self._sock.bind (server_address)
@@ -119,6 +121,8 @@ class CommandListener (object):
 			print "Registered sensor %s" % (sensor.name)
 
 	def _reply (self, addr, what):
+		if DEBUG:
+			print "%s:%s <-- %s" % (addr[0], addr[1], what)
 		self._sock.sendto (what, addr)
 
 	def _qry (self, addr, args):
@@ -194,7 +198,8 @@ class CommandListener (object):
 				data = data.strip ()
 				self.msg_ip = client_address[0]
 				self.msg_port = int (client_address[1])
-				print "From '%s:%s: '%s'" % (self.msg_ip, self.msg_port, data)
+				if DEBUG:
+					print "%s:%s --> %s" % (self.msg_ip, self.msg_port, data)
 
 				parts = data.split (" ", 1)
 				if len (parts) < 1:
@@ -218,9 +223,9 @@ class CommandListener (object):
 if __name__ == "__main__":
 	tk = KitchenTemperatureSensor ()
 	tb = BathroomTemperatureSensor ()
-	#~ rh = RelayHeater ()
+	rh = RelayHeater ()
 	listener = CommandListener ()
 	listener.register_sensor (tk)
 	listener.register_sensor (tb)
-	#~ listener.register_sensor (rh)
+	listener.register_sensor (rh)
 	listener.go ()

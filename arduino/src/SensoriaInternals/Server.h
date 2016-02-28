@@ -1,9 +1,12 @@
 #ifndef _SENSORIA_H_INCLUDED
 #define _SENSORIA_H_INCLUDED
 
+#include <Arduino.h>
+#include <IPAddress.h>
 #include "Transducer.h"
 #include "Sensor.h"
 #include "Actuator.h"
+#include "Communicator.h"
 #include "utils.h"
 #include "common.h"
 #include "debug.h"
@@ -13,10 +16,11 @@
 
 class SensoriaServer {
 private:
-	static const byte MAX_SENSORS = 8;
+  SensoriaCommunicator *comm;
+
 	byte nTransducers;
 
-	Transducer *transducers[MAX_SENSORS];
+	Transducer *transducers[MAX_TRANSDUCERS];
 
 	char buf[OUT_BUF_SIZE];
 	char sensorBuf[SENSOR_BUF_SIZE];
@@ -47,20 +51,19 @@ private:
   // Commodity method to flush data to server
   boolean send_srv ();
 
-protected:
-	void process_cmd (char *buffer);
+  // Temp?
+  IPAddress remoteAddress;
+  uint16_t remotePort;
 
-	// Override to implement actual sending of data
-	virtual boolean send (const char *str) = 0;
+protected:
+	void process_cmd (char *buffer, IPAddress senderAddr, uint16_t senderPort);
 
 public:
 	SensoriaServer ();
 
-	// Override if needed, but always call super
-	virtual boolean begin (FlashString _serverName, FlashString _serverVersion);
+	boolean begin (FlashString _serverName, SensoriaCommunicator& _comm);
 
-	// Override if needed
-	virtual boolean stop ();
+  void loop ();
 
 	int addTransducer (Transducer& transducer);
 

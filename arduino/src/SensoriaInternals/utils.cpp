@@ -68,22 +68,22 @@ char *floatToString (double val, char *outstr) {
 	return outstr;
 }
 
-int splitString (char *str, char **parts, size_t n) {
+int splitString (char *str, char **parts, size_t n, const char sep) {
 	size_t i;
 	char *c;
 
 	for (i = 0; i < n - 1; i++) {
 		parts[i] = str;
 
-		// Find next space
-		if ((c = strchr (str, ' '))) {
+		// Find next separator
+		if ((c = strchr (str, sep))) {
 			*c = '\0';	// Terminate
 
-			// Find next non-space
-			while (*(str = ++c) == ' ')
+			// Find next non-separator
+			while (*(str = ++c) == sep)
 				;
 		} else {
-			// No more spaces
+			// No more separators
 			break;
 		}
 	}

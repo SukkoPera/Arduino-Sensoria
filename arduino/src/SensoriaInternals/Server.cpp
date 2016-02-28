@@ -1,25 +1,27 @@
+#include <Sensoria.h>
 //~ #include <RokkitHash.h>
 #include "Server.h"
 #include "common.h"
 
 
-SensoriaServer::SensoriaServer (): nTransducers (0), hash (42) {
+SensoriaServer::SensoriaServer (): comm (NULL), nTransducers (0), hash (42) {
 	clearBuffer ();
 }
 
-boolean SensoriaServer::begin (FlashString _serverName, FlashString _serverVersion) {
+boolean SensoriaServer::begin (FlashString _serverName, SensoriaCommunicator& _comm) {
   serverName = _serverName;
-  serverVersion = _serverVersion;
+  serverVersion = F("20160226");
+  comm = &_comm;
 
   return strlen_P (F_TO_PSTR (_serverName)) > 0;
 }
 
-boolean SensoriaServer::stop () {
-	return true;
-}
+//~ boolean SensoriaServer::stop () {
+	//~ return true;
+//~ }
 
 int SensoriaServer::addTransducer (Transducer& transducer) {
-	if (nTransducers < MAX_SENSORS) {
+	if (nTransducers < MAX_TRANSDUCERS) {
 		transducers[nTransducers++] = &transducer;
 
 		// Update hash
@@ -64,7 +66,7 @@ boolean SensoriaServer::send_srv (const char *str, boolean cr) {
 	if (cr) {
 		// Send!
 		strcat_P (buf, PSTR ("\r"));   // Line terminator
-		boolean ok = send (buf);
+		boolean ok = comm -> send (buf, remoteAddress, remotePort);
 
 		clearBuffer ();
 
@@ -85,7 +87,7 @@ boolean SensoriaServer::send_srv (const __FlashStringHelper *str, boolean cr) {
 	if (cr) {
 		// Send!
 		strcat_P (buf, PSTR ("\r"));   // Line terminator
-		boolean ok = send (buf);
+		boolean ok = comm -> send (buf, remoteAddress, remotePort);
 
 		clearBuffer ();
 
@@ -100,8 +102,11 @@ boolean SensoriaServer::send_srv () {
   return send_srv ((char *) NULL, true);
 }
 
-void SensoriaServer::process_cmd (char *buffer) {
+void SensoriaServer::process_cmd (char *buffer, IPAddress senderAddr, uint16_t senderPort) {
   char *cmd, *args;
+
+  remoteAddress = senderAddr;
+  remotePort = senderPort;
 
   // Separate command and arguments
   strstrip (buffer);
@@ -141,6 +146,16 @@ void SensoriaServer::process_cmd (char *buffer) {
 }
 
 
+void SensoriaServer::loop () {
+  char *cmd;
+  IPAddress addr;
+  uint16_t port;
+
+  if (comm -> receiveString (&cmd, &addr, &port)) {
+    process_cmd (cmd, addr, port);
+  }
+}
+
 /*******************************************************************************
  * COMMANDS
  *******************************************************************************
@@ -155,13 +170,13 @@ void SensoriaServer::cmd_qry (char *args) {
 
     Transducer *t = getTransducer (args);
     if (t) {
-      send_srv ("QRY ");
+      send_srv (F("QRY "));
       send_srv (t -> name);
-      send_srv ("|");
-      send_srv (t -> type == Transducer::SENSOR ? "S" : "A");
-      send_srv ("|WD|");		// FIXME!
+      send_srv (F("|"));
+      send_srv (t -> type == Transducer::SENSOR ? F("S") : F("A"));
+      send_srv (F("|WD|"));		// FIXME!
       send_srv (t -> description);
-      send_srv ("|");
+      send_srv (F("|"));
       send_srv (t -> version, true);
     } else {
       DPRINT (F("ERR No such transducer: "));
@@ -177,9 +192,9 @@ void SensoriaServer::cmd_qry (char *args) {
     for (byte i = 0; i < nTransducers; i++) {
       Transducer *t = transducers[i];
       send_srv (t -> name);
-      send_srv (" ");
-      send_srv (t -> type == Transducer::SENSOR ? "S" : "A");
-      send_srv (" WD ");		// FIXME!
+      send_srv ((" "));
+      send_srv (t -> type == Transducer::SENSOR ? ("S") : ("A"));
+      send_srv (F(" WD "));		// FIXME!
       send_srv (t -> description);
 
       if (i < nTransducers - 1)
@@ -219,7 +234,7 @@ void SensoriaServer::cmd_rea (char *args) {
         if (buf) {
           send_srv (F("REA "));
           send_srv (s -> name);
-          send_srv (" ");
+          send_srv ((" "));
           send_srv (buf, true);
         } else {
           send_srv (F("ERR Read failed"), true);
@@ -256,8 +271,8 @@ void SensoriaServer::cmd_wri (char *args) {
         Actuator *a = (Actuator *) t;
         send_srv (F("WRI "));
         send_srv (a -> name);
-        send_srv (" ");
-        send_srv (a -> write (rest) ? "OK" : "ERR", true);
+        send_srv ((" "));
+        send_srv (a -> write (rest) ? F("OK") : F("ERR"), true);
       } else {
         send_srv (F("ERR Transducer is not an actuator"), true);
       }

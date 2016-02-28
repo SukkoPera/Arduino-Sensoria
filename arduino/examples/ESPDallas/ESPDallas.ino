@@ -1,5 +1,4 @@
 #include <Sensoria.h>
-#include <SensoriaServers/ESPStandAlone.h>
 
 #include <OneWire.h>
 #include <DallasTemperature.h>
@@ -9,22 +8,28 @@ OneWire oneWire (D2);
 DallasTemperature sensors (&oneWire);
 DallasTemperatureSensor dallasSensor;
 
+
+// Communicator & Server
+#include <SoftwareSerial.h>
+SoftwareSerial swSerial (10, 11);
+
+#include <SensoriaCommunicators/ESPStandAlone.h>
+ESPCommunicator comm;
+
+#include <SensoriaInternals/Server.h>
+SensoriaServer srv;
+
 // Wi-Fi parameters
-#define SSID        ""
-#define PASSWORD    ""
-
-// Pin 2 seems to control the ESP module led on my NodeMCU
-#define LED_PIN BUILTIN_LED
-
-ESPServer srv;
+#define WIFI_SSID        "ssid"
+#define WIFI_PASSWORD    "password"
 
 
 void mypanic (int interval) {
-  pinMode (LED_PIN, OUTPUT);
+  pinMode (LED_BUILTIN, OUTPUT);
   while (42) {
-    digitalWrite (LED_PIN, HIGH);
+    digitalWrite (LED_BUILTIN, HIGH);
     delay (interval);
-    digitalWrite (LED_PIN, LOW);
+    digitalWrite (LED_BUILTIN, LOW);
     delay (interval);
   }
 }
@@ -32,9 +37,14 @@ void mypanic (int interval) {
 void setup (void) {
   DSTART ();
 
-  if (!srv.begin (F("ESPDallas"), SSID, PASSWORD)) {
+  if (!comm.begin (WIFI_SSID, WIFI_PASSWORD)) {
+    mypanic (100);
+  }
+
+  if (!srv.begin (F("ESPDallas-1"), comm)) {
     mypanic (500);
   }
+
 
   // Init DS18B20
   // locate devices on the bus
@@ -71,15 +81,15 @@ void setup (void) {
 
   // Signal we're ready!
   //Serial.println (F("GO!"));
-  pinMode (LED_PIN, OUTPUT);
+  pinMode (LED_BUILTIN, OUTPUT);
   for (int i = 0; i < 3; i++) {
-    digitalWrite (LED_PIN, HIGH);
+    digitalWrite (LED_BUILTIN, HIGH);
     delay (100);
-    digitalWrite (LED_PIN, LOW);
+    digitalWrite (LED_BUILTIN, LOW);
     delay (100);
   }
 }
 
 void loop (void) {
-  srv.receive ();
+  srv.loop ();
 }

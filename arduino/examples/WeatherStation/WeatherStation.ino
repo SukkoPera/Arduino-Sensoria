@@ -39,13 +39,22 @@ PressureSensor pressureSensor;
 #define LDR_RESISTANCE 3260	// Resistance of other resistor in the divider
 PhotoSensor photoSensor;
 
+// Communicator & Server
+#include <SoftwareSerial.h>
+SoftwareSerial swSerial (10, 11);
+
+#include <SensoriaCommunicators/ESPWifiAlt.h>
+SensoriaEsp8266Communicator comm;
+
+#include <SensoriaInternals/Server.h>
+SensoriaServer srv;
 
 // Wi-Fi parameters
-#define SSID        ""
-#define PASSWORD    ""
+#define WIFI_SSID        "ssid"
+#define WIFI_PASSWORD    "password"
 
 
-void panic (int interval) {
+void mypanic (int interval) {
   pinMode (LED_BUILTIN, OUTPUT);
   while (42) {
     digitalWrite (LED_BUILTIN, HIGH);
@@ -54,10 +63,6 @@ void panic (int interval) {
     delay (interval);
   }
 }
-
-
-#include <SensoriaServers/ESPWifi.h>
-SensoriaWifiServer srv (10, 11);
 
 void registerSensor (Sensor& sensor) {
   int b = srv.addTransducer (sensor);
@@ -69,19 +74,23 @@ void registerSensor (Sensor& sensor) {
 
     return;
   } else {
-    panic (1000);
+    mypanic (1000);
   }
 }
 
 void setup (void) {
   DSTART ();
 
-  if (!srv.begin (F("Outdoor-1"), SSID, PASSWORD)) {
-    panic (500);
+  swSerial.begin (9600);
+  if (!comm.begin (swSerial, WIFI_SSID, WIFI_PASSWORD)) {
+    mypanic (100);
   }
 
-//  registerSensor (dummySensor);
+  if (!srv.begin (F("Outdoor-1"), comm)) {
+    mypanic (500);
+  }
 
+  // LDR
   pinMode (LDR_PIN, INPUT);
   if (photoSensor.begin (F("PR"), F("Outdoor Light (LDR)"), LDR_PIN, LDR_RESISTANCE))
     registerSensor (photoSensor);
@@ -111,7 +120,7 @@ void setup (void) {
   DeviceAddress outdoorThermometer;
   if (!sensors.getAddress (outdoorThermometer, 0)) {
     DPRINTLN (F("Unable to find address for Device 0"));
-    panic (333);
+    mypanic (333);
   }
 
 #if 0
@@ -147,5 +156,5 @@ void setup (void) {
 }
 
 void loop (void) {
-  srv.receive ();
+  srv.loop ();
 }
