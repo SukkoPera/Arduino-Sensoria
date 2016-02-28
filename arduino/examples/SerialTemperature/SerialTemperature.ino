@@ -1,7 +1,6 @@
 #include <Sensoria.h>
 
 // Arduino "Secret" Temperature Sensor
-<<<<<<< HEAD
 //~ #include <SensoriaSensors/Temperature328.h>
 //~ TemperatureSensor328 secretSensor;
 
@@ -15,15 +14,6 @@ SensoriaSerialCommunicator comm;
 SensoriaServer srv;;
 
 void mypanic (int interval) {
-=======
-#include <SensoriaSensors/Temperature328.h>
-TemperatureSensor328 secretSensor;
-
-#include <SensoriaServers/Serial.h>
-SensoriaSerialServer srv;
-
-void panic (int interval) {
->>>>>>> 5ee9d9a6c3c59933e0f8fed8ca79517959e425b9
   pinMode (LED_BUILTIN, OUTPUT);
   while (42) {
     digitalWrite (LED_BUILTIN, HIGH);
@@ -34,7 +24,6 @@ void panic (int interval) {
 }
 
 void setup (void) {
-<<<<<<< HEAD
   Serial.begin (9600);
   comm.begin (Serial);
   if (!srv.begin (F("Indoor-1"), comm)) {
@@ -48,20 +37,6 @@ void setup (void) {
       DPRINTLN (si7021.name);
     } else {
       mypanic (1000);
-=======
-  DSTART ();
-
-  if (!srv.begin (F("Indoor-1"))) {
-    panic (500);
-  }
-
-  if (secretSensor.begin (F("HT"), F("Indoor Temp"))) {
-    if (srv.addTransducer (secretSensor) >= 0) {
-      DPRINT (F("Sensor registered: "));
-      DPRINTLN (secretSensor.name);
-    } else {
-      panic (1000);
->>>>>>> 5ee9d9a6c3c59933e0f8fed8ca79517959e425b9
     }
   } else {
     DPRINTLN ("Sensor failed begin()");
@@ -72,9 +47,5 @@ void setup (void) {
 }
 
 void loop (void) {
-<<<<<<< HEAD
   srv.loop ();
-=======
-  srv.receive ();
->>>>>>> 5ee9d9a6c3c59933e0f8fed8ca79517959e425b9
 }
