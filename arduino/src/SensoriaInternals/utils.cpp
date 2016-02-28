@@ -68,13 +68,18 @@ char *floatToString (double val, char *outstr) {
 	return outstr;
 }
 
+<<<<<<< HEAD
 int splitString (char *str, char **parts, size_t n, const char sep) {
+=======
+int splitString (char *str, char **parts, size_t n) {
+>>>>>>> 5ee9d9a6c3c59933e0f8fed8ca79517959e425b9
 	size_t i;
 	char *c;
 
 	for (i = 0; i < n - 1; i++) {
 		parts[i] = str;
 
+<<<<<<< HEAD
 		// Find next separator
 		if ((c = strchr (str, sep))) {
 			*c = '\0';	// Terminate
@@ -84,6 +89,17 @@ int splitString (char *str, char **parts, size_t n, const char sep) {
 				;
 		} else {
 			// No more separators
+=======
+		// Find next space
+		if ((c = strchr (str, ' '))) {
+			*c = '\0';	// Terminate
+
+			// Find next non-space
+			while (*(str = ++c) == ' ')
+				;
+		} else {
+			// No more spaces
+>>>>>>> 5ee9d9a6c3c59933e0f8fed8ca79517959e425b9
 			break;
 		}
 	}
