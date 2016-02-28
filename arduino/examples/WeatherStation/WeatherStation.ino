@@ -39,6 +39,7 @@ PressureSensor pressureSensor;
 #define LDR_RESISTANCE 3260	// Resistance of other resistor in the divider
 PhotoSensor photoSensor;
 
+<<<<<<< HEAD
 // Communicator & Server
 #include <SoftwareSerial.h>
 SoftwareSerial swSerial (10, 11);
@@ -55,6 +56,15 @@ SensoriaServer srv;
 
 
 void mypanic (int interval) {
+=======
+
+// Wi-Fi parameters
+#define SSID        ""
+#define PASSWORD    ""
+
+
+void panic (int interval) {
+>>>>>>> 5ee9d9a6c3c59933e0f8fed8ca79517959e425b9
   pinMode (LED_BUILTIN, OUTPUT);
   while (42) {
     digitalWrite (LED_BUILTIN, HIGH);
@@ -64,6 +74,13 @@ void mypanic (int interval) {
   }
 }
 
+<<<<<<< HEAD
+=======
+
+#include <SensoriaServers/ESPWifi.h>
+SensoriaWifiServer srv (10, 11);
+
+>>>>>>> 5ee9d9a6c3c59933e0f8fed8ca79517959e425b9
 void registerSensor (Sensor& sensor) {
   int b = srv.addTransducer (sensor);
   if (b >= 0) {
@@ -74,13 +91,18 @@ void registerSensor (Sensor& sensor) {
 
     return;
   } else {
+<<<<<<< HEAD
     mypanic (1000);
+=======
+    panic (1000);
+>>>>>>> 5ee9d9a6c3c59933e0f8fed8ca79517959e425b9
   }
 }
 
 void setup (void) {
   DSTART ();
 
+<<<<<<< HEAD
   swSerial.begin (9600);
   if (!comm.begin (swSerial, WIFI_SSID, WIFI_PASSWORD)) {
     mypanic (100);
@@ -91,6 +113,14 @@ void setup (void) {
   }
 
   // LDR
+=======
+  if (!srv.begin (F("Outdoor-1"), SSID, PASSWORD)) {
+    panic (500);
+  }
+
+//  registerSensor (dummySensor);
+
+>>>>>>> 5ee9d9a6c3c59933e0f8fed8ca79517959e425b9
   pinMode (LDR_PIN, INPUT);
   if (photoSensor.begin (F("PR"), F("Outdoor Light (LDR)"), LDR_PIN, LDR_RESISTANCE))
     registerSensor (photoSensor);
@@ -120,7 +150,11 @@ void setup (void) {
   DeviceAddress outdoorThermometer;
   if (!sensors.getAddress (outdoorThermometer, 0)) {
     DPRINTLN (F("Unable to find address for Device 0"));
+<<<<<<< HEAD
     mypanic (333);
+=======
+    panic (333);
+>>>>>>> 5ee9d9a6c3c59933e0f8fed8ca79517959e425b9
   }
 
 #if 0
@@ -156,5 +190,9 @@ void setup (void) {
 }
 
 void loop (void) {
+<<<<<<< HEAD
   srv.loop ();
+=======
+  srv.receive ();
+>>>>>>> 5ee9d9a6c3c59933e0f8fed8ca79517959e425b9
 }

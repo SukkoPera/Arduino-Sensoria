@@ -1,4 +1,8 @@
 #include <Sensoria.h>
+<<<<<<< HEAD
+=======
+#include <SensoriaServers/ESPStandAlone.h>
+>>>>>>> 5ee9d9a6c3c59933e0f8fed8ca79517959e425b9
 
 #include <OneWire.h>
 #include <DallasTemperature.h>
@@ -8,6 +12,7 @@ OneWire oneWire (D2);
 DallasTemperature sensors (&oneWire);
 DallasTemperatureSensor dallasSensor;
 
+<<<<<<< HEAD
 
 // Communicator & Server
 #include <SoftwareSerial.h>
@@ -30,6 +35,24 @@ void mypanic (int interval) {
     digitalWrite (LED_BUILTIN, HIGH);
     delay (interval);
     digitalWrite (LED_BUILTIN, LOW);
+=======
+// Wi-Fi parameters
+#define SSID        ""
+#define PASSWORD    ""
+
+// Pin 2 seems to control the ESP module led on my NodeMCU
+#define LED_PIN BUILTIN_LED
+
+ESPServer srv;
+
+
+void mypanic (int interval) {
+  pinMode (LED_PIN, OUTPUT);
+  while (42) {
+    digitalWrite (LED_PIN, HIGH);
+    delay (interval);
+    digitalWrite (LED_PIN, LOW);
+>>>>>>> 5ee9d9a6c3c59933e0f8fed8ca79517959e425b9
     delay (interval);
   }
 }
@@ -37,6 +60,7 @@ void mypanic (int interval) {
 void setup (void) {
   DSTART ();
 
+<<<<<<< HEAD
   if (!comm.begin (WIFI_SSID, WIFI_PASSWORD)) {
     mypanic (100);
   }
@@ -46,6 +70,12 @@ void setup (void) {
   }
 
 
+=======
+  if (!srv.begin (F("ESPDallas"), SSID, PASSWORD)) {
+    mypanic (500);
+  }
+
+>>>>>>> 5ee9d9a6c3c59933e0f8fed8ca79517959e425b9
   // Init DS18B20
   // locate devices on the bus
   sensors.begin ();
@@ -81,15 +111,27 @@ void setup (void) {
 
   // Signal we're ready!
   //Serial.println (F("GO!"));
+<<<<<<< HEAD
   pinMode (LED_BUILTIN, OUTPUT);
   for (int i = 0; i < 3; i++) {
     digitalWrite (LED_BUILTIN, HIGH);
     delay (100);
     digitalWrite (LED_BUILTIN, LOW);
+=======
+  pinMode (LED_PIN, OUTPUT);
+  for (int i = 0; i < 3; i++) {
+    digitalWrite (LED_PIN, HIGH);
+    delay (100);
+    digitalWrite (LED_PIN, LOW);
+>>>>>>> 5ee9d9a6c3c59933e0f8fed8ca79517959e425b9
     delay (100);
   }
 }
 
 void loop (void) {
+<<<<<<< HEAD
   srv.loop ();
+=======
+  srv.receive ();
+>>>>>>> 5ee9d9a6c3c59933e0f8fed8ca79517959e425b9
 }

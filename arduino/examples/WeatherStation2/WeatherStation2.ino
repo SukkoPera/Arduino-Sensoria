@@ -34,10 +34,17 @@ DhtHumiditySensor dhtSensor;
 
 
 // BMP180 Barometric Pressure Sensor
+<<<<<<< HEAD
 //~ #include <SensoriaSensors/PressureBMP180.h>
 
 //~ SFE_BMP180 pressure;
 //~ PressureSensor pressureSensor;
+=======
+#include <SensoriaSensors/PressureBMP180.h>
+
+SFE_BMP180 pressure;
+PressureSensor pressureSensor;
+>>>>>>> 5ee9d9a6c3c59933e0f8fed8ca79517959e425b9
 
 // Simple Photoresistor
 #include <SensoriaSensors/LightLDR.h>
@@ -51,6 +58,7 @@ PhotoSensor photoSensor;
 #define LM35_PIN A1
 TemperatureSensorLM35 lm35Sensor;
 
+<<<<<<< HEAD
 
 // Communicator & Server
 #include <SoftwareSerial.h>
@@ -68,6 +76,14 @@ SensoriaServer srv;
 
 
 void mypanic (int interval) {
+=======
+// Wi-Fi parameters
+#define SSID        ""
+#define PASSWORD    ""
+
+
+void panic (int interval) {
+>>>>>>> 5ee9d9a6c3c59933e0f8fed8ca79517959e425b9
   pinMode (LED_BUILTIN, OUTPUT);
   while (42) {
     digitalWrite (LED_BUILTIN, HIGH);
@@ -78,6 +94,13 @@ void mypanic (int interval) {
 }
 
 
+<<<<<<< HEAD
+=======
+#include <SensoriaServers/ESPWifi.h>
+SensoriaWifiServer srv (10, 11);
+
+
+>>>>>>> 5ee9d9a6c3c59933e0f8fed8ca79517959e425b9
 void registerSensor (Sensor& sensor) {
   int b = srv.addTransducer (sensor);
   if (b >= 0) {
@@ -88,13 +111,18 @@ void registerSensor (Sensor& sensor) {
 
     return;
   } else {
+<<<<<<< HEAD
     mypanic (1000);
+=======
+    panic (1000);
+>>>>>>> 5ee9d9a6c3c59933e0f8fed8ca79517959e425b9
   }
 }
 
 void setup (void) {
   DSTART ();
 
+<<<<<<< HEAD
   swSerial.begin (9600);
   if (!comm.begin (swSerial, WIFI_SSID, WIFI_PASSWORD)) {
     mypanic (100);
@@ -105,6 +133,12 @@ void setup (void) {
   }
 
   // LDR
+=======
+  if (!srv.begin (F("Outdoor-2"), SSID, PASSWORD)) {
+    panic (500);
+  }
+
+>>>>>>> 5ee9d9a6c3c59933e0f8fed8ca79517959e425b9
   pinMode (LDR_PIN, INPUT);
   if (photoSensor.begin (F("L2"), F("Outdoor Light (LDR)"), LDR_PIN, LDR_RESISTANCE))
     registerSensor (photoSensor);
@@ -139,7 +173,11 @@ void setup (void) {
   DeviceAddress outdoorThermometer;
   if (!sensors.getAddress (outdoorThermometer, 0)) {
     DPRINTLN (F("Unable to find address for Device 0"));
+<<<<<<< HEAD
     mypanic (333);
+=======
+    panic (333);
+>>>>>>> 5ee9d9a6c3c59933e0f8fed8ca79517959e425b9
   }
 
 #if 0
@@ -160,8 +198,13 @@ void setup (void) {
     registerSensor (dhtSensor);
 
 
+<<<<<<< HEAD
   //~ if (pressure.begin () && pressureSensor.begin (F("P2"), F("Outdoor Pressure"), pressure))
     //~ registerSensor (pressureSensor);
+=======
+  if (pressure.begin () && pressureSensor.begin (F("P2"), F("Outdoor Pressure"), pressure))
+    registerSensor (pressureSensor);
+>>>>>>> 5ee9d9a6c3c59933e0f8fed8ca79517959e425b9
 
   pinMode (LM35_PIN, INPUT);
   if (lm35Sensor.begin (F("T3"), F("Outdoor Temp (LM35)"), LM35_PIN))
@@ -180,5 +223,9 @@ void setup (void) {
 }
 
 void loop (void) {
+<<<<<<< HEAD
   srv.loop ();
+=======
+  srv.receive ();
+>>>>>>> 5ee9d9a6c3c59933e0f8fed8ca79517959e425b9
 }
