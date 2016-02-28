@@ -8,8 +8,8 @@
 TemperatureSensor328 tempSensor;
 
 // Wi-Fi parameters
-#define WIFI_SSID        "ssid"
-#define WIFI_PASSWORD    "password"
+#define WIFI_SSID        ""
+#define WIFI_PASSWORD    ""
 
 #define LED_PIN LED_BUILTIN
 

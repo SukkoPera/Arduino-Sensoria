@@ -7,8 +7,8 @@ IPAddress outdoor1(192, 168, 1, 152);
 IPAddress test(192, 168, 1, 154);
 
 // Wi-Fi parameters
-#define WIFI_SSID        "ssid"
-#define WIFI_PASSWORD    "password"
+#define WIFI_SSID        ""
+#define WIFI_PASSWORD    ""
 
 SoftwareSerial swSerial (10, 11);
 SensoriaEsp8266Communicator comm;

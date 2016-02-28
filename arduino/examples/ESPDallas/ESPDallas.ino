@@ -20,8 +20,8 @@ ESPCommunicator comm;
 SensoriaServer srv;
 
 // Wi-Fi parameters
-#define WIFI_SSID        "ssid"
-#define WIFI_PASSWORD    "password"
+#define WIFI_SSID        ""
+#define WIFI_PASSWORD    ""
 
 
 void mypanic (int interval) {
