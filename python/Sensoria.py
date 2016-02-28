@@ -17,16 +17,12 @@ class Sensoria (object):
 		self.servers = {}
 		self.sensors = {}
 		for srv in servers:
-<<<<<<< HEAD
 			parts = srv.split (":")
 			if len (parts) == 2:
 				srv, port = parts
 				self._queryServer (srv, int (port))
 			else:
 				self._queryServer (srv)
-=======
-			self._queryServer (srv)
->>>>>>> 5ee9d9a6c3c59933e0f8fed8ca79517959e425b9
 		if autodiscover:
 			self._discoverServers ()
 		self.discoverSensors ()

@@ -1,5 +1,4 @@
 // This is just a placeholder header
-<<<<<<< HEAD
 
 #define DEFAULT_PORT 9999
 
@@ -17,5 +16,3 @@
 
 // ms
 #define CLIENT_TIMEOUT 5000
-=======
->>>>>>> 5ee9d9a6c3c59933e0f8fed8ca79517959e425b9

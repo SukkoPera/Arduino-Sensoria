@@ -16,7 +16,6 @@ import matplotlib.dates as mdates
 
 from db import DB
 
-<<<<<<< HEAD
 MAIL_FROM = "noreply@sukkology.net"
 MAIL_SUBJ = "GRAPHs"
 MAIL_SMTP = "mail.sukkology.net"
@@ -24,15 +23,6 @@ MAIL_PORT = 25
 MAIL_TLS = True
 MAIL_USER = "sukkology.net"
 MAIL_PASS = ""
-=======
-MAIL_FROM = None
-MAIL_SUBJ = "GRAPHs"
-MAIL_SMTP = None
-MAIL_PORT = 25
-MAIL_TLS = True
-MAIL_USER = None
-MAIL_PASS = None
->>>>>>> 5ee9d9a6c3c59933e0f8fed8ca79517959e425b9
 
 DEFAULT_HOURS = 48
 
@@ -184,7 +174,6 @@ fig.suptitle ("Weather Data over the last %d hours" % args.hours)
 import math
 
 dp = []
-<<<<<<< HEAD
 for celsius, humidity in zip (ydallas, yh):
 	if not math.isnan (celsius) and not math.isnan (humidity):
 		RATIO = 373.15 / (273.15 + celsius)
@@ -208,22 +197,6 @@ for celsius, humidity in zip (ydallas, yh):
 	else:
 		dp.append (float ("nan"))
 
-=======
-for celsius, humidity in zip (ydallas, yh2):
-	RATIO = 373.15 / (273.15 + celsius)
-	RHS = -7.90298 * (RATIO - 1)
-	RHS += 5.02808 * math.log10 (RATIO)
-	RHS += -1.3816e-7 * (math.pow (10, (11.344 * (1 - 1 / RATIO ))) - 1)
-	RHS += 8.1328e-3 * (math.pow (10, (-3.49149 * (RATIO - 1))) - 1)
-	RHS += math.log10 (1013.246)
-
-	# factor -3 is to adjust units - Vapor Pressure SVP * humidity
-	VP = math.pow (10, RHS - 3) * humidity
-
-	# (2) DEWPOINT = F(Vapor Pressure)
-	T = math.log (VP / 0.61078)
-	dp.append ((241.88 * T) / (17.558 - T))
->>>>>>> 5ee9d9a6c3c59933e0f8fed8ca79517959e425b9
 
 #~ dpfast = []
 #~ for celsius, humidity in zip (ydallas, yh):
@@ -238,16 +211,10 @@ for celsius, humidity in zip (ydallas, yh2):
 plt.subplot (2, 2, 1)
 plt.title ("Temperature")
 plt.plot (x, ydht, "r--", label = "DHT11")
-<<<<<<< HEAD
 #~ plt.plot (x, ydht22, "m--", label = "DHT22")
 plt.plot (x, ybmp, "m--", label = "BMP180")
 plt.plot (x, ydallas, "b-", label = "Temperature")
 #~ plt.plot (x, y35, "c-", label = "LM35")
-=======
-plt.plot (x, ydht22, "m--", label = "DHT22")
-plt.plot (x, ydallas, "b-", label = "Temperature")
-plt.plot (x, y35, "c-", label = "LM35")
->>>>>>> 5ee9d9a6c3c59933e0f8fed8ca79517959e425b9
 plt.plot (x, dp, "g-", label = "Dew Point")
 #~ plt.plot (x, dpfast, "m-", label = "Dew Point (Fast)")
 #~ plt.plot (x, ydallas2, "m-", label = "DS18B20 (2)")
