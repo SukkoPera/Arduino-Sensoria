@@ -7,22 +7,21 @@
 //~ BH1750 lightMeter;
 //~ LightSensorBH1750 lightSensor1750;
 
-//~ #include <Wire.h>
-#include <SparkFunTSL2561.h>
-#include <SensoriaSensors/LightTSL2561.h>
+//~ #include <SparkFunTSL2561.h>
+//~ #include <SensoriaSensors/LightTSL2561.h>
 
-SFE_TSL2561 lightMeter;
-LightSensorTSL2561 lightSensor2561;
+//~ SFE_TSL2561 lightMeter;
+//~ LightSensorTSL2561 lightSensor2561;
 
 
 // Dallas Temperature Sensor
-#include <OneWire.h>
-#include <DallasTemperature.h>
-#include <SensoriaSensors/TemperatureDallas.h>
+//~ #include <OneWire.h>
+//~ #include <DallasTemperature.h>
+//~ #include <SensoriaSensors/TemperatureDallas.h>
 
-OneWire oneWire (7);
-DallasTemperature sensors (&oneWire);
-DallasTemperatureSensor dallasSensor;
+//~ OneWire oneWire (7);
+//~ DallasTemperature sensors (&oneWire);
+//~ DallasTemperatureSensor dallasSensor;
 
 
 // DHTxx Humidity Sensor
@@ -31,6 +30,11 @@ DallasTemperatureSensor dallasSensor;
 
 DHT dht (2, DHT22);
 DhtHumiditySensor dhtSensor;
+
+// SI7021 Humidity Sensor
+#include <SensoriaSensors/HumiditySI7021.h>
+SI7021HumiditySensor si7021;
+
 
 
 // BMP180 Barometric Pressure Sensor
@@ -63,8 +67,8 @@ SensoriaEsp8266Communicator comm;
 SensoriaServer srv;
 
 // Wi-Fi parameters
-#define WIFI_SSID        ""
-#define WIFI_PASSWORD    ""
+#define WIFI_SSID        "SukkoNet-TO"
+#define WIFI_PASSWORD    "everythingyouknowiswrong"
 
 
 void mypanic (int interval) {
@@ -110,6 +114,7 @@ void setup (void) {
     registerSensor (photoSensor);
 
   // TSL2561
+#if 0
   lightMeter.begin ();
   // If gain = false (0), device is set to low gain (1X)
   // If gain = high (1), device is set to high gain (16X)
@@ -126,10 +131,10 @@ void setup (void) {
   lightMeter.setPowerUp();
   if (lightSensor2561.begin (F("OR"), F("Outdoor Light (Lux)"), lightMeter, gain, ms))
     registerSensor (lightSensor2561);
-
+#endif
 
   // Init DS18B20
-
+#if 0
   // locate devices on the bus
   sensors.begin ();
   DPRINT (F("Found "));
@@ -153,7 +158,7 @@ void setup (void) {
 
   if (dallasSensor.begin (F("T2"), F("Outdoor Temperature"), &sensors, outdoorThermometer))
     registerSensor (dallasSensor);
-
+#endif
 
   dht.begin ();
   if (dhtSensor.begin (F("H2"), F("Outdoor Humidity"), dht))
@@ -162,6 +167,9 @@ void setup (void) {
 
   //~ if (pressure.begin () && pressureSensor.begin (F("P2"), F("Outdoor Pressure"), pressure))
     //~ registerSensor (pressureSensor);
+
+  if (si7021.begin (F("H3"), F("Outdoor Humid+Temp")))
+    registerSensor (si7021);
 
   pinMode (LM35_PIN, INPUT);
   if (lm35Sensor.begin (F("T3"), F("Outdoor Temp (LM35)"), LM35_PIN))

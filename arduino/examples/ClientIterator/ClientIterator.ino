@@ -4,11 +4,12 @@
 #include <SensoriaCommunicators/ESPWifiAlt.h>
 
 IPAddress outdoor1(192, 168, 1, 152);
+IPAddress outdoor2(192, 168, 1, 158);
 IPAddress test(192, 168, 1, 154);
 
 // Wi-Fi parameters
-#define WIFI_SSID        ""
-#define WIFI_PASSWORD    ""
+#define WIFI_SSID        "SukkoNet-TO"
+#define WIFI_PASSWORD    "everythingyouknowiswrong"
 
 SoftwareSerial swSerial (10, 11);
 SensoriaEsp8266Communicator comm;
@@ -47,6 +48,10 @@ void setup() {
 
   if (!client.registerNode (outdoor1)) {
     Serial.println (F("Cannot register outdoor1 server"));
+  }
+
+  if (!client.registerNode (outdoor2)) {
+    Serial.println (F("Cannot register outdoor2 server"));
   }
 
 #if 0

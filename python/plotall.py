@@ -45,6 +45,7 @@ y = []
 yv = []
 ydht = []
 ydht22 = []
+yth3 = []
 ydallas = []
 ydallas2 = []
 y35 = []
@@ -53,6 +54,7 @@ ypx = []
 ypx2 = []
 yh = []
 yh2 = []
+yh3 = []
 ylux = []
 ylux2 = []
 yscale = []	#yldr
@@ -65,12 +67,14 @@ for dt, row in db.get_data_since (limit):
 		x.append (dt - datetime.timedelta (hours = 1))
 		ydht.append (float ('nan'))
 		ydht22.append (float ('nan'))
+		yth3.append (float ('nan'))
 		ydallas.append (float ('nan'))
 		ydallas2.append (float ('nan'))
 		ybmp.append (float ('nan'))
 		ypx2.append (float ('nan'))
 		yh.append (float ('nan'))
 		yh2.append (float ('nan'))
+		yh3.append (float ('nan'))
 		ylux.append (float ('nan'))
 		ylux2.append (float ('nan'))
 		yscale.append (float ('nan'))
@@ -96,6 +100,14 @@ for dt, row in db.get_data_since (limit):
 		print "No reading for sensor H2 in data from %s" % (dt)
 		ydht22.append (float ('nan'))
 		yh2.append (float ('nan'))
+
+	if "H3" in row:
+		yth3.append (row["H3"].temperature)
+		yh3.append (row["H3"].humidity)
+	else:
+		print "No reading for sensor H3 in data from %s" % (dt)
+		yth3.append (float ('nan'))
+		yh3.append (float ('nan'))
 
 	if "OT" in row:
 		ydallas.append (row["OT"].temperature)
@@ -174,7 +186,7 @@ fig.suptitle ("Weather Data over the last %d hours" % args.hours)
 import math
 
 dp = []
-for celsius, humidity in zip (ydallas, yh):
+for celsius, humidity in zip (ydallas, yh3):
 	if not math.isnan (celsius) and not math.isnan (humidity):
 		RATIO = 373.15 / (273.15 + celsius)
 		RHS = -7.90298 * (RATIO - 1)
@@ -210,12 +222,13 @@ for celsius, humidity in zip (ydallas, yh):
 
 plt.subplot (2, 2, 1)
 plt.title ("Temperature")
-plt.plot (x, ydht, "r--", label = "DHT11")
-#~ plt.plot (x, ydht22, "m--", label = "DHT22")
-plt.plot (x, ybmp, "m--", label = "BMP180")
-plt.plot (x, ydallas, "b-", label = "Temperature")
-#~ plt.plot (x, y35, "c-", label = "LM35")
-plt.plot (x, dp, "g-", label = "Dew Point")
+plt.plot (x, ydht, "y--", label = "DHT11")
+plt.plot (x, ydht22, "g", label = "DHT22")
+plt.plot (x, ybmp, "m", label = "BMP180")
+plt.plot (x, ydallas, "b-", label = "DS18B20")
+plt.plot (x, y35, "c", label = "LM35")
+plt.plot (x, yth3, "r", label = "SI7021")
+plt.plot (x, dp, "k--", label = "Dew Point")
 #~ plt.plot (x, dpfast, "m-", label = "Dew Point (Fast)")
 #~ plt.plot (x, ydallas2, "m-", label = "DS18B20 (2)")
 #~ plt.plot (x, ybmp, "g--", label = "BMP180")
@@ -250,19 +263,20 @@ plt.legend (loc = 'best', fancybox = True, framealpha = 0.5)
 # Humidity
 plt.subplot (2, 2, 3)
 plt.title ("Humidity")
-plt.plot (x, yh, "b-")
-plt.plot (x, yh2, "g-")
+plt.plot (x, yh, "b-", label = "DHT11")
+plt.plot (x, yh2, "g-", label = "DHT22")
+plt.plot (x, yh3, "r-", label = "SI7021")
 #~ plt.xlabel ('Time')
 plt.ylabel ('Percentage')
 plt.grid (True)
 plt.gca ().xaxis.set_major_formatter (xDateFmt)
-
+plt.legend (loc = 'best', fancybox = True, framealpha = 0.5)
 
 # Light
 plt.subplot (2, 2, 4)
 plt.title ("Light Level")
 plt.plot (x, yscale, "b-", label = "LDR")
-plt.plot (x, yldr2, "m-", label = "LDR 2")
+#~ plt.plot (x, yldr2, "m-", label = "LDR 2")
 #~ plt.xlabel ('Time')
 #~ plt.ylabel ('Light Level')
 plt.grid (True)
