@@ -23,31 +23,25 @@ public:
 	WeatherData(): Stereotype ("WD") {
 	}
 
-  virtual void clear () override {
-    temperature = UNDEFINED;
+	virtual void clear () override {
+		temperature = UNDEFINED;
 		humidity = UNDEFINED;
-    localPressure = UNDEFINED;
+		localPressure = UNDEFINED;
 		seaPressure = UNDEFINED;
-    altitude = UNDEFINED;
+		altitude = UNDEFINED;
 		lightLux = UNDEFINED;
-    light10bit = UNDEFINED;
-  }
+		light10bit = UNDEFINED;
+	}
 
 	bool unmarshal (char *s) override {
 		char *p[MAX_SPLIT];
 		int n = splitString (s, p, MAX_SPLIT, ' ');
 
 		for (int i = 0; i < n; i++) {
-			//~ printf ("%d. \"%s\"\n", i, p[i]);
-
 			char *q[2];
 			int m = splitString (p[i], q, 2, ':');
 
 			if (m == 2) {
-				//~ double d;
-				//~ sscanf (q[1], "%lf", &d);
-				//~ printf ("  %s -> %lf\n", q[0], d);
-
 				if (strcmp_P (q[0], PSTR ("T")) == 0) {
 					temperature = atof (q[1]);
 				} else if (strcmp_P (q[0], PSTR ("H")) == 0) {
