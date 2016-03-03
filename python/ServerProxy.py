@@ -6,7 +6,7 @@ class SensorError (Exception):
 	pass
 
 class ServerProxy:
-	DEBUG = 1
+	DEBUG = False
 	RECV_BUFSIZE = 16384
 	DEFAULT_LISTEN_PORT = 9999
 
