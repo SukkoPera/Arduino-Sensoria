@@ -1,6 +1,6 @@
 #include "AllStereotypes.h"
 
-WeatherData wd;
+static WeatherData wd;
 
 Stereotype* stereotypes[N_STEREOTYPES] = {
   &wd
