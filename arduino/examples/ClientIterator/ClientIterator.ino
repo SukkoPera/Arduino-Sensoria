@@ -3,8 +3,8 @@
 #include <SensoriaClient/SensoriaClient.h>
 #include <SensoriaCommunicators/ESPWifiAlt.h>
 
-IPAddress outdoor1(192, 168, 1, 152);
-IPAddress outdoor2(192, 168, 1, 158);
+IPAddress outdoor1(192, 168, 1, 150);
+IPAddress outdoor2(192, 168, 1, 151);
 IPAddress test(192, 168, 1, 154);
 
 // Wi-Fi parameters
@@ -53,22 +53,6 @@ void setup() {
   if (!client.registerNode (outdoor2)) {
     Serial.println (F("Cannot register outdoor2 server"));
   }
-
-#if 0
-  while (1) {
-    //SensorProxy* tpx = srvpx.getSensor ("OT");
-    SensorProxy* tpx = client.getSensor ("OT");
-    char *reply;
-    if (!tpx -> read (reply)) {
-      Serial.println ("Read FAILED");
-    } else {
-      Serial.print (F("Read: "));
-      Serial.println (reply);
-    }
-
-    delay (5000);
-  }
-#endif
 
   char *reply;
 
