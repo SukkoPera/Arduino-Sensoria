@@ -1,6 +1,7 @@
 #ifndef _SENSORPROXY_H_INCLUDED
 #define _SENSORPROXY_H_INCLUDED
 
+#include <SensoriaCore/Stereotype.h>
 #include "ServerProxy.h"
 
 #define SAVE_RAM
@@ -24,19 +25,23 @@ public:
 #endif
   TransducerType type;
 
-  TransducerProxy (ServerProxy* _srvpx, const char *name, TransducerType _type, const char *stereotype, const char *description, const char *version);
+  Stereotype *stereotype;
+
+  TransducerProxy (ServerProxy* _srvpx, const char *name, TransducerType _type, Stereotype *stereotype, const char *description, const char *version);
 };
 
 class SensorProxy: public TransducerProxy {
 public:
-  SensorProxy (ServerProxy* _srvpx, const char *name, const char *stereotype, const char *description, const char *version = NULL);
+  SensorProxy (ServerProxy* _srvpx, const char *name, Stereotype *stereotype, const char *description, const char *version = NULL);
 
   boolean read (char*& reply);
+
+  Stereotype *read ();
 };
 
 class ActuatorProxy: public TransducerProxy {
 public:
-  ActuatorProxy (ServerProxy* _srvpx, const char *name, const char *stereotype, const char *description, const char *version = NULL);
+  ActuatorProxy (ServerProxy* _srvpx, const char *name, Stereotype *stereotype, const char *description, const char *version = NULL);
 };
 
 #endif

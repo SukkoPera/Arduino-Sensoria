@@ -1,3 +1,6 @@
+#ifndef SENSORIA_H_INCLUDED
+#define SENSORIA_H_INCLUDED
+
 // This is just a placeholder header
 
 #define DEFAULT_PORT 9999
@@ -16,3 +19,5 @@
 
 // ms
 #define CLIENT_TIMEOUT 5000
+
+#endif

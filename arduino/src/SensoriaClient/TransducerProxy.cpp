@@ -1,8 +1,13 @@
-#include "TransducerProxy.h"
+#include <Sensoria.h>
+#include <SensoriaStereotypes/AllStereotypes.h>
 #include <SensoriaCore/utils.h>
 #include <SensoriaCore/debug.h>
+#include "TransducerProxy.h"
 
-TransducerProxy::TransducerProxy (ServerProxy* _srvpx, const char *_name, TransducerType _type, const char *_stereotype, const char *_description, const char *_version): srvpx (_srvpx), type (_type) {
+TransducerProxy::TransducerProxy (ServerProxy* _srvpx, const char *_name,
+    TransducerType _type, Stereotype *_stereotype, const char *_description,
+    const char *_version): srvpx (_srvpx), type (_type), stereotype (_stereotype) {
+
   strlcpy (name, _name, MAX_TRANSDUCER_NAME);
 #ifndef SAVE_RAM
   strlcpy (description, _description, MAX_TRANSDUCER_DESC);
@@ -11,8 +16,10 @@ TransducerProxy::TransducerProxy (ServerProxy* _srvpx, const char *_name, Transd
 #endif
 }
 
-SensorProxy::SensorProxy (ServerProxy* _srvpx, const char *_name, const char *_stereotype, const char *_description, const char *_version):
-  TransducerProxy (_srvpx, _name, TransducerType::TYPE_SENSOR, _stereotype, _description, _version) {
+SensorProxy::SensorProxy (ServerProxy* _srvpx, const char *_name,
+    Stereotype *_stereotype, const char *_description, const char *_version):
+  TransducerProxy (_srvpx, _name, TransducerType::TYPE_SENSOR, _stereotype,
+    _description, _version) {
 }
 
 boolean SensorProxy::read (char*& reply) {
@@ -38,6 +45,22 @@ boolean SensorProxy::read (char*& reply) {
   return ret;
 }
 
-ActuatorProxy::ActuatorProxy (ServerProxy* _srvpx, const char *_name, const char *_stereotype, const char *_description, const char *_version):
+Stereotype *SensorProxy::read () {
+  Stereotype *ret = NULL;
+
+  char *reply;
+  if (read (reply)) {
+    if (stereotype) {
+      stereotype -> clear ();
+      if (stereotype -> unmarshal (reply)) {
+        ret = stereotype;
+      }
+    }
+  }
+
+  return ret;
+}
+
+ActuatorProxy::ActuatorProxy (ServerProxy* _srvpx, const char *_name, Stereotype *_stereotype, const char *_description, const char *_version):
   TransducerProxy (_srvpx, _name, TransducerType::TYPE_ACTUATOR, _stereotype, _description, _version) {
 }
