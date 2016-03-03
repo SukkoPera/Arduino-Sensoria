@@ -1,6 +1,6 @@
 #include <SoftwareSerial.h>
 #include <Sensoria.h>
-#include <SensoriaInternals/Server.h>
+#include <SensoriaCore/Server.h>
 #include <SensoriaCommunicators/ESPWifiAlt.h>
 
 #include <SensoriaSensors/Temperature328.h>

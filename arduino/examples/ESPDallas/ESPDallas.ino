@@ -16,7 +16,7 @@ SoftwareSerial swSerial (10, 11);
 #include <SensoriaCommunicators/ESPStandAlone.h>
 ESPCommunicator comm;
 
-#include <SensoriaInternals/Server.h>
+#include <SensoriaCore/Server.h>
 SensoriaServer srv;
 
 // Wi-Fi parameters

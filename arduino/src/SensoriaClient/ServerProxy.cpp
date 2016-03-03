@@ -1,9 +1,9 @@
 #if 1
 
 #include "Sensoria.h"
-#include "SensoriaInternals/common.h"
-#include "SensoriaInternals/debug.h"
-#include "SensoriaInternals/utils.h"
+#include "SensoriaCore/common.h"
+#include "SensoriaCore/debug.h"
+#include "SensoriaCore/utils.h"
 #include "ServerProxy.h"
 #include "TransducerProxy.h"
 

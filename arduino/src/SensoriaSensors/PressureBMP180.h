@@ -1,4 +1,4 @@
-#include <SensoriaInternals/Sensor.h>
+#include <SensoriaCore/Sensor.h>
 
 // https://github.com/sparkfun/BMP180_Breakout/
 #include <SFE_BMP180.h>

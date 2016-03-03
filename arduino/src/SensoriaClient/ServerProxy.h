@@ -2,8 +2,8 @@
 #define _SERVERPROXY_H_INCLUDED
 
 #include <Sensoria.h>
-#include <SensoriaInternals/Communicator.h>
-//~ #include <SensoriaInternals/Server.h>
+#include <SensoriaCore/Communicator.h>
+//~ #include <SensoriaCore/Server.h>
 
 class TransducerProxy;
 class SensorProxy;

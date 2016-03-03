@@ -1,4 +1,4 @@
-#include <SensoriaInternals/Sensor.h>
+#include <SensoriaCore/Sensor.h>
 
 class DhtHumiditySensor: public Sensor {
 private:

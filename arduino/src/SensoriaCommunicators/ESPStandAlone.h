@@ -1,12 +1,12 @@
-#include <SensoriaInternals/common.h>
+#include <SensoriaCore/common.h>
 
 #ifdef PLATFORM_ESP8266
 
 #include <Sensoria.h>
-#include <SensoriaInternals/Communicator.h>
+#include <SensoriaCore/Communicator.h>
 #include <ESP8266WiFi.h>
 #include <WiFiUdp.h>
-#include <SensoriaInternals/debug.h>
+#include <SensoriaCore/debug.h>
 
 #define HOST_NAME   "0"
 #define IN_BUF_SIZE 64

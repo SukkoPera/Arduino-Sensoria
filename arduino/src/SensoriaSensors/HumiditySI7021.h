@@ -1,4 +1,4 @@
-#include <SensoriaInternals/Sensor.h>
+#include <SensoriaCore/Sensor.h>
 
 #include <SI7021.h>
 

@@ -1,10 +1,10 @@
 #if 1
 
 #include <Sensoria.h>
-#include <SensoriaInternals/Communicator.h>
+#include <SensoriaCore/Communicator.h>
 #include <WiFiEsp.h>
 #include <WiFiEspUdp.h>
-#include <SensoriaInternals/debug.h>
+#include <SensoriaCore/debug.h>
 
 #define IN_BUF_SIZE 256
 

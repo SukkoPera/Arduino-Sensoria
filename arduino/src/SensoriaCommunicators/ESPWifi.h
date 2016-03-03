@@ -3,7 +3,7 @@
 THIS NEEDS TO BE FIXED AFTER THE SWITCH TO COMMUNICATOR CLASS!
 
 #include <IPAddress.h>
-#include <SensoriaInternals/Communicator.h>
+#include <SensoriaCore/Communicator.h>
 #include <ESP8266.h>
 
 #define HOST_NAME   "0"

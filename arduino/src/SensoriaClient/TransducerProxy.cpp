@@ -1,6 +1,6 @@
 #include "TransducerProxy.h"
-#include <SensoriaInternals/utils.h>
-#include <SensoriaInternals/debug.h>
+#include <SensoriaCore/utils.h>
+#include <SensoriaCore/debug.h>
 
 TransducerProxy::TransducerProxy (ServerProxy* _srvpx, const char *_name, TransducerType _type, const char *_stereotype, const char *_description, const char *_version): srvpx (_srvpx), type (_type) {
   strlcpy (name, _name, MAX_TRANSDUCER_NAME);

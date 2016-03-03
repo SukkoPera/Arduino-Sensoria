@@ -1,6 +1,6 @@
 #include <Sensoria.h>
-#include <SensoriaInternals/Communicator.h>
-#include <SensoriaInternals/common.h>
+#include <SensoriaCore/Communicator.h>
+#include <SensoriaCore/common.h>
 
 class SensoriaSerialCommunicator: public SensoriaCommunicator {
 private:

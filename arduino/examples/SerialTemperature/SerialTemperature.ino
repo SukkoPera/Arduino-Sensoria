@@ -10,7 +10,7 @@ SI7021HumiditySensor si7021;
 #include <SensoriaCommunicators/Serial.h>
 SensoriaSerialCommunicator comm;
 
-#include <SensoriaInternals/Server.h>
+#include <SensoriaCore/Server.h>
 SensoriaServer srv;;
 
 void mypanic (int interval) {
