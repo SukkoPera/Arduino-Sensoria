@@ -30,7 +30,7 @@ void setup (void) {
 	if (secretSensor.begin (F("HT"), F("Indoor Temp"))) {
 		if (srv.addTransducer (secretSensor) >= 0) {
 			DPRINT (F("Sensor registered: "));
-			DPRINTLN (si7021.name);
+			DPRINTLN (secretSensor.name);
 		} else {
 			mypanic (1000);
 		}
