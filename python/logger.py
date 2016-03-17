@@ -3,11 +3,23 @@
 import sys
 import datetime
 import time
+import argparse
 
 from db import DB
 from Sensoria import *
 
-sensoria = Sensoria (autodiscover = True)
+parser = argparse.ArgumentParser (description = 'Plot some data')
+parser.add_argument ('--address', "-a", dest = 'address', action = 'store',
+                     help = "Address of device to query")
+
+args = parser.parse_args ()
+
+if args.address is not None:
+	servers = [args.address]
+else:
+	servers = []
+
+sensoria = Sensoria (servers = servers, autodiscover = True)
 #sensoria = Sensoria (servers = ["192.168.1.171"], autodiscover = True)
 #~ sensoria = Sensoria (servers = ["192.168.1.164"])
 
