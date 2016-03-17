@@ -23,7 +23,6 @@ public:
 		}
 	}
 
-
 	char *read (char *buf, const byte size _UNUSED) {
     si7021_env reading = sensor.getHumidityAndTemperature();
   	float h = reading.humidityBasisPoints / 100.0;
