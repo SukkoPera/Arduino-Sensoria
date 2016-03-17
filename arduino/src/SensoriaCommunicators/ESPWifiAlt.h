@@ -14,7 +14,6 @@
 class SensoriaEsp8266Communicator: public SensoriaCommunicator {
 private:
 	Stream *serial;
-	WiFiEspUDP udp;
 
 	const char *ssid;
 	const char *password;
@@ -22,6 +21,8 @@ private:
 	uint8_t buffer[IN_BUF_SIZE];
 
 public:
+	WiFiEspUDP udp;
+
 	boolean begin (Stream& _serial, const char *_ssid, const char *_password) {
     serial = &_serial;
     ssid = _ssid;
