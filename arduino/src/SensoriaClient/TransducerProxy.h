@@ -42,6 +42,8 @@ public:
 class ActuatorProxy: public TransducerProxy {
 public:
   ActuatorProxy (ServerProxy* _srvpx, const char *name, Stereotype *stereotype, const char *description, const char *version = NULL);
+
+  boolean write (char* buf, char*& reply);
 };
 
 #endif

@@ -64,3 +64,17 @@ Stereotype *SensorProxy::read () {
 ActuatorProxy::ActuatorProxy (ServerProxy* _srvpx, const char *_name, Stereotype *_stereotype, const char *_description, const char *_version):
   TransducerProxy (_srvpx, _name, TransducerType::TYPE_ACTUATOR, _stereotype, _description, _version) {
 }
+
+boolean ActuatorProxy::write (char* what, char*& reply) {
+  boolean ret;
+  // FIXME: Check buffer length
+  char buf[32] = {0}, *r;
+  strcat (buf, "WRI ");
+  strcat (buf, name);
+  strcat (buf, " ");
+  strcat (buf, what);
+  strcat (buf, "\n");
+
+  ret = srvpx -> sendcmd (buf, reply);
+  return ret;
+}
