@@ -41,10 +41,6 @@ class Sensoria (object):
 				self.stereotypes[cls.getIdString ()] = cls
 
 	def discoverSensors (self):
-		if len (self.serverAddresses) == 0:
-			# Try scanning for servers
-			self._discoverServers ()
-
 		self.servers = {}
 		self.sensors = {}
 		for model, ip in self.serverAddresses.iteritems ():
@@ -67,7 +63,7 @@ class Sensoria (object):
 					elif typ == "A":
 						# FIXME: Add stereotype support
 						print "  - Found Actuator %s (%s) using stereotype %s" % (name, desc, stereotype)
-						newact = ActuatorProxy (name, srv)
+						newact = ActuatorProxy (name, None, srv)
 						self.sensors[name] = newact
 						srv.sensors[name] = newact
 					else:

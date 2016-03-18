@@ -36,10 +36,10 @@ class SensorProxy (TransducerProxy):
 			return self.stereoclass.unmarshalStatic (rest)
 
 class ActuatorProxy (TransducerProxy):
-	def __init__ (self, name, srv):
+	def __init__ (self, name, stereoclass, srv):
 		sdata = srv.send ("QRY %s" % name)
 		name, stereotype, description, version = sdata.split ("|", 3)
-		super (ActuatorProxy, self).__init__ (srv, name, stereotype, description, version)
+		super (ActuatorProxy, self).__init__ (srv, name, stereotype, stereoclass, description, version)
 
 	def write (self, what):
 		assert self.server is not None
