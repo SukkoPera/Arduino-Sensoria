@@ -6,19 +6,14 @@ from ServerProxy import ServerProxy
 from Sensoria import *
 
 parser = argparse.ArgumentParser (description = 'Plot some data')
-parser.add_argument ('--address', "-a", dest = 'address', action = 'store',
-                     help = "Address of device to query")
+parser.add_argument ('addresses', metavar = "ADDRESS", nargs = '*',
+                     help = "Address of node to query")
+parser.add_argument ('--autodiscover', "-a", action = 'store_true', default = False,
+                     help = "(Try to) Autodiscover nodes")
+
 
 args = parser.parse_args ()
-
-if args.address is not None:
-	servers = [args.address]
-else:
-	servers = []
-#~ sensoria = Sensoria (servers = ["192.168.1.154", "192.168.1.155"], autodiscover = True)
-#~ sensoria = Sensoria (servers = ["192.168.1.184"])
-sensoria = Sensoria (servers = servers, autodiscover = True)
-#~ sensoria = Sensoria (servers = ["localhost"])
+sensoria = Sensoria (servers = args.addresses, autodiscover = args.autodiscover)
 for sname, server in sensoria.servers.iteritems ():
 	print "- Server: %s (%s:%d)" % (sname, server.address, server.port)
 	for tname in sorted (server.sensors.iterkeys ()):
