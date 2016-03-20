@@ -1,4 +1,5 @@
 #include <Sensoria.h>
+#include <SensoriaStereotypes/AllStereotypes.h>
 //~ #include <RokkitHash.h>
 #include "Server.h"
 #include "common.h"
@@ -10,7 +11,7 @@ SensoriaServer::SensoriaServer (): comm (NULL), nTransducers (0), hash (42) {
 
 boolean SensoriaServer::begin (FlashString _serverName, SensoriaCommunicator& _comm) {
   serverName = _serverName;
-  serverVersion = F("20160226");
+  serverVersion = F("20160320");
   comm = &_comm;
 
   return strlen_P (F_TO_PSTR (_serverName)) > 0;
@@ -20,17 +21,40 @@ boolean SensoriaServer::begin (FlashString _serverName, SensoriaCommunicator& _c
 	//~ return true;
 //~ }
 
+Stereotype* SensoriaServer::getStereotype (FlashString s) {
+  Stereotype *st = NULL;
+  for (int i = 0; !st && i < N_STEREOTYPES; i++) {
+    //~ DPRINT ("-> ");
+    //~ DPRINT (stereotypes[i] -> tag);
+    //~ DPRINT ("-");
+    //~ DPRINTLN (s);
+
+    if (strcmp_P (stereotypes[i] -> tag, F_TO_PSTR (s)) == 0)
+      st = stereotypes[i];
+  }
+
+  return st;
+}
+
 int SensoriaServer::addTransducer (Transducer& transducer) {
 	if (nTransducers < MAX_TRANSDUCERS) {
-		transducers[nTransducers++] = &transducer;
+    // Look up stereotype
+    if (getStereotype (transducer.stereotype)) {
+      transducers[nTransducers++] = &transducer;
 
-		// Update hash
-		//~ hash = rokkit (transducer.name, strlen_P (reinterpret_cast<PGM_P> (transducer.name)), hash);
-		//~ hash = rokkit (transducer.type == Transducer::SENSOR ? F("S") : F("A"), 1, hash);
-		//~ hash = rokkit (transducer.description, strlen_P (reinterpret_cast<PGM_P> (transducer.description)), hash);
-		//~ hash = rokkit (transducer.version, strlen_P (reinterpret_cast<PGM_P> (transducer.version)), hash);
+      // Update hash
+      //~ hash = rokkit (transducer.name, strlen_P (reinterpret_cast<PGM_P> (transducer.name)), hash);
+      //~ hash = rokkit (transducer.type == Transducer::SENSOR ? F("S") : F("A"), 1, hash);
+      //~ hash = rokkit (transducer.description, strlen_P (reinterpret_cast<PGM_P> (transducer.description)), hash);
+      //~ hash = rokkit (transducer.version, strlen_P (reinterpret_cast<PGM_P> (transducer.version)), hash);
 
-		return nTransducers - 1;
+      return nTransducers - 1;
+    } else {
+      DPRINT (F("Unknown stereotype: "));
+      DPRINTLN (transducer.stereotype);
+
+      return -10;
+    }
 	} else {
 		return -1;
 	}
@@ -39,7 +63,7 @@ int SensoriaServer::addTransducer (Transducer& transducer) {
 Transducer *SensoriaServer::getTransducer (char *name) const {
 	strupr (name);
 	for (int i = 0; i < nTransducers; ++i) {
-		if (strcmp_P (name, reinterpret_cast<PGM_P> (transducers[i] -> name)) == 0)
+		if (strcmp_P (name, F_TO_PSTR (transducers[i] -> name)) == 0)
 			return transducers[i];
 	}
 
@@ -174,7 +198,9 @@ void SensoriaServer::cmd_qry (char *args) {
       send_srv (t -> name);
       send_srv (F("|"));
       send_srv (t -> type == Transducer::SENSOR ? F("S") : F("A"));
-      send_srv (F("|WD|"));		// FIXME!
+      send_srv (F("|"));
+      send_srv (t -> stereotype);
+      send_srv (F("|"));
       send_srv (t -> description);
       send_srv (F("|"));
       send_srv (t -> version, true);
@@ -192,9 +218,12 @@ void SensoriaServer::cmd_qry (char *args) {
     for (byte i = 0; i < nTransducers; i++) {
       Transducer *t = transducers[i];
       send_srv (t -> name);
-      send_srv ((" "));
+      send_srv (F(" "));
       send_srv (t -> type == Transducer::SENSOR ? ("S") : ("A"));
-      send_srv (F(" WD "));		// FIXME!
+      send_srv (F(" "));
+      send_srv (t -> stereotype);
+      send_srv (F(" "));
+
       send_srv (t -> description);
 
       if (i < nTransducers - 1)
@@ -227,20 +256,22 @@ void SensoriaServer::cmd_rea (char *args) {
 
     Transducer *t = getTransducer (args);
     if (t) {
-      if (t -> type == Transducer::SENSOR) {
-        Sensor *s = (Sensor *) t;
+      Stereotype *st = getStereotype (t -> stereotype);   // Can't be NULL by now!
+      st -> clear ();
+      if (t -> read (st)) {
+        // Try to marshal
         clearSensorBuffer ();
-        char *buf = s -> read (sensorBuf, SENSOR_BUF_SIZE);
+        char *buf = st -> marshal (sensorBuf, SENSOR_BUF_SIZE);
         if (buf) {
           send_srv (F("REA "));
-          send_srv (s -> name);
+          send_srv (t -> name);
           send_srv ((" "));
           send_srv (buf, true);
         } else {
-          send_srv (F("ERR Read failed"), true);
+          send_srv (F("ERR Marshaling failed"), true);
         }
       } else {
-        send_srv (F("ERR Transducer is not a sensor"), true);
+        send_srv (F("ERR Read failed"), true);
       }
     } else {
       DPRINT (F("ERR No such transducer: "));
@@ -269,10 +300,26 @@ void SensoriaServer::cmd_wri (char *args) {
     if (t) {
       if (t -> type == Transducer::ACTUATOR) {
         Actuator *a = (Actuator *) t;
-        send_srv (F("WRI "));
-        send_srv (a -> name);
-        send_srv ((" "));
-        send_srv (a -> write (rest) ? F("OK") : F("ERR"), true);
+
+        if (rest) {
+          // Do the unmrshaling, baby!
+          Stereotype *st = getStereotype (a -> stereotype);
+          st -> clear ();
+          if (st -> unmarshal (rest)) {
+            send_srv (F("WRI "));
+            send_srv (a -> name);
+            send_srv ((" "));
+            send_srv (a -> write (st) ? F("OK") : F("ERR"), true);
+          } else {
+            DPRINT (F("Unmarshaling with "));
+            DPRINT (st -> tag);
+            DPRINT (F(" failed for: "));
+            DPRINTLN (buf);
+            send_srv (F("ERR Unmarshaling failed"), true);
+          }
+        } else {
+          send_srv (F("ERR Nothing to write"), true);
+        }
       } else {
         send_srv (F("ERR Transducer is not an actuator"), true);
       }

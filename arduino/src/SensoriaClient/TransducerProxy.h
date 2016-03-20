@@ -27,16 +27,16 @@ public:
 
   Stereotype *stereotype;
 
+  boolean read (char*& reply);
+
+  Stereotype *read ();
+
   TransducerProxy (ServerProxy* _srvpx, const char *name, TransducerType _type, Stereotype *stereotype, const char *description, const char *version);
 };
 
 class SensorProxy: public TransducerProxy {
 public:
   SensorProxy (ServerProxy* _srvpx, const char *name, Stereotype *stereotype, const char *description, const char *version = NULL);
-
-  boolean read (char*& reply);
-
-  Stereotype *read ();
 };
 
 class ActuatorProxy: public TransducerProxy {
@@ -44,6 +44,8 @@ public:
   ActuatorProxy (ServerProxy* _srvpx, const char *name, Stereotype *stereotype, const char *description, const char *version = NULL);
 
   boolean write (char* buf, char*& reply);
+
+  boolean write (Stereotype& st);
 };
 
 #endif

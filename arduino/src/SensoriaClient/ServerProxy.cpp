@@ -48,6 +48,9 @@ boolean ServerProxy::sendcmd (const char *args, char*& reply) {
       DPRINTLN (reply);
 #endif
 
+      // Remove trailing whitespace
+      strstrip (reply);
+
       char *rc[2];
       if (splitString (reply, rc, 2) == 2)
         reply = rc[1];

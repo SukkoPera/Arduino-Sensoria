@@ -12,9 +12,16 @@ public:
 	Actuator (): Transducer (Transducer::ACTUATOR) {
 	}
 
-	/* Override to implement the actual Actuator writing and reporting.
+	/* Override to implement the actual Actuator writing.
 	 */
-	virtual bool write (char *buf) = 0;
+	virtual boolean write (Stereotype *st) = 0;
+
+  /* Since not all actuators might be interested in this, provide a do-nothing
+   * default.
+   */
+  virtual boolean read (Stereotype *st _UNUSED) override {
+    return false;
+  }
 
 	virtual void configure (const char *name _UNUSED, char *value _UNUSED) {
 	}

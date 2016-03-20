@@ -22,7 +22,7 @@ SensorProxy::SensorProxy (ServerProxy* _srvpx, const char *_name,
     _description, _version) {
 }
 
-boolean SensorProxy::read (char*& reply) {
+boolean TransducerProxy::read (char*& reply) {
   boolean ret;
   char buf[8] = {0}, *r;
   strcat (buf, "REA ");
@@ -32,10 +32,12 @@ boolean SensorProxy::read (char*& reply) {
   if ((ret = srvpx -> sendcmd (buf, r))) {
     char *p[2];
     if (splitString (r, p, 2) != 2) {
-      DPRINTLN (F("AAAA"));
+      DPRINT (F("AAA:"));
+      DPRINTLN (r);
       ret = false;
     } else if (strcmp (p[0], name) != 0) {
-      DPRINTLN (F("AAAAAA"));
+      DPRINT (F("AAAAAA: "));
+      DPRINTLN (r);
       ret = false;
     } else {
       reply = p[1];
@@ -45,7 +47,7 @@ boolean SensorProxy::read (char*& reply) {
   return ret;
 }
 
-Stereotype *SensorProxy::read () {
+Stereotype *TransducerProxy::read () {
   Stereotype *ret = NULL;
 
   char *reply;
@@ -65,16 +67,25 @@ ActuatorProxy::ActuatorProxy (ServerProxy* _srvpx, const char *_name, Stereotype
   TransducerProxy (_srvpx, _name, TransducerType::TYPE_ACTUATOR, _stereotype, _description, _version) {
 }
 
+#define SZ 32
+
 boolean ActuatorProxy::write (char* what, char*& reply) {
   boolean ret;
-  // FIXME: Check buffer length
-  char buf[32] = {0}, *r;
-  strcat (buf, "WRI ");
-  strcat (buf, name);
-  strcat (buf, " ");
-  strcat (buf, what);
-  strcat (buf, "\n");
+
+  char buf[SZ];
+  buf[0] = '\0';
+  strncat_P (buf, PSTR ("WRI "), SZ);
+  strncat (buf, name, SZ);
+  strncat_P (buf, PSTR (" "), SZ);
+  strncat (buf, what, SZ);
+  strncat_P (buf, PSTR ("\n"), SZ);
 
   ret = srvpx -> sendcmd (buf, reply);
   return ret;
+}
+
+boolean ActuatorProxy::write (Stereotype& st) {
+  char *tmp, buf[16];
+  tmp = st.marshal (buf, 16);
+  return tmp && write (buf, tmp);
 }

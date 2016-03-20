@@ -3,8 +3,9 @@
 
 #include <SensoriaCore/Stereotype.h>
 #include "WeatherData.h"
+#include "RelayData.h"
 
-#define N_STEREOTYPES 1
+#define N_STEREOTYPES 2
 
 extern Stereotype* stereotypes[N_STEREOTYPES];
 

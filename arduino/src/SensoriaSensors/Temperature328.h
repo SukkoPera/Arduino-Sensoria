@@ -1,4 +1,5 @@
 #include <SensoriaCore/Sensor.h>
+#include <SensoriaStereotypes/WeatherData.h>
 
 class TemperatureSensor328: public Sensor {
 private:
@@ -7,7 +8,7 @@ private:
    */
   double readTemp () {
     ADMUX = _BV(REFS1) | _BV(REFS0) | _BV(MUX3);
-    delay (5); // Wait for Vref to settle
+    delay (10); // Wait for Vref to settle
     ADCSRA |= _BV(ADSC); // Convert
     delay (20);            // wait for voltages to become stable.
     while (bit_is_set (ADCSRA, ADSC))
@@ -17,19 +18,13 @@ private:
   }
 
 public:
-	bool begin (FlashString name, FlashString description) {
-		return Sensor::begin (name, description, F("20160201"));
+	boolean begin (FlashString name, FlashString description) {
+		return Sensor::begin (name, F("WD"), description, F("20160201"));
 	}
 
-	char *read (char *buf, const byte size _UNUSED) {
-    double temp = readTemp ();
-		DPRINT ("Temperature = ");
-		DPRINTLN (temp);
-
-		buf[0] = 'T';
-		buf[1] = ':';
-		floatToString (temp, buf + 2);
-
-		return buf;
-	}
+  boolean read (Stereotype *st) override {
+    WeatherData& wd = *static_cast<WeatherData *> (st);
+    wd.temperature = readTemp ();
+    return true;
+  }
 };

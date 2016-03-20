@@ -1,4 +1,5 @@
 #include <SensoriaCore/Sensor.h>
+#include <SensoriaStereotypes/WeatherData.h>
 
 // https://github.com/sparkfun/BMP180_Breakout/
 #include <SFE_BMP180.h>
@@ -11,12 +12,11 @@ private:
 	SFE_BMP180 *sensor;
 
 public:
-	PressureSensor () {
-		sensor = NULL;
+	PressureSensor (): sensor (NULL) {
 	}
 
-	bool begin (FlashString name, FlashString description, SFE_BMP180& _sensor) {
-		if (Sensor::begin (name, description, F("20160125"))) {
+	boolean begin (FlashString name, FlashString description, SFE_BMP180& _sensor) {
+		if (Sensor::begin (name, F("WD"), description, F("20160320"))) {
 			sensor = &_sensor;
 			return true;
 		} else {
@@ -25,7 +25,7 @@ public:
 	}
 
 	// FIXME: Check for sensor != null
-	char *read (char *buf, const byte size _UNUSED) {
+  boolean read (Stereotype *st) override {
 		char status;
 		double temp, px;
 
@@ -96,17 +96,9 @@ public:
 						//Serial.println(" feet");
 
 						if (!isnan (temp) && !isnan (px)) {
-							buf[0] = 'T';
-							buf[1] = ':';
-							floatToString (temp, buf + 2);
-							int l = strlen (buf);
-							buf[l] = ' ';
-							buf[l + 1] = 'L';
-							buf[l + 2] = 'P';
-							buf[l + 3] = ':';
-							floatToString (px, buf + l + 4);
-						} else {
-							buf[0] = '\0';
+              WeatherData& wd = *static_cast<WeatherData *> (st);
+              wd.localPressure = px;
+              wd.temperature = temp;
 						}
 					} else {
 						DPRINTLN (F("Error retrieving pressure measurement"));
@@ -121,6 +113,6 @@ public:
 			DPRINTLN (F("Error starting temperature measurement"));
 		}
 
-		return buf;
+		return true;
 	}
 };

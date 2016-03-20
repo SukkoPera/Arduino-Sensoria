@@ -1,4 +1,5 @@
 #include <SensoriaCore/Sensor.h>
+#include <SensoriaStereotypes/WeatherData.h>
 #include <SparkFunTSL2561.h>
 
 class LightSensorTSL2561: public Sensor {
@@ -51,7 +52,7 @@ public:
 	}
 
 	bool begin (FlashString name, FlashString description, SFE_TSL2561 &_lightMeter, boolean _gain, unsigned int _ms) {
-		if (Sensor::begin (name, description, F("20151213"))) {
+		if (Sensor::begin (name, F("WD"), description, F("20160320"))) {
 			lightMeter = &_lightMeter;
 			gain = _gain;
 			ms = _ms;
@@ -61,15 +62,16 @@ public:
 		}
 	}
 
-	char *read (char *buf, const byte size _UNUSED) {
-		unsigned int data0, data1;
+  boolean read (Stereotype *st) override {
+    WeatherData& wd = *static_cast<WeatherData *> (st);
 
+		unsigned int data0, data1;
 		if (lightMeter -> getData (data0, data1)) {
 			// getData() returned true, communication was successful
 			DPRINT ("data0: = ");
-			DPRINT (data0);
+			DPRINT (data0);     // Visibile light
 			DPRINT (", data1 = ");
-			DPRINT (data1);
+			DPRINT (data1);     // Infrared light?
 
 			// To calculate lux, pass all your settings and readings
 			// to the getLux() function.
@@ -87,34 +89,16 @@ public:
 			DPRINT (lux);
 			if (good) {
 				DPRINTLN (" (good)");
+        wd.lightLux = lux;
+        return true;
 			} else {
 				DPRINTLN (" (BAD)");
 			}
-
-			// FIXME: Take into account good/bad reads
-			buf[0] = 'L';
-			buf[1] = 'X';
-			buf[2] = ':';
-			floatToString ((float) lux, buf + 3);
-			int l = strlen (buf);
-			buf[l] = ' ';
-			buf[l + 1] = 'L';
-			buf[l + 2] = 'V';
-			buf[l + 3] = ':';
-			floatToString ((float) data0, buf + l + 4);
-			l = strlen (buf);
-			buf[l] = ' ';
-			buf[l + 1] = 'L';
-			buf[l + 2] = 'R';
-			buf[l + 3] = ':';
-			floatToString ((float) data1, buf + l + 4);
-
-			return buf;
 		} else {
 			// getData() returned false because of an I2C error, inform the user.
 			printError (lightMeter -> getError());
+    }
 
-			return NULL;
-		}
+    return false;
 	}
 };

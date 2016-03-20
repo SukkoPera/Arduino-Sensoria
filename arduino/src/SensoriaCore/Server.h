@@ -7,6 +7,7 @@
 #include "Sensor.h"
 #include "Actuator.h"
 #include "Communicator.h"
+#include "Stereotype.h"
 #include "utils.h"
 #include "common.h"
 #include "debug.h"
@@ -29,6 +30,8 @@ private:
   FlashString serverVersion;
 
 	uint32_t hash;
+
+  Stereotype* getStereotype (FlashString s);
 
 	void clearBuffer ();
 

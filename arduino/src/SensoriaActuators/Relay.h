@@ -1,15 +1,13 @@
 #include <SensoriaCore/Actuator.h>
+#include <SensoriaStereotypes/RelayData.h>
 
 class Relay: public Actuator {
 private:
-  static const byte NO_PIN = 255;
+  static const byte NO_PIN = ~0;
   byte pin;
 
 public:
-  enum State {
-    STATE_OFF = 0,
-    STATE_ON
-  };
+  typedef RelayData::State State;
 
   State state;
 
@@ -18,14 +16,14 @@ public:
   Relay (): pin (NO_PIN) {
   }
 
-  bool begin (FlashString name, FlashString description, byte _pin, boolean invertedLogic = false, State initialState = STATE_OFF) {
-    if (Actuator::begin (name, description, F("20160317")) && _pin != NO_PIN) {
+  boolean begin (FlashString name, FlashString description, byte _pin, boolean invertedLogic = false, State initialState = RelayData::STATE_OFF) {
+    if (Actuator::begin (name, F("RS"), description, F("20160320")) && _pin != NO_PIN) {
       pin = _pin;
       inverted = invertedLogic;
       state = initialState;
 
       pinMode (pin, OUTPUT);
-      digitalWrite (pin, !!state ^ inverted);   // Nice hack, huh? ;)
+      doSwitch ();
 
       return true;
     } else {
@@ -33,22 +31,30 @@ public:
     }
   }
 
-  bool write (char *buf) {
+  boolean write (Stereotype *st) override {
     if (pin != NO_PIN) {
-      strupr (buf);
-      if (strcmp_P (buf, PSTR("ON")) == 0) {
-        state = STATE_ON;
-      } else if (strcmp_P (buf, PSTR("OFF")) == 0) {
-        state = STATE_OFF;
+      RelayData& rd = *static_cast<RelayData *> (st);
+      if (rd.state != RelayData::STATE_UNKNOWN) {
+        state = rd.state;
+        digitalWrite (pin, !!state ^ inverted);
+        return true;
       } else {
-        return false;
+        DPRINTLN (F("Cannot set relay to unknown state"));
       }
-
-      digitalWrite (pin, !!state ^ inverted);
-
-      return true;
-    } else {
-      return false;
     }
+
+    return false;
+  }
+
+  boolean read (Stereotype *st) override {
+    RelayData& rd = *static_cast<RelayData *> (st);
+    rd.state = state;
+    return true;
+  }
+
+private:
+  // Makes the relay reflect the internal state
+  void doSwitch () {
+    digitalWrite (pin, !!state ^ inverted);   // Nice hack, huh? ;)
   }
 };

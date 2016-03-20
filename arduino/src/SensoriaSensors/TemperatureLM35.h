@@ -1,12 +1,14 @@
+#include <SensoriaCore/Sensor.h>
+#include <SensoriaStereotypes/WeatherData.h>
 #include <DallasTemperature.h>
 
 class TemperatureSensorLM35: public Sensor {
 private:
   // How many times to read the sensor, to smooth out inaccuracies
-  static const byte N_SAMPLES = 5;
+  static const byte N_SAMPLES = 3;
 
   // How much to wait between two readings (ms)
-  static const byte READ_DELAY = 5;
+  static const byte READ_DELAY = 10;
 
   // DAC resolution
   static const unsigned int STEPS = 1023;
@@ -34,10 +36,15 @@ public:
 	bool begin (FlashString name, FlashString description, byte _pin) {
 		pin = _pin;
 
-		return Sensor::begin (name, description, F("20160201"));
+		return Sensor::begin (name, F("WD"), description, F("20160320"));
 	}
 
-	char *read (char *buf, const byte size _UNUSED) {
+  boolean read (Stereotype *st) override {
+    WeatherData& wd = *static_cast<WeatherData *> (st);
+
+    // Initial delay to let things settle down
+    delay (50);
+
 		double val = 0;
 		for (int i = 0; i < N_SAMPLES; i++) {
 		  val += analogRead (pin);
@@ -45,14 +52,10 @@ public:
 		}
 		val /= (float) N_SAMPLES;
 		float mv = (float) readVcc () / (float) STEPS * (float) val;
-		float cel = mv / 10;
+		wd.temperature = mv / 10.0;
 		DPRINT ("Temperature = ");
-		DPRINTLN (cel);
+		DPRINTLN (wd.temperature);
 
-		buf[0] = 'T';
-		buf[1] = ':';
-		floatToString (cel, buf + 2);
-
-		return buf;
+		return true;
 	}
 };

@@ -1,4 +1,6 @@
 #include <SensoriaCore/Sensor.h>
+#include <SensoriaStereotypes/WeatherData.h>
+#include <DHT.h>
 
 class DhtHumiditySensor: public Sensor {
 private:
@@ -42,7 +44,7 @@ public:
 	}
 
 	bool begin (FlashString name, FlashString description, DHT& _dht) {
-		if (Sensor::begin (name, description, F("20160125"))) {
+		if (Sensor::begin (name, F("WD"), description, F("20160320"))) {
 			dht = &_dht;
 			return true;
 		} else {
@@ -50,21 +52,15 @@ public:
 		}
 	}
 
-
-	char *read (char *buf, const byte size _UNUSED) {
-		float h = dht -> readHumidity();
+  boolean read (Stereotype *st) override {
+    float h = dht -> readHumidity();
 		float t = dht -> readTemperature();
 		if (!isnan (h) && !isnan(t)) {
-			buf[0] = 'T';
-			buf[1] = ':';
-			floatToString (t, buf + 2);
-			int l = strlen (buf);
-			buf[l] = ' ';
-			buf[l + 1] = 'H';
-			buf[l + 2] = ':';
-			floatToString (h, buf + l + 3);
+      WeatherData& wd = *static_cast<WeatherData *> (st);
+      wd.humidity = h;
+      wd.temperature = t;
 		}
 
-		return buf;
+		return true;
 	}
 };

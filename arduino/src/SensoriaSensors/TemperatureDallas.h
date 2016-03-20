@@ -1,4 +1,5 @@
 #include <SensoriaCore/Sensor.h>
+#include <SensoriaStereotypes/WeatherData.h>
 #include <DallasTemperature.h>
 
 class DallasTemperatureSensor: public Sensor {
@@ -7,8 +8,8 @@ private:
 	DeviceAddress sensorAddress;
 
 public:
-	bool begin (FlashString name, FlashString description, DallasTemperature *_sensors, DeviceAddress _sensorAddress) {
-		if (_sensors != NULL && Sensor::begin (name, description, F("20160125"))) {
+	boolean begin (FlashString name, FlashString description, DallasTemperature *_sensors, DeviceAddress _sensorAddress) {
+		if (_sensors != NULL && Sensor::begin (name, F("WD"), description, F("20160320"))) {
 			sensors = _sensors;
 
 			// Maybe the DallasTemperature library should provide a copyAddress() method...
@@ -20,19 +21,17 @@ public:
 		}
 	}
 
-	char *read (char *buf, const byte size _UNUSED) {
+  boolean read (Stereotype *st) override {
+    WeatherData& wd = *static_cast<WeatherData *> (st);
+
 		DPRINT (F("Requesting temperatures... "));
 		sensors -> requestTemperatures (); // Send the command to get temperatures
 		DPRINTLN (F("DONE"));
 
-		float tempC = sensors -> getTempC (sensorAddress);
+		wd.temperature = sensors -> getTempC (sensorAddress);
 		DPRINT (F("Temp C: "));
-		DPRINTLN (tempC);
+		DPRINTLN (wd.temperature);
 
-		buf[0] = 'T';
-		buf[1] = ':';
-		floatToString (tempC, buf + 2);
-
-		return buf;
+		return true;
 	}
 };
