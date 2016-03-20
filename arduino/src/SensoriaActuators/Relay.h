@@ -36,7 +36,7 @@ public:
       RelayData& rd = *static_cast<RelayData *> (st);
       if (rd.state != RelayData::STATE_UNKNOWN) {
         state = rd.state;
-        digitalWrite (pin, !!state ^ inverted);
+        doSwitch ();
         return true;
       } else {
         DPRINTLN (F("Cannot set relay to unknown state"));
