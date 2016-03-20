@@ -8,11 +8,6 @@ OneWire oneWire (D2);
 DallasTemperature sensors (&oneWire);
 DallasTemperatureSensor dallasSensor;
 
-
-// Communicator & Server
-#include <SoftwareSerial.h>
-SoftwareSerial swSerial (10, 11);
-
 #include <SensoriaCommunicators/ESPStandAlone.h>
 ESPCommunicator comm;
 
