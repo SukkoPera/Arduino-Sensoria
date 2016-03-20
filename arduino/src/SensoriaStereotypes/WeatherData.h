@@ -33,7 +33,7 @@ public:
 		light10bit = UNDEFINED;
 	}
 
-	bool unmarshal (char *s) override {
+	boolean unmarshal (char *s) override {
 		char *p[MAX_SPLIT];
 		int n = splitString (s, p, MAX_SPLIT, ' ');
 

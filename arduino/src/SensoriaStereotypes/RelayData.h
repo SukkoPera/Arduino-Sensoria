@@ -23,7 +23,7 @@ public:
 		state = STATE_UNKNOWN;
 	}
 
-	bool unmarshal (char *s) override {
+	boolean unmarshal (char *s) override {
     strupr (s);
     if (strcmp_P (s, PSTR ("ON")) == 0) {
       state = STATE_ON;
