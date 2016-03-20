@@ -11,8 +11,6 @@ Relay relay;
 #define WIFI_SSID        "ssid"
 #define WIFI_PASSWORD    "password"
 
-#define LED_PIN LED_BUILTIN
-
 SoftwareSerial swSerial (10, 11);
 
 SensoriaEsp8266Communicator comm;
@@ -36,11 +34,11 @@ void setup (void) {
     mypanic (100);
   }
 
-  if (!srv.begin (F("TemperatureTest"), comm)) {
+  if (!srv.begin (F("RelayTest"), comm)) {
     mypanic (500);
   }
 
-  if (relay.begin (F("RR"), F("Demo Relay"), 13)) {
+  if (relay.begin (F("RR"), F("Demo Relay"), LED_BUILTIN)) {
     if (srv.addTransducer (relay) >= 0) {
       DPRINT (F("Actuator registered: "));
       DPRINTLN (relay.name);
