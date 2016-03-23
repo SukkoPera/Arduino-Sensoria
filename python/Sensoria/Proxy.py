@@ -20,7 +20,7 @@ class TransducerProxy (object):
 class SensorProxy (TransducerProxy):
 	def __init__ (self, name, stereoclass, srv):
 		sdata = srv.send ("QRY %s" % name)
-		name, stereotype, description, version = sdata.split ("|", 3)
+		name, typ, stereotype, description, version = sdata.split ("|")
 		super (SensorProxy, self).__init__ (srv, SENSOR, name, stereotype, stereoclass, description, version)
 
 	def read (self, raw = False):
@@ -39,7 +39,7 @@ class SensorProxy (TransducerProxy):
 class ActuatorProxy (TransducerProxy):
 	def __init__ (self, name, stereoclass, srv):
 		sdata = srv.send ("QRY %s" % name)
-		name, stereotype, description, version = sdata.split ("|", 3)
+		name, typ, stereotype, description, version = sdata.split ("|")
 		super (ActuatorProxy, self).__init__ (srv, ACTUATOR, name, stereotype, stereoclass, description, version)
 
 	def write (self, what):

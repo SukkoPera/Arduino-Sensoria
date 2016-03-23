@@ -6,7 +6,7 @@ import sqlite3
 import stereotypes
 
 class DB (object):
-	TABLE = "data"
+	TABLE = "sensoria"
 
 	def __init__ (self):
 		self._conn = sqlite3.connect ('sensoria.db', detect_types = sqlite3.PARSE_DECLTYPES)
@@ -46,17 +46,22 @@ class DB (object):
 		c.execute ("ALTER TABLE %s ADD COLUMN '%s' TYPE TEXT" % (self.TABLE, col))
 		#~ self._conn.commit ()
 
+	def _trans2col (self, t):
+		"""Makes up the name of the column where data for a transducer belong"""
+		return "%s:%s" % (t.name, t.stereotype)
+
 	def insert (self, date, dct, commit = False):
 		"""dct is a dictionary of sensor_name => sensor_data type"""
-		for sensor in dct.iterkeys ():
-			if not self.has_column (sensor):
-				print "Adding column: %s" % sensor
-				self.add_column (sensor)
+		for t in dct.iterkeys ():
+			cname = self._trans2col (t)
+			if not self.has_column (cname):
+				print "Adding column: %s" % cname
+				self.add_column (cname)
 
 		# If items(), keys(), values(),  iteritems(), iterkeys(), and
 		# itervalues() are called with no intervening modifications to
 		# the dictionary, the lists will directly correspond
-		self._conn.execute ("INSERT INTO %s (date, %s) VALUES ('%s', %s)" % (self.TABLE, ", ".join ("'%s'" % x for x in dct.keys ()), date, ", ".join ("'%s'" % x for x in dct.values ())))
+		self._conn.execute ("INSERT INTO %s (date, %s) VALUES ('%s', %s)" % (self.TABLE, ", ".join ("'%s'" % self._trans2col (x) for x in dct.keys ()), date, ", ".join ("'%s'" % x for x in dct.values ())))
 		if commit:
 			self._conn.commit ()
 
@@ -71,10 +76,15 @@ class DB (object):
 		for row in c:
 			dt = row["date"]
 			vals = {}
-			stereoclass = self.stereotypes["WD"]	# FIXME
 			for t, r in zip (row.keys (), row):
 				if t != "date" and r is not None:
-					vals[t] = stereoclass.unmarshalStatic (r)
+					parts = t.split (":")
+					if len (parts) == 2:
+						tname, st = parts
+						stereoclass = self.stereotypes[st]
+						vals[tname] = stereoclass.unmarshalStatic (r)
+					else:
+						print "ERROR: Unrecognized column in DB: %s" % t
 			yield dt, vals
 
 	def get_data_between (self, start, end):
@@ -83,10 +93,13 @@ class DB (object):
 		for row in c:
 			dt = row["date"]
 			vals = {}
-			stereoclass = self.stereotypes["WD"]	# FIXME
 			for t, r in zip (row.keys (), row):
 				if t != "date" and r is not None:
-					vals[t] = stereoclass.unmarshalStatic (r)
+					parts = t.split (":")
+					if len (parts) == 2:
+						tname, st = parts
+						stereoclass = self.stereotypes[st]
+						vals[tname] = stereoclass.unmarshalStatic (r)
 			yield dt, vals
 
 	def count (self):
@@ -96,9 +109,6 @@ class DB (object):
 
 if __name__ == "__main__":
 	db = DB ()
-	print db.count ()
-	#~ d = {"OT": "AAAA", "OH": "BBBB"}
-	#~ db.insert (datetime.datetime.now (), d, commit = True)
-	#~ now = datetime.datetime.now ()
-	#~ print list (db.get_data_between ("2015-11-10", "2015-11-15"))
+	print "DB currently has %d lines" % db.count ()
+	#~ print list (db.get_data_between ("2016-02-10", "2016-02-29"))
 	print list (db.get_data_since ("2016-01-15"))

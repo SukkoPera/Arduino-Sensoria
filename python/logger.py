@@ -25,6 +25,8 @@ if len (sensoria.transducers) == 0:
 	print "No sensors to log"
 	sys.exit (1)
 
+print "Logging data every %d minutes" % args.interval
+
 db = Sensoria.DB ()
 
 # FIXME: Stop with SIGHUP
@@ -36,8 +38,8 @@ while True:
 			t = sensoria.transducers[tname]
 			if t.genre == Sensoria.SENSOR or (t.genre == Sensoria.ACTUATOR and args.read_actuators):
 				try:
-					data[tname] = t.read (raw = True)
-					print "%s -> %s" % (tname, data[tname])
+					data[t] = t.read (raw = True)
+					print "%s -> %s" % (tname, data[t])
 				except Exception as ex:
 					print "Cannot read sensor %s: %s" % (tname, str (ex))
 
