@@ -1,4 +1,4 @@
-from stereotype import StereoType
+from Sensoria.StereoType import StereoType
 
 class WeatherData (StereoType):
 	"""
@@ -25,8 +25,8 @@ class WeatherData (StereoType):
 		self.lightLux = None
 		self.light10bit = None
 
-	def unmarshal (self, output):
-		d = dict ([p.split (":") for p in output.split (" ")])
+	def unmarshal (self, string):
+		d = dict ([p.split (":") for p in string.split (" ")])
 		if 'T' in d:
 			self.temperature = float (d['T'])
 		if 'H' in d:
@@ -41,6 +41,7 @@ class WeatherData (StereoType):
 			self.lightLux = float (d['LX'])
 		if 'LU' in d:
 			self.light10bit = float (d['LU'])
+		return True
 
 	def marshal (self):
 		ret = ""
@@ -59,3 +60,11 @@ class WeatherData (StereoType):
 		if self.light10bit is not None:
 			ret += "LX:%.2f" % self.light10bit
 		return ret
+
+	def __repr__ (self):
+		ret = {}
+		for attr in filter (lambda x: not x.startswith ("_"), dir (self)):
+			a = getattr (self, attr)
+			if a is not None and not callable (a):
+				ret[attr] = a
+		return " ".join ("%s:%s" % (k, v) for k, v in ret.iteritems ())

@@ -14,7 +14,7 @@ from email.mime.multipart import MIMEMultipart
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 
-from db import DB
+import Sensoria
 
 MAIL_FROM = "noreply@sukkology.net"
 MAIL_SUBJ = "GRAPHs"
@@ -39,7 +39,7 @@ args = parser.parse_args ()
 
 xDateFmt = mdates.DateFormatter ('%d/%m/%Y %H:%M:%S')
 
-db = DB ()
+db = Sensoria.DB ()
 x = []
 y = []
 yv = []

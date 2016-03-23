@@ -2,9 +2,6 @@
 
 import socket
 
-class SensorError (Exception):
-	pass
-
 class ServerProxy:
 	DEBUG = False
 	RECV_BUFSIZE = 16384
@@ -16,7 +13,7 @@ class ServerProxy:
 		self.port = port
 		self._sock = socket.socket (socket.AF_INET, socket.SOCK_DGRAM)
 		self._sock.settimeout (5)
-		self.sensors = {}
+		self.transducers = {}
 
 	def sendcmd (self, cmd):
 		self._sock.sendto (cmd, (self.address, self.port))

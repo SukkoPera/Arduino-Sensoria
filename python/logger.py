@@ -5,29 +5,23 @@ import datetime
 import time
 import argparse
 
-from db import DB
-from Sensoria import *
+import Sensoria
 
 parser = argparse.ArgumentParser (description = 'Plot some data')
-parser.add_argument ('--address', "-a", dest = 'address', action = 'store',
-                     help = "Address of device to query")
+parser.add_argument ('addresses', metavar = "ADDRESS", nargs = '*',
+                     help = "Address of node to query")
+parser.add_argument ('--no-autodiscover', "-n", action = 'store_true', default = False,
+                     help = "Do not autodiscover nodes")
+parser.add_argument ('--read-actuators', "-a", action = 'store_true', default = False,
+                     help = "Read Actuators too")
 
 args = parser.parse_args ()
-
-if args.address is not None:
-	servers = [args.address]
-else:
-	servers = []
-
-sensoria = Sensoria (servers = servers, autodiscover = True)
-#sensoria = Sensoria (servers = ["192.168.1.171"], autodiscover = True)
-#~ sensoria = Sensoria (servers = ["192.168.1.164"])
-
-if len (sensoria.sensors) == 0:
+sensoria = Sensoria.Client (servers = args.addresses, autodiscover = not args.no_autodiscover)
+if len (sensoria.transducers) == 0:
 	print "No sensors to log"
 	sys.exit (1)
 
-db = DB ()
+db = Sensoria.DB ()
 
 while True:
 	try:

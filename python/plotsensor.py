@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import argparse
 
-from db import DB
+import Sensoria
 
 DEFAULT_HOURS = 48
 
@@ -22,7 +22,7 @@ args = parser.parse_args ()
 
 xDateFmt = mdates.DateFormatter ('%d/%m/%Y %H:%M:%S')
 
-db = DB ()
+db = Sensoria.DB ()
 x = []
 ys = {}
 sens = args.sensor.upper ()

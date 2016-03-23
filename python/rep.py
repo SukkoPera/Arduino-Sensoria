@@ -9,34 +9,34 @@ from Sensoria import *
 sensoria = Sensoria (autodiscover = True)
 
 try:
-	intThermo = sensoria.getSensor ("IT")
+	intThermo = sensoria.getTransducer ("IT")
 	print "Found internal thermometer on %s at %s:%s" % (intThermo.server.name, intThermo.server.address, intThermo.server.port)
 except SensoriaError as ex:
 	print "Cannot get internal thermometer: %s" % str (ex)
 	intThermo = None
 
 try:
-	extThermo = sensoria.getSensor ("OT")
+	extThermo = sensoria.getTransducer ("OT")
 	print "Found external thermometer on %s at %s:%s" % (extThermo.server.name, extThermo.server.address, extThermo.server.port)
 except SensoriaError as ex:
 	print "Cannot get external thermometer: %s" % str (ex)
 	extThermo = None
 
 try:
-	hygrometer = sensoria.getSensor ("OH")
+	hygrometer = sensoria.getTransducer ("OH")
 	print "Found hygrometer on %s at %s:%s" % (hygrometer.server.name, hygrometer.server.address, hygrometer.server.port)
 except SensoriaError as ex:
 	print "Cannot get hygrometer: %s" % str (ex)
 	hygrometer = None
 
 try:
-	barometer = sensoria.getSensor ("OP")
+	barometer = sensoria.getTransducer ("OP")
 	print "Found barometer on %s at %s:%s" % (barometer.server.name, barometer.server.address, barometer.server.port)
 except SensoriaError as ex:
 	print "Cannot get barometer: %s" % str (ex)
 
 try:
-	display = sensoria.getSensor ("LD")
+	display = sensoria.getTransducer ("LD")
 	print "Found display on %s at %s:%s" % (display.server.name, display.server.address, display.server.port)
 except SensoriaError as ex:
 	print "Cannot get display: %s" % str (ex)
