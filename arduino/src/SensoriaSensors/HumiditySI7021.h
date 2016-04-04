@@ -13,7 +13,7 @@ public:
 	bool begin (FlashString name, FlashString description) {
 		if (Sensor::begin (name, F("WD"), description, F("20160320"))) {
       if (!sensor.begin ()) {
-        DPRINTLN ("SI7021.begin() failed");
+        DPRINTLN (F("SI7021.begin() failed"));
         return false;
       } else {
         return true;

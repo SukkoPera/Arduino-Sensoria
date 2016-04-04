@@ -16,33 +16,34 @@ private:
 	// If there's an I2C error, this function will
 	// print out an explanation.
 	void printError (byte error) {
-		DPRINT ("I2C error: ");
+		DPRINT (F("I2C error: "));
 		DPRINT (error, DEC);
-		DPRINT (", ");
+		DPRINT (F(", "));
 
 		switch (error) {
 			case 0:
-				DPRINTLN ("success");
+				DPRINTLN (F("success"));
 				break;
 
 			case 1:
-				DPRINTLN ("data too long for transmit buffer");
+				DPRINTLN (F("data too long for transmit buffer"));
 				break;
 
 			case 2:
-				DPRINTLN ("received NACK on address (disconnected?)");
+				DPRINTLN (F("received NACK on address (disconnected?)"));
 				break;
 
 			case 3:
-				DPRINTLN ("received NACK on data");
+				DPRINTLN (F("received NACK on data"));
 				break;
 
 			case 4:
-				DPRINTLN ("other error");
+				DPRINTLN (F("other error"));
 				break;
 
 			default:
-				DPRINTLN ("unknown error");
+				DPRINTLN (F("unknown error"));
+				break;
 		}
 	}
 
@@ -68,9 +69,9 @@ public:
 		unsigned int data0, data1;
 		if (lightMeter -> getData (data0, data1)) {
 			// getData() returned true, communication was successful
-			DPRINT ("data0: = ");
+			DPRINT (F("data0: = "));
 			DPRINT (data0);     // Visibile light
-			DPRINT (", data1 = ");
+			DPRINT (F(", data1 = "));
 			DPRINT (data1);     // Infrared light?
 
 			// To calculate lux, pass all your settings and readings
@@ -85,14 +86,14 @@ public:
 			good = lightMeter -> getLux (gain, ms, data0, data1, lux);
 
 			// Print out the results:
-			DPRINT (" lux: ");
+			DPRINT (F(" lux: "));
 			DPRINT (lux);
 			if (good) {
-				DPRINTLN (" (good)");
+				DPRINTLN (F(" (good)"));
         wd.lightLux = lux;
         return true;
 			} else {
-				DPRINTLN (" (BAD)");
+				DPRINTLN (F(" (BAD)"));
 			}
 		} else {
 			// getData() returned false because of an I2C error, inform the user.

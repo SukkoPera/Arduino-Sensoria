@@ -53,7 +53,7 @@ public:
 		val /= (float) N_SAMPLES;
 		float mv = (float) readVcc () / (float) STEPS * (float) val;
 		wd.temperature = mv / 10.0;
-		DPRINT ("Temperature = ");
+		DPRINT (F("Temperature = "));
 		DPRINTLN (wd.temperature);
 
 		return true;

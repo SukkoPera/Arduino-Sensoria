@@ -68,7 +68,7 @@ public:
 						// Print out the measurement:
 						DPRINT (F("Absolute pressure: "));
 						DPRINT (px, 2);
-						DPRINTLN ((" millibar"));
+						DPRINTLN (F(" millibar"));
 						//Serial.print (P*0.0295333727,2);
 						//Serial.println(" inHg");
 

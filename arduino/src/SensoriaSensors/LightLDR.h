@@ -37,12 +37,12 @@ public:
 		// Assume reading extremes indicates some problem. Debatable, yeah.
 		do {
 			wd.light10bit = analogRead (pin);
-			DPRINT ("Analog reading = ");
+			DPRINT (F("Analog reading = "));
 			DPRINTLN (wd.light10bit);
 		} while (wd.light10bit == 0 || wd.light10bit == 1023);
 
 		//~ float v = (float) readVcc () / (float) STEPS * (float) reading / 1000;
-		//~ DPRINT ("Voltage across LDR = ");
+		//~ DPRINT (F("Voltage across LDR = "));
 		//~ DPRINTLN (v);
 
 		return true;
