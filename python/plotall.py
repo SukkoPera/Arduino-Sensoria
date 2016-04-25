@@ -42,6 +42,7 @@ xDateFmt = mdates.DateFormatter ('%d/%m/%Y %H:%M:%S')
 db = Sensoria.DB ()
 x = []
 y = []
+yti = []
 yv = []
 ydht = []
 ydht22 = []
@@ -65,6 +66,7 @@ prev = None
 for dt, row in db.get_data_since (limit):
 	if prev is not None and dt - prev > datetime.timedelta (hours = 2):
 		x.append (dt - datetime.timedelta (hours = 1))
+		yti.append (float ('nan'))
 		ydht.append (float ('nan'))
 		ydht22.append (float ('nan'))
 		yth3.append (float ('nan'))
@@ -114,6 +116,12 @@ for dt, row in db.get_data_since (limit):
 	else:
 		print "No reading for sensor OT in data from %s" % (dt)
 		ydallas.append (float ('nan'))
+
+	if "IT" in row:
+		yti.append (row["IT"].temperature)
+	else:
+		print "No reading for sensor IT in data from %s" % (dt)
+		yti.append (float ('nan'))
 
 	if "T2" in row:
 		ydallas2.append (row["T2"].temperature)
@@ -228,6 +236,7 @@ plt.plot (x, ybmp, "m", label = "BMP180")
 plt.plot (x, ydallas, "b-", label = "DS18B20")
 plt.plot (x, y35, "c", label = "LM35")
 plt.plot (x, yth3, "r", label = "SI7021")
+plt.plot (x, yti, "b--", label = "Indoor")
 plt.plot (x, dp, "k--", label = "Dew Point")
 #~ plt.plot (x, dpfast, "m-", label = "Dew Point (Fast)")
 #~ plt.plot (x, ydallas2, "m-", label = "DS18B20 (2)")
