@@ -34,6 +34,7 @@ while True:
 	try:
 		data = {}
 		now = datetime.datetime.now ()
+		print now
 		for tname in sorted (sensoria.transducers.iterkeys ()):
 			t = sensoria.transducers[tname]
 			if t.genre == Sensoria.SENSOR or (t.genre == Sensoria.ACTUATOR and args.read_actuators):
