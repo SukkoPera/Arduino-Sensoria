@@ -7,29 +7,30 @@
 //~ BH1750 lightMeter;
 //~ LightSensorBH1750 lightSensor1750;
 
-//~ #include <SparkFunTSL2561.h>
-//~ #include <SensoriaSensors/LightTSL2561.h>
+#include <SparkFunTSL2561.h>
+#include <SensoriaSensors/LightTSL2561.h>
 
-//~ SFE_TSL2561 lightMeter;
-//~ LightSensorTSL2561 lightSensor2561;
+SFE_TSL2561 lightMeter;
+LightSensorTSL2561 lightSensor2561;
 
 
 // Dallas Temperature Sensor
-//~ #include <OneWire.h>
-//~ #include <DallasTemperature.h>
-//~ #include <SensoriaSensors/TemperatureDallas.h>
+#include <OneWire.h>
+#include <DallasTemperature.h>
+#include <SensoriaSensors/TemperatureDallas.h>
 
-//~ OneWire oneWire (7);
-//~ DallasTemperature sensors (&oneWire);
-//~ DallasTemperatureSensor dallasSensor;
+OneWire oneWire (7);
+DallasTemperature sensors (&oneWire);
+DallasTemperatureSensor dallasSensor;
 
 
 // DHTxx Humidity Sensor
-#include <DHT.h>
+/*#include <DHT.h>
 #include <SensoriaSensors/HumidityDHT.h>
 
 DHT dht (2, DHT22);
 DhtHumiditySensor dhtSensor;
+*/
 
 // SI7021 Humidity Sensor
 #include <SensoriaSensors/HumiditySI7021.h>
@@ -43,12 +44,14 @@ SI7021HumiditySensor si7021;
 //~ SFE_BMP180 pressure;
 //~ PressureSensor pressureSensor;
 
+/*
 // Simple Photoresistor
 #include <SensoriaSensors/LightLDR.h>
 
 #define LDR_PIN A0
 #define LDR_RESISTANCE 3240	// Resistance of other resistor in the divider
 PhotoSensor photoSensor;
+*/
 
 // LM35 Temperature Sensor
 #include <SensoriaSensors/TemperatureLM35.h>
@@ -99,6 +102,9 @@ void registerSensor (Sensor& sensor) {
 void setup (void) {
   DSTART ();
 
+  // Wait for ESP8266 to init
+  delay (3000);
+
   swSerial.begin (9600);
   if (!comm.begin (swSerial, WIFI_SSID, WIFI_PASSWORD)) {
     mypanic (100);
@@ -109,12 +115,14 @@ void setup (void) {
   }
 
   // LDR
+#if 0
   pinMode (LDR_PIN, INPUT);
   if (photoSensor.begin (F("L2"), F("Outdoor Light (LDR)"), LDR_PIN, LDR_RESISTANCE))
     registerSensor (photoSensor);
+#endif
 
   // TSL2561
-#if 0
+#if 1
   lightMeter.begin ();
   // If gain = false (0), device is set to low gain (1X)
   // If gain = high (1), device is set to high gain (16X)
@@ -134,7 +142,7 @@ void setup (void) {
 #endif
 
   // Init DS18B20
-#if 0
+#if 1
   // locate devices on the bus
   sensors.begin ();
   DPRINT (F("Found "));
@@ -160,10 +168,11 @@ void setup (void) {
     registerSensor (dallasSensor);
 #endif
 
+#if 0
   dht.begin ();
   if (dhtSensor.begin (F("H2"), F("Outdoor Humidity"), dht))
     registerSensor (dhtSensor);
-
+#endif
 
   //~ if (pressure.begin () && pressureSensor.begin (F("P2"), F("Outdoor Pressure"), pressure))
     //~ registerSensor (pressureSensor);
