@@ -6,17 +6,17 @@
 #include <WiFiEspUdp.h>
 #include <SensoriaCore/debug.h>
 
-#define IN_BUF_SIZE 256
+#define IN_BUF_SIZE 192
 
 /* This uses Bruno Portaluri's WiFiEsp library:
  * https://github.com/bportaluri/WiFiEsp
  */
 class SensoriaEsp8266Communicator: public SensoriaCommunicator {
 private:
-	Stream *serial;
+	//~ Stream *serial;
 
-	const char *ssid;
-	const char *password;
+	//~ const char *ssid;
+	//~ const char *password;
 
 	uint8_t buffer[IN_BUF_SIZE];
 
@@ -24,11 +24,11 @@ public:
 	WiFiEspUDP udp;
 
 	boolean begin (Stream& _serial, const char *_ssid, const char *_password) {
-    serial = &_serial;
-    ssid = _ssid;
-    password = _password;
+    //~ serial = &_serial;
+    //~ ssid = _ssid;
+    //~ password = _password;
 
-    WiFi.init (serial);
+    WiFi.init (&_serial);
 
     // Check for the presence of ESP
     if (WiFi.status() == WL_NO_SHIELD) {
@@ -44,7 +44,7 @@ public:
     do {
       DPRINT (F("Connecting to AP: "));
       DPRINTLN (ssid);
-      status = WiFi.begin (const_cast<char *> (ssid), password);
+      status = WiFi.begin (const_cast<char *> (_ssid), _password);
     } while (status != WL_CONNECTED);
 
     //~ if (wifi.joinAP (ssid, password)) {

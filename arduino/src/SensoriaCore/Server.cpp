@@ -197,7 +197,7 @@ void SensoriaServer::cmd_qry (char *args) {
       send_srv (F("QRY "));
       send_srv (t -> name);
       send_srv (F("|"));
-      send_srv (t -> type == Transducer::SENSOR ? F("S") : F("A"));
+      send_srv (t -> type == Transducer::SENSOR ? ("S") : ("A"));
       send_srv (F("|"));
       send_srv (t -> stereotype);
       send_srv (F("|"));
@@ -218,11 +218,11 @@ void SensoriaServer::cmd_qry (char *args) {
     for (byte i = 0; i < nTransducers; i++) {
       Transducer *t = transducers[i];
       send_srv (t -> name);
-      send_srv (F(" "));
+      send_srv (" ");		   // No F() here saves flash and wastes no ram
       send_srv (t -> type == Transducer::SENSOR ? ("S") : ("A"));
-      send_srv (F(" "));
+      send_srv (" ");
       send_srv (t -> stereotype);
-      send_srv (F(" "));
+      send_srv (" ");
 
       send_srv (t -> description);
 
@@ -231,7 +231,7 @@ void SensoriaServer::cmd_qry (char *args) {
     }
 
     // Send reply
-    send_srv ((char *) NULL, true);
+    send_srv ();
   }
 }
 
@@ -240,7 +240,7 @@ void SensoriaServer::cmd_ver (const char *args _UNUSED) {
   send_srv (serverName);
 
   if (serverVersion) {
-    send_srv (F(" "));
+    send_srv (" ");
     send_srv (serverVersion);
   }
 
@@ -265,7 +265,7 @@ void SensoriaServer::cmd_rea (char *args) {
         if (buf) {
           send_srv (F("REA "));
           send_srv (t -> name);
-          send_srv ((" "));
+          send_srv (" ");   // No F() here saves flash and wastes no ram
           send_srv (buf, true);
         } else {
           send_srv (F("ERR Marshaling failed"), true);
@@ -308,7 +308,7 @@ void SensoriaServer::cmd_wri (char *args) {
           if (st -> unmarshal (rest)) {
             send_srv (F("WRI "));
             send_srv (a -> name);
-            send_srv ((" "));
+            send_srv (" ");   // No F() here saves flash and wastes no ram
             send_srv (a -> write (st) ? F("OK") : F("ERR"), true);
           } else {
             DPRINT (F("Unmarshaling with "));
