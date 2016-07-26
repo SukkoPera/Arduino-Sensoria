@@ -25,6 +25,13 @@ class WeatherData (StereoType):
 		self.lightLux = None
 		self.light10bit = None
 
+	def __eq__ (self, other):
+		return self.temperature == other.temperature and \
+			self.humidity == other.humidity and \
+			self.localPressure == other.localPressure and \
+			self.altitude == other.altitude and \
+			self.lightLux == other.lightLux
+
 	def unmarshal (self, string):
 		d = dict ([p.split (":") for p in string.split (" ")])
 		if 'T' in d:
