@@ -6,7 +6,7 @@ import Sensoria
 
 # ./query.py OH OT
 # ./query -s
-parser = argparse.ArgumentParser (description = 'Plot some data')
+parser = argparse.ArgumentParser (description = 'Query Sensoria devices')
 parser.add_argument ('addresses', metavar = "ADDRESS", nargs = '*',
                      help = "Address of node to query")
 parser.add_argument ('--no-autodiscover', "-n", action = 'store_true', default = False,
