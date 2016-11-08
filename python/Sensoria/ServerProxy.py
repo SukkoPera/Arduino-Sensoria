@@ -2,17 +2,20 @@
 
 import socket
 
+from common import *
+
 class ServerProxy:
 	DEBUG = False
 	RECV_BUFSIZE = 16384
 	DEFAULT_LISTEN_PORT = 9999
 
-	def __init__ (self, name, ip, port = DEFAULT_LISTEN_PORT):
+	def __init__ (self, name, sock, ip, port = DEFAULT_LISTEN_PORT):
 		self.name = name
 		self.address = ip
 		self.port = port
-		self._sock = socket.socket (socket.AF_INET, socket.SOCK_DGRAM)
-		self._sock.settimeout (5)
+		#~ self._sock = socket.socket (socket.AF_INET, socket.SOCK_DGRAM)
+		#~ self._sock.settimeout (5)
+		self._sock = sock
 		self.transducers = {}
 
 	def sendcmd (self, cmd):
@@ -42,6 +45,7 @@ class ServerProxy:
 			elif rep0 == cmd:
 				return rest
 			else:
-				raise SensorError, "Unexpected reply: '%s' (Command: '%s')" % (rep, args)
+				raise Error, "Unexpected reply: '%s' (Command: '%s')" % (rep, args)
 		else:
-			raise SensorError, "No reply received (Command: '%s')" % args
+			raise Error, "No reply received (Command: '%s')" % args
+

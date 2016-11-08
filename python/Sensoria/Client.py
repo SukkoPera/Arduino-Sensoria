@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import socket
+import select
 
 import stereotypes
 
@@ -9,11 +10,15 @@ from ServerProxy import ServerProxy
 from Proxy import TransducerProxy, SensorProxy, ActuatorProxy
 
 class Client (object):
+	RECV_BUFSIZE = 16384
+	DEFAULT_LISTEN_PORT = 9999
+
 	def __init__ (self, servers = [], autodiscover = False):
 		self._load_stereotypes ()
 		self.serverAddresses = {}
 		self.servers = {}
 		self.transducers = {}
+		self._setupSocket ()
 		for srv in servers:
 			parts = srv.split (":")
 			if len (parts) == 2:
@@ -24,6 +29,10 @@ class Client (object):
 		if autodiscover:
 			self._discoverServers ()
 		self.discoverTransducers ()
+
+	def _setupSocket (self):
+		self._sock = socket.socket (socket.AF_INET, socket.SOCK_DGRAM)
+		self._sock.settimeout (5)
 
 	def _load_stereotypes (self):
 		# Load stereotypes (Hmmm... A bit of a hack?)
@@ -44,7 +53,7 @@ class Client (object):
 		for model, ip in self.serverAddresses.iteritems ():
 			print "- Querying server '%s' at %s:%d" % (model, ip[0], ip[1])
 			try:
-				srv = ServerProxy (model, *ip)
+				srv = ServerProxy (model, self._sock, *ip)
 				sensorList = srv.send ("QRY")
 				#~ print sensorList
 				for s in sensorList.split ("|"):
@@ -124,7 +133,7 @@ class Client (object):
 		if name in self.transducers:
 			return self.transducers[name]
 		else:
-			raise SensoriaError, "No such sensor: %s" % name
+			raise Error, "No such sensor: %s" % name
 
 	@property
 	def sensors (self):
@@ -135,6 +144,32 @@ class Client (object):
 	def actuators (self):
 		"""Returns a list of actuators only"""
 		return {name:t for (name, t) in self.transducers.iteritems () if t.genre == ACTUATOR}
+
+	def waitForNotifications (self):
+		while True:
+			rlist = [self._sock]
+			r, w, x = select.select (rlist, [], [])
+
+			if self._sock in r:
+				line, client_address = self._sock.recvfrom (Client.RECV_BUFSIZE)
+
+				if line == "":
+					break
+				else:
+					line = line.strip ()
+					ip = client_address[0]
+					port = int (client_address[1])
+					print "Got message from %s:%s: '%s'" % (ip, port, line)
+					parts = line.split (" ", 2)
+					if len (parts) != 3:
+						raise Error, "Unexpected NOT format: '%s'" % notification
+					dummy, name, rest = parts
+					try:
+						trans = self.getTransducer (name)
+						trans._processNotification (rest)
+					except Error as ex:
+						print "ERROR while processing notification: %s" % str (ex)
+
 
 if __name__ == "__main__":
 	s = Client ()

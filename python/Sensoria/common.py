@@ -6,3 +6,6 @@ class SensorError (Error):
 
 # Actuator genres
 SENSOR, ACTUATOR = xrange (0, 2)
+
+# Notification types
+PERIODIC, ON_CHANGE = xrange (0, 2)

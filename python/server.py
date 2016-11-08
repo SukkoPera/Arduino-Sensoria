@@ -190,7 +190,7 @@ class CommandListener (object):
 			self._reply (addr, "QRY %s" % "|".join ("%s %s %s %s" % (sensor.name, sensor.get_type_string (), sensor.stereotype, sensor.description) for sensor in self.sensors.itervalues ()))
 
 	def _ver (self, addr, args):
-		self._reply (addr, "VER TestSensors 20160122")
+		self._reply (addr, "VER TestSensors 20160727")
 
 	def _rea (self, addr, args):
 		if args is not None and len (args) > 0:
@@ -243,7 +243,7 @@ class CommandListener (object):
 					sensor = self.sensors[name]
 					if typ == "CHA":
 						#~ rest = parts[2:]
-						print "Notifying on change of %s" % sensor.name
+						print >> sys.stderr, "Notifying on change of %s" % sensor.name
 						req = OnChangeNotificationRequest (addr, self._sock, sensor)
 						self.notificationRequests.append (req)
 						self._reply (addr, "NRQ %s CHA OK" % sensor.name)
@@ -252,7 +252,7 @@ class CommandListener (object):
 							self._reply (addr, "NRQ %s ERR No interval specified" % sensor.name)
 						else:
 							intv = int (parts[2])
-							print "Notifying values of %s every %d seconds" % (sensor.name, intv)
+							print >> sys.stderr, "Notifying values of %s every %d seconds" % (sensor.name, intv)
 							req = PeriodicNotificationRequest (addr, self._sock, sensor, intv)
 							self.notificationRequests.append (req)
 							self._reply (addr, "NRQ %s OK" % sensor.name)
