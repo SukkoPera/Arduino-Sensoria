@@ -17,7 +17,7 @@
 
 class SensoriaServer {
 private:
-  SensoriaCommunicator *comm;
+	SensoriaCommunicator *comm;
 
 	byte nTransducers;
 
@@ -26,12 +26,12 @@ private:
 	char buf[OUT_BUF_SIZE];
 	char sensorBuf[SENSOR_BUF_SIZE];
 
-  FlashString serverName;
-  FlashString serverVersion;
+	FlashString serverName;
+	FlashString serverVersion;
 
 	uint32_t hash;
 
-  Stereotype* getStereotype (FlashString s);
+	Stereotype* getStereotype (FlashString s);
 
 	void clearBuffer ();
 
@@ -51,12 +51,12 @@ private:
 	boolean send_srv (const __FlashStringHelper *str, boolean cr = false);
 #endif
 
-  // Commodity method to flush data to server
-  boolean send_srv ();
+	// Commodity method to flush data to server
+	boolean send_srv ();
 
-  // Temp?
-  IPAddress remoteAddress;
-  uint16_t remotePort;
+	// Temp?
+	IPAddress remoteAddress;
+	uint16_t remotePort;
 
 protected:
 	void process_cmd (char *buffer, IPAddress senderAddr, uint16_t senderPort);
@@ -66,7 +66,7 @@ public:
 
 	boolean begin (FlashString _serverName, SensoriaCommunicator& _comm);
 
-  void loop ();
+	void loop ();
 
 	int addTransducer (Transducer& transducer);
 
