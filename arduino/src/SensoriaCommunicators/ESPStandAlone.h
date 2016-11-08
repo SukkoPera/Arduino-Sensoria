@@ -9,7 +9,7 @@
 #include <SensoriaCore/debug.h>
 
 #define HOST_NAME   "0"
-#define IN_BUF_SIZE 64
+#define IN_BUF_SIZE 512
 
 class ESPCommunicator: public SensoriaCommunicator {
 private:
