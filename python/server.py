@@ -9,8 +9,6 @@ import select
 import Sensoria
 from Sensoria.stereotypes.WeatherData import WeatherData
 
-#~ from stereotypes.WeatherData import WeatherData
-
 LISTEN_PORT = 9999
 RECV_BUFSIZE = 16384
 DEBUG = True
@@ -31,7 +29,7 @@ class NotificationRequest (object):
 	def isDue (self):
 		raise NotImplementedError
 
-	def processReading (self, reading):
+	def processReading (self):
 		raise NotImplementedError
 
 class PeriodicNotificationRequest (NotificationRequest):
@@ -40,24 +38,22 @@ class PeriodicNotificationRequest (NotificationRequest):
 		self.lastNotified = None
 		self.interval = intv
 
-	def isDue (self):
+	def _isDue (self):
 		return self.lastNotified is None or (datetime.datetime.now () - self.lastNotified).total_seconds () >= self.interval
 
-	def processReading (self, reading):
-		self._notify (reading)
-		self.lastNotified = datetime.datetime.now ()
+	def process (self):
+		if self._isDue ():
+			reading = self.sensor.read ()
+			self._notify (reading)
+			self.lastNotified = datetime.datetime.now ()
 
 class OnChangeNotificationRequest (NotificationRequest):
 	def __init__ (self, dest, sock, sensor):
 		super (OnChangeNotificationRequest, self).__init__ (dest, sock, sensor, NotificationRequest.Type.ON_CHANGE)
 		self._lastReading = None
 
-	def isDue (self):
-		# Always return true, since we will have to compare the new reading
-		# against the previous one
-		return True
-
-	def processReading (self, reading):
+	def process (self):
+		reading = self.sensor.read ()
 		if reading != self._lastReading:
 			self._notify (reading)
 			self._lastReading = reading
@@ -263,20 +259,14 @@ class CommandListener (object):
 		else:
 			self._reply (addr, "ERR Missing or malformed args")
 
-	def _processNotificationRequests (self):
-		for nrq in self.notificationRequests:
-			if nrq.isDue ():
-				#~ print "NotificationRequest is due: %s" % nrq
-				r = nrq.sensor.read ()
-				nrq.processReading (r)
-
 	def go (self):
-		handlers = {}
-		handlers["VER"] = self._ver
-		handlers["REA"] = self._rea
-		handlers["WRI"] = self._wri
-		handlers["QRY"] = self._qry
-		handlers["NRQ"] = self._nrq
+		handlers = {
+			"VER": self._ver,
+			"REA": self._rea,
+			"WRI": self._wri,
+			"QRY": self._qry,
+			"NRQ": self._nrq
+		}
 
 		print >> sys.stderr, 'Waiting for commands...'
 		while True:
@@ -317,8 +307,9 @@ class CommandListener (object):
 								print >> sys.stderr, "Unknown command: '%s'" % cmd
 								self._reply (client_address, "ERR Unknown command: '%s'" % cmd)
 			else:
-				#~ print "socket timeout"
-				self._processNotificationRequests ()
+				# Periodically process notifications
+				for nrq in self.notificationRequests:
+					nrq.process ()
 
 if __name__ == "__main__":
 	tk = KitchenTemperatureSensor ()
