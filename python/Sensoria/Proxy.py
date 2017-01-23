@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+import sys
+
 from common import *
 from ServerProxy import ServerProxy
 
@@ -14,6 +16,7 @@ class TransducerProxy (object):
 		self.description = description
 		self.version = version
 		self.notificationClients = []
+		self.failures = 0
 
 	def configure (self, name, value):
 		raise NotImplementedError
@@ -67,16 +70,21 @@ class SensorProxy (TransducerProxy):
 
 	def read (self, raw = False):
 		assert self.server is not None
-		reply = self.server.send ("REA %s" % self.name)
-		parts = reply.split (" ", 1)
-		if len (parts) != 2:
-			raise Error, "Unexpected REA reply: '%s'" % reply
-		name, rest = parts
-		assert name == self.name
-		if raw:
-			return rest
-		else:
-			return self.stereoclass.unmarshalStatic (rest)
+		try:
+			reply = self.server.send ("REA %s" % self.name)
+			parts = reply.split (" ", 1)
+			if len (parts) != 2:
+				raise Error, "Unexpected REA reply: '%s'" % reply
+			name, rest = parts
+			assert name == self.name
+			if raw:
+				return rest
+			else:
+				return self.stereoclass.unmarshalStatic (rest)
+		except Error as ex:
+			print >> sys.stderr, "Sensor read failed: %s" % str (ex)
+			self.failures += 1
+			raise
 
 class ActuatorProxy (TransducerProxy):
 	def __init__ (self, name, stereoclass, srv):

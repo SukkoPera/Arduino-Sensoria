@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import sys
 import socket
 
 from common import *
@@ -8,6 +9,7 @@ class ServerProxy:
 	DEBUG = False
 	RECV_BUFSIZE = 16384
 	DEFAULT_LISTEN_PORT = 9999
+	MAX_FAILURES = 3
 
 	def __init__ (self, name, sock, ip, port = DEFAULT_LISTEN_PORT):
 		self.name = name
@@ -16,7 +18,7 @@ class ServerProxy:
 		#~ self._sock = socket.socket (socket.AF_INET, socket.SOCK_DGRAM)
 		#~ self._sock.settimeout (5)
 		self._sock = sock
-		self.transducers = {}
+		self._transducers = {}
 
 	def sendcmd (self, cmd):
 		self._sock.sendto (cmd, (self.address, self.port))
@@ -28,7 +30,7 @@ class ServerProxy:
 				print "--> %s" % reply.strip ()
 			return reply.strip ()
 		except socket.error as ex:
-			print "FAILED: %s" % str (ex)
+			raise Error, "sendcmd() FAILED: %s" % str (ex)
 
 	def send (self, args):
 		cmd = args.split (" ", 1)[0].upper ()
@@ -47,5 +49,29 @@ class ServerProxy:
 			else:
 				raise Error, "Unexpected reply: '%s' (Command: '%s')" % (rep, args)
 		else:
+			# This shouldn't really happen
 			raise Error, "No reply received (Command: '%s')" % args
 
+	def _checkTransducers (self):
+		for name, t in self._transducers.items ():
+			if t.failures >= self.MAX_FAILURES:
+				print >> sys.stderr, "Removing transducer %s because of excessive failures" % name
+				del self._transducers[name]
+
+	@property
+	def transducers (self):
+		"""Returns a dictionary of all transducers"""
+		self._checkTransducers ()
+		return self._transducers
+
+	@property
+	def sensors (self):
+		"""Returns a dictionary of sensors only"""
+		self._checkTransducers ()
+		return {name:t for (name, t) in self._transducers.iteritems () if t.genre == SENSOR}
+
+	@property
+	def actuators (self):
+		"""Returns a dictionary of actuators only"""
+		self._checkTransducers ()
+		return {name:t for (name, t) in self._transducers.iteritems () if t.genre == ACTUATOR}

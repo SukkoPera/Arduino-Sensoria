@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import sys
 import socket
 import select
 
@@ -17,7 +18,7 @@ class Client (object):
 		self._load_stereotypes ()
 		self.serverAddresses = {}
 		self.servers = {}
-		self.transducers = {}
+		self._transducers = {}
 		self._setupSocket ()
 		for srv in servers:
 			parts = srv.split (":")
@@ -49,7 +50,7 @@ class Client (object):
 
 	def discoverTransducers (self):
 		self.servers = {}
-		self.transducers = {}
+		self._transducers = {}
 		for model, ip in self.serverAddresses.iteritems ():
 			print "- Querying server '%s' at %s:%d" % (model, ip[0], ip[1])
 			try:
@@ -63,16 +64,16 @@ class Client (object):
 						print "  - Found Sensor %s (%s) using stereotype %s" % (name, desc, stereotype)
 						if stereotype in self.stereotypes:
 							newsens = SensorProxy (name, self.stereotypes[stereotype], srv)
-							self.transducers[name] = newsens	# Add to all sensors
-							srv.transducers[name] = newsens		# Also add to server
+							self._transducers[name] = newsens	# Add to all sensors
+							srv._transducers[name] = newsens		# Also add to server
 						else:
 							print "ERROR: Sensor uses unknown stereotype %s" % stereotype
 					elif typ == "A":
 						print "  - Found Actuator %s (%s) using stereotype %s" % (name, desc, stereotype)
 						if stereotype in self.stereotypes:
 							newact = ActuatorProxy (name, self.stereotypes[stereotype], srv)
-							self.transducers[name] = newact
-							srv.transducers[name] = newact
+							self._transducers[name] = newact
+							srv._transducers[name] = newact
 						else:
 							print "ERROR: Actuator uses unknown stereotype %s" % stereotype
 					else:
@@ -82,6 +83,7 @@ class Client (object):
 			except SensorError as ex:
 				print "  - Cannot retrieve sensors list: %s" % str (ex)
 
+	# FIXME: Handle connection failure
 	def _queryServer (self, ip, port = ServerProxy.DEFAULT_LISTEN_PORT):
 		print "Querying %s:%s" % (ip, port)
 		s = socket.socket (socket.AF_INET, socket.SOCK_DGRAM)
@@ -129,21 +131,36 @@ class Client (object):
 			except socket.error as ex:
 				timeout = True
 
-	def getTransducer (self, name):
-		if name in self.transducers:
-			return self.transducers[name]
-		else:
-			raise Error, "No such sensor: %s" % name
+	#~ def getTransducer (self, name):
+		#~ if name in self._transducers:
+			#~ return self._transducers[name]
+		#~ else:
+			#~ raise Error, "No such sensor: %s" % name
+
+	def _checkTransducers (self):
+		print "!"
+		for name, t in self._transducers.items ():
+			if t.failures >= ServerProxy.MAX_FAILURES:
+				print >> sys.stderr, "Removing transducer %s because of excessive failures" % name
+				del self._transducers[name]
+
+	@property
+	def transducers (self):
+		"""Returns a dictionary of all transducers"""
+		self._checkTransducers ()
+		return self._transducers
 
 	@property
 	def sensors (self):
-		"""Returns a list of sensors only"""
-		return {name:t for (name, t) in self.transducers.iteritems () if t.genre == SENSOR}
+		"""Returns a dictionary of sensors only"""
+		self._checkTransducers ()
+		return {name:t for (name, t) in self._transducers.iteritems () if t.genre == SENSOR}
 
 	@property
 	def actuators (self):
-		"""Returns a list of actuators only"""
-		return {name:t for (name, t) in self.transducers.iteritems () if t.genre == ACTUATOR}
+		"""Returns a dictionary of actuators only"""
+		self._checkTransducers ()
+		return {name:t for (name, t) in self._transducers.iteritems () if t.genre == ACTUATOR}
 
 	def waitForNotifications (self):
 		while True:
