@@ -17,7 +17,7 @@ SensoriaServer::SensoriaServer ():
 
 boolean SensoriaServer::begin (FlashString _serverName, SensoriaCommunicator& _comm) {
 	serverName = _serverName;
-	serverVersion = F("20160320");
+	serverVersion = F("20170130");
 	comm = &_comm;
 	nTransducers = 0;
 
