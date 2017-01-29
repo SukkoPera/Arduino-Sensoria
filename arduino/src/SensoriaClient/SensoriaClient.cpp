@@ -12,6 +12,10 @@ void SensoriaClient::begin (SensoriaCommunicator& _comm) {
   comm = &_comm;
 }
 
+//~ int SensoriaClient::discover () {
+
+//~ }
+
 boolean SensoriaClient::registerNode (IPAddress& addr, uint16_t port) {
   boolean ret = false;
 
