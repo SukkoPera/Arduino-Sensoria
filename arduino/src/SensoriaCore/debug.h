@@ -1,7 +1,7 @@
 #define NDEBUG
 
 #ifndef NDEBUG
-  #define DSTART(...) Serial.begin (9600);
+  #define DSTART(spd) Serial.begin (spd);
   #define DPRINT(...) Serial.print (__VA_ARGS__)
   #define DPRINTLN(...) Serial.println (__VA_ARGS__)
 #else
