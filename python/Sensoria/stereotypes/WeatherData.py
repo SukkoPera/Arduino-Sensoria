@@ -55,17 +55,17 @@ class WeatherData (StereoType):
 		if self.temperature is not None:
 			ret += "T:%.2f " % self.temperature
 		if self.humidity is not None:
-			ret += "H:%.2f" % self.humidity
+			ret += "H:%.2f " % self.humidity
 		if self.localPressure is not None:
-			ret += "LP:%.2f" % self.localPressure
+			ret += "LP:%.2f " % self.localPressure
 		if self.seaPressure is not None:
-			ret += "SP:%.2f" % self.seaPressure
+			ret += "SP:%.2f " % self.seaPressure
 		if self.altitude is not None:
-			ret += "A:%.2f" % self.altitude
+			ret += "A:%.2f " % self.altitude
 		if self.lightLux is not None:
-			ret += "LX:%.2f" % self.lightLux
+			ret += "LX:%.2f " % self.lightLux
 		if self.light10bit is not None:
-			ret += "LX:%.2f" % self.light10bit
+			ret += "LX:%.2f " % self.light10bit
 		return ret
 
 	def __repr__ (self):
