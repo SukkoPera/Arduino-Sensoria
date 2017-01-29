@@ -19,20 +19,20 @@ public:
 protected:
 	boolean onNotification (T& data) {
 		ControlledRelayData rdata;
-    if (r -> read (&rdata)) {
-      if (rdata.controller == ControlledRelayData::CTRL_AUTO) {
-        // R is under our control
-        ControlledRelayData::State newState = mustEnable (data) ? ControlledRelayData::STATE_ON : ControlledRelayData::STATE_OFF;
-        if (newState != rdata.state) {
-          rdata.state = newState;
-          r -> write (&rdata);
-        }
-      } else {
-        DPRINTLN (F("Ignoring notification as relay is under manual control"));
-      }
-    } else {
-      DPRINTLN (F("Ignoring notification as relay actuator cannot be read"));
-    }
+		if (r -> read (&rdata)) {
+			if (rdata.controller == ControlledRelayData::CTRL_AUTO) {
+				// R is under our control
+				ControlledRelayData::State newState = mustEnable (data) ? ControlledRelayData::STATE_ON : ControlledRelayData::STATE_OFF;
+				if (newState != rdata.state) {
+					rdata.state = newState;
+					r -> write (&rdata);
+				}
+			} else {
+				DPRINTLN (F("Ignoring notification as relay is under manual control"));
+			}
+		} else {
+			DPRINTLN (F("Ignoring notification as relay actuator cannot be read"));
+		}
 
 		return true;
 	}
@@ -79,19 +79,19 @@ protected:
 class WeatherDataRelayController: public RelayController<WeatherData> {
 protected:
 	boolean mustEnable (WeatherData& data) {
-    Serial.println (F("Received WeatherData notification:"));
-    if (data.temperature != WeatherData::UNDEFINED) {
-      Serial.print (F("- Temp = "));
-      Serial.println (data.temperature);
-    }
-    if (data.humidity != WeatherData::UNDEFINED) {
-      Serial.print (F("- Humidity = "));
-      Serial.println (data.humidity);
-    }
-    if (data.localPressure != WeatherData::UNDEFINED) {
-      Serial.print (F("- Local Pressure = "));
-      Serial.println (data.localPressure);
-    }
+		Serial.println (F("Received WeatherData notification:"));
+		if (data.temperature != WeatherData::UNDEFINED) {
+			Serial.print (F("- Temp = "));
+			Serial.println (data.temperature);
+		}
+		if (data.humidity != WeatherData::UNDEFINED) {
+			Serial.print (F("- Humidity = "));
+			Serial.println (data.humidity);
+		}
+		if (data.localPressure != WeatherData::UNDEFINED) {
+			Serial.print (F("- Local Pressure = "));
+			Serial.println (data.localPressure);
+		}
 
 		return data.temperature >= 25;
 	}
