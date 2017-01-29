@@ -12,7 +12,11 @@ public:
 
 	bool begin (FlashString name, FlashString description) {
 		if (Sensor::begin (name, F("WD"), description, F("20160320"))) {
+#ifdef ARDUINO_ARCH_ESP8266
+      if (!sensor.begin (D3, D4)) {
+#else
       if (!sensor.begin ()) {
+#endif
         DPRINTLN (F("SI7021.begin() failed"));
         return false;
       } else {
