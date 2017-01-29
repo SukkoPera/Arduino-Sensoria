@@ -38,7 +38,6 @@ protected:
 	}
 
 	virtual boolean checkEnable (T& data) {
-    DPRINTLN ("checkEnable 1");
 		return mustEnable (data);
 	}
 
