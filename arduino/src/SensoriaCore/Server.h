@@ -8,20 +8,26 @@
 #include "Actuator.h"
 #include "Communicator.h"
 #include "Stereotype.h"
+#include "NotificationRequest.h"
 #include "utils.h"
 #include "common.h"
 #include "debug.h"
 
 #define OUT_BUF_SIZE 192
-#define SENSOR_BUF_SIZE 32
 
 class SensoriaServer {
 private:
-	SensoriaCommunicator *comm;
+	SensoriaCommunicator* comm;
 
 	byte nTransducers;
 
-	Transducer *transducers[MAX_TRANSDUCERS];
+	Transducer* transducers[MAX_TRANSDUCERS];
+
+#ifdef ENABLE_NOTIFICATIONS
+	byte nNotificationReqs;
+
+	NotificationRequest notificationReqs[MAX_NOTIFICATION_REQS];
+#endif
 
 	char buf[OUT_BUF_SIZE];
 	char sensorBuf[SENSOR_BUF_SIZE];
@@ -37,6 +43,9 @@ private:
 
 	void clearSensorBuffer ();
 
+
+	void handleNotificationReqs ();
+
 	void cmd_qry (char *args);
 
 	void cmd_ver (const char *args);
@@ -45,7 +54,9 @@ private:
 
 	void cmd_wri (char *args);
 
-	boolean send_srv (const char *str, boolean cr = false);
+	void cmd_nrq (char *args);
+
+	boolean send_srv (const char *str, boolean cr = false, IPAddress* destAddr = NULL, word* destPort = NULL);
 
 #ifdef ENABLE_FLASH_STRINGS
 	boolean send_srv (const __FlashStringHelper *str, boolean cr = false);
@@ -56,7 +67,7 @@ private:
 
 	// Temp?
 	IPAddress remoteAddress;
-	uint16_t remotePort;
+	word remotePort;
 
 protected:
 	void process_cmd (char *buffer, IPAddress senderAddr, uint16_t senderPort);

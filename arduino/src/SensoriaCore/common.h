@@ -3,6 +3,12 @@
 
 #include <Arduino.h>
 
+// Size of marshaling buffer
+#define SENSOR_BUF_SIZE 32
+
+// Uses ~1600b flash, ~120b RAM
+#define ENABLE_NOTIFICATIONS
+
 // Isn't there a ready-to-use macro in the ESP core headers??
 #ifdef ESP8266_CLOCK
   //~ #warning Compiling for ESP8266

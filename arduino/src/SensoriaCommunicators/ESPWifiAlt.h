@@ -21,9 +21,10 @@ private:
 	uint8_t buffer[IN_BUF_SIZE];
 
 public:
-	WiFiEspUDP udp;
+	WiFiEspUDP udpMain;
+	WiFiEspUDP udpNot;
 
-	boolean begin (Stream& _serial, const char *_ssid, const char *_password) {
+	boolean begin (Stream& _serial, const char *_ssid, const char *_password, int channels = CC_SERVER) {
 		//~ serial = &_serial;
 		//~ ssid = _ssid;
 		//~ password = _password;
@@ -43,7 +44,7 @@ public:
 		int status;
 		do {
 			DPRINT (F("Connecting to AP: "));
-			DPRINTLN (ssid);
+			DPRINTLN (_ssid);
 			status = WiFi.begin (const_cast<char *> (_ssid), _password);
 		} while (status != WL_CONNECTED);
 
@@ -65,10 +66,27 @@ public:
 		DPRINT (F("IP address: "));
 		DPRINTLN (WiFi.localIP ());
 
-		// FIXME: Make this separate, we don't need it for clients
-		if (!udp.begin (DEFAULT_PORT)) {
-			DPRINTLN (F("Cannot setup listening socket"));
-			return false;
+		/* Clients don't really need this, but how can we make an output-only
+		 * socket?
+		 */
+		if (channels & CC_SERVER) {
+			if (!udpMain.begin (DEFAULT_PORT)) {
+				DPRINTLN (F("Cannot setup main listening socket"));
+				return false;
+			}
+		}
+
+		/* This can be enabled at will if you want to be able to RECEIVE
+		 * notifications
+		 */
+		if (channels & CC_NOTIFICATIONS) {
+			if (!udpNot.begin (DEFAULT_NOTIFICATION_PORT)) {
+				DPRINTLN (F("Cannot setup notification listening socket"));
+				return false;
+			} else {
+				DPRINT (F("Notification listening socket setup on port "));
+				DPRINTLN (DEFAULT_NOTIFICATION_PORT);
+			}
 		}
 
 		return true;
@@ -84,15 +102,15 @@ public:
 	//~ }
 
 	boolean send (const char *str, IPAddress& dest, uint16_t port) override {
-		udp.beginPacket (dest, port);
-		udp.write ((const uint8_t *) str, strlen (str));
-		udp.endPacket ();
+		udpMain.beginPacket (dest, port);
+		udpMain.write ((const uint8_t *) str, strlen (str));
+		udpMain.endPacket ();
 
 		// FIXME
 		return true;
 	}
 
-	boolean receiveString (char **str, IPAddress *senderAddr, uint16_t *senderPort) override {
+	boolean receiveGeneric (WiFiEspUDP& udp, char **str, IPAddress *senderAddr, uint16_t *senderPort) {
 		// Assume we'll receive nothing
 		boolean ret = false;
 
@@ -119,6 +137,22 @@ public:
 			DPRINTLN (F("\""));
 #endif
 			ret = true;
+		}
+
+		return ret;
+	}
+
+	boolean receiveString (char **str, IPAddress *senderAddr, uint16_t *senderPort, SensoriaChannel channel) override {
+		boolean ret = false;
+		switch (channel) {
+			case CC_SERVER:
+				ret = receiveGeneric (udpMain, str, senderAddr, senderPort);
+				break;
+			case CC_NOTIFICATIONS:
+				ret = receiveGeneric (udpNot, str, senderAddr, senderPort);
+				break;
+			default:
+				break;
 		}
 
 		return ret;

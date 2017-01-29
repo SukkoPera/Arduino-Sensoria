@@ -25,11 +25,16 @@ public:
 #endif
   TransducerType type;
 
-  Stereotype *stereotype;
+  Stereotype* stereotype;
+
+  Stereotype* parseReply (char*& reply);
 
   boolean read (char*& reply);
 
-  Stereotype *read ();
+  Stereotype* read ();
+
+  // Period is in seconds and is mandatory if type is periodic
+  boolean requestNotification (NotificationType type, word period = 0);
 
   TransducerProxy (ServerProxy* _srvpx, const char *name, TransducerType _type, Stereotype *stereotype, const char *description, const char *version);
 };

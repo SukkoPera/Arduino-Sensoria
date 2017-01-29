@@ -42,7 +42,7 @@ boolean ServerProxy::sendcmd (const char *args, char*& reply) {
 	} else {
 		IPAddress addr;
 		uint16_t port;
-		if ((ret = comm -> receiveStringWithTimeout (&reply, &addr, &port, CLIENT_TIMEOUT))) {
+		if ((ret = comm -> receiveStringWithTimeout (&reply, &addr, &port, CC_SERVER, CLIENT_TIMEOUT))) {
 #ifdef DEBUG_COMMS
 			DPRINT (F("--> "));
 			DPRINTLN (reply);

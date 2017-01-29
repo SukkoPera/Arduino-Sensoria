@@ -5,9 +5,13 @@
 
 #define DEFAULT_PORT 9999
 
+#define DEFAULT_NOTIFICATION_PORT 9998
+
 #define MAX_SERVERS 4
 
 #define MAX_TRANSDUCERS 8
+
+#define MAX_NOTIFICATION_REQS 2
 
 #define MAX_SERVER_NAME (16 + 1)
 
@@ -19,5 +23,15 @@
 
 // ms
 #define CLIENT_TIMEOUT 5000
+
+/* When checking for if transducer readings have changed for notification
+ * purposes, only poll at this interval (ms)
+ */
+#define NOTIFICATION_POLL_INTERVAL 1000
+
+enum NotificationType {
+  NT_CHA,     // On change
+  NT_PRD      // Periodic
+};
 
 #endif

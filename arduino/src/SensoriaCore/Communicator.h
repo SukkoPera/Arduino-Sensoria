@@ -4,6 +4,14 @@
 #include <Arduino.h>
 #include <IPAddress.h>
 
+enum SensoriaChannel {
+	CC_SERVER        = 1 << 0,
+	CC_NOTIFICATIONS = 1 << 1,
+
+	// We still need to enable the UDP socket for output
+	CC_CLIENT        = CC_SERVER
+};
+
 class SensoriaCommunicator {
 public:
 
@@ -21,13 +29,13 @@ public:
 	virtual boolean send (const char *str, IPAddress& dest, uint16_t port) = 0;
 
 	// Override to implement actual receiving of data
-	virtual boolean receiveString (char **str, IPAddress *senderAddr, uint16_t *senderPort) = 0;
+	virtual boolean receiveString (char **str, IPAddress *senderAddr, uint16_t *senderPort, SensoriaChannel channel) = 0;
 
-	boolean receiveStringWithTimeout (char **str, IPAddress *senderAddr, uint16_t *senderPort, unsigned int timeout_ms) {;
+	boolean receiveStringWithTimeout (char **str, IPAddress *senderAddr, uint16_t *senderPort, SensoriaChannel channel, unsigned int timeout_ms) {;
 		boolean ret;
 		unsigned long start = millis ();
 		do {
-			ret = receiveString (str, senderAddr, senderPort);
+			ret = receiveString (str, senderAddr, senderPort, channel);
 			if (ret)
 				break;
 		} while (millis () - start < timeout_ms);
