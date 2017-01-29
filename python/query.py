@@ -23,8 +23,7 @@ sensoria = Sensoria.Client (servers = args.addresses, autodiscover = not args.no
 while True:
 	for sname, server in sensoria.servers.iteritems ():
 		print "- Server: %s (%s:%d)" % (sname, server.address, server.port)
-		for tname in sorted (server.transducers.iterkeys ()):
-			t = server.transducers[tname]
+		for tname, t in sorted (server.transducers.iteritems ()):
 			try:
 				if t.genre == Sensoria.SENSOR:
 					print "  - Sensor %s: %s" % (t.name, t.description)
