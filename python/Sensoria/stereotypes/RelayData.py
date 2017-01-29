@@ -1,7 +1,7 @@
 from Sensoria.StereoType import StereoType
 
 class RelayData (StereoType):
-	ON, OFF, UNKNOWN = xrange (0, 3)
+	OFF, ON, UNKNOWN = xrange (0, 3)
 
 	_IDSTR = "RS"
 
