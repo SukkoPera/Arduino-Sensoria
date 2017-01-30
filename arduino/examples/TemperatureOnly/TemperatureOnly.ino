@@ -41,7 +41,7 @@ void setup (void) {
     mypanic (500);
   }
 
-  if (tempSensor.begin (F("IT"), F("Indoor Temperature"))) {
+  if (tempSensor.begin (F("TT"), F("ATmega328 Temperature"))) {
     if (srv.addTransducer (tempSensor) >= 0) {
       DPRINT (F("Sensor registered: "));
       DPRINTLN (tempSensor.name);
