@@ -12,17 +12,17 @@ private:
 	Actuator *r;
 
 public:
-	void begin (Actuator& _r) {
+	virtual void begin (Actuator& _r) {
 		r = &_r;
 	}
 
 protected:
-	boolean onNotification (T& data) {
+	boolean onNotification (T& data) override {
 		ControlledRelayData rdata;
 		if (r -> read (&rdata)) {
 			if (rdata.controller == ControlledRelayData::CTRL_AUTO) {
 				// R is under our control
-				ControlledRelayData::State newState = mustEnable (data) ? ControlledRelayData::STATE_ON : ControlledRelayData::STATE_OFF;
+				ControlledRelayData::State newState = checkEnable (data) ? ControlledRelayData::STATE_ON : ControlledRelayData::STATE_OFF;
 				if (newState != rdata.state) {
 					rdata.state = newState;
 					r -> write (&rdata);
@@ -55,30 +55,39 @@ protected:
 template <typename T, unsigned long TIME_SEC>
 class DelayedRelayController: public RelayController<T> {
 private:
-	unsigned long timeFirstOverThreshold;
+	boolean enabled;
+	unsigned long startTime;
+
+public:
+	void begin (Actuator& _r) override {
+		RelayController<T>::begin (_r);
+		enabled = false;
+		startTime = 0;
+	}
 
 protected:
-	boolean checkEnable (T& data) {
-		boolean ret = false;
-
-		if (mustEnable (data)) {
-			if (timeFirstOverThreshold == 0) {
+	boolean checkEnable (T& data) override {
+		if (this -> mustEnable (data) != enabled) {
+			if (startTime == 0) {
 				// First over thres
-				timeFirstOverThreshold = millis ();
-			} else if (millis () - timeFirstOverThreshold >= TIME_SEC * 1000) {
-				ret = true;
+				startTime = millis ();
+			} else if (millis () - startTime >= TIME_SEC * 1000UL) {
+				enabled = !enabled;
+				startTime = 0;
 			}
 		} else {
-			timeFirstOverThreshold = 0;
+			startTime = 0;
 		}
 
-		return ret;
+		return enabled;
 	}
 };
 
-class WeatherDataRelayController: public RelayController<WeatherData> {
+// 'float' is not a valid type for a template non-type parameter
+template <int TEMP>
+class OverTempController: public RelayController<WeatherData> {
 protected:
-	boolean mustEnable (WeatherData& data) {
+	boolean mustEnable (WeatherData& data) override {
 		Serial.println (F("Received WeatherData notification:"));
 		if (data.temperature != WeatherData::UNDEFINED) {
 			Serial.print (F("- Temp = "));
@@ -93,26 +102,14 @@ protected:
 			Serial.println (data.localPressure);
 		}
 
-		return data.temperature >= 25;
-	}
-};
-
-// 'float' is not a valid type for a template non-type parameter
-template <int TEMP>
-class OverTempController: public RelayController<WeatherData> {
-protected:
-	boolean mustEnable (WeatherData& data) {
 		return data.temperature >= TEMP;
 	}
 };
 
 template <int LUX_THRES>
-class UnderLuxController: public DelayedRelayController<WeatherData, 10> {
+class LowLightController: public DelayedRelayController<WeatherData, 5> {
 protected:
-	boolean mustEnable (WeatherData& data) {
-		return data.lightLux <= LUX_THRES;
+	boolean mustEnable (WeatherData& data) override {
+		return data.light10bit <= LUX_THRES;
 	}
-};
-
-class DarkController: public UnderLuxController<0> {
 };
