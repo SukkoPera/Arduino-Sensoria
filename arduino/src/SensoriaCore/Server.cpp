@@ -4,15 +4,7 @@
 #include "Server.h"
 #include "common.h"
 
-SensoriaServer::SensoriaServer ():
-		comm (NULL),
-		//~ nTransducers (0),
-#ifdef ENABLE_NOTIFICATIONS
-		//~ nNotificationReqs (0),
-#endif
-		hash (42) {
-
-	clearBuffer ();
+SensoriaServer::SensoriaServer (): comm (NULL) {
 }
 
 boolean SensoriaServer::begin (FlashString _serverName, SensoriaCommunicator& _comm) {
@@ -20,6 +12,7 @@ boolean SensoriaServer::begin (FlashString _serverName, SensoriaCommunicator& _c
 	serverVersion = F("20170130");
 	comm = &_comm;
 	nTransducers = 0;
+	clearBuffer ();
 
 #ifdef ENABLE_NOTIFICATIONS
 	nNotificationReqs = 0;
