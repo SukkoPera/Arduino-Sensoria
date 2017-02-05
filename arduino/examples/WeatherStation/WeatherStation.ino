@@ -80,7 +80,7 @@ void registerSensor (Sensor& sensor) {
 }
 
 void setup (void) {
-	DSTART ();
+	DSTART (9600);
 
   // Wait for ESP8266 to init
 	delay (3000);

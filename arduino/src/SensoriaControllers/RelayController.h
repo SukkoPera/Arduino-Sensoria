@@ -9,23 +9,23 @@
 template <typename T>
 class RelayController: public NotificationReceiver<T> {
 private:
-	Actuator *r;
+	ControlledRelay *r;
 
 public:
-	virtual void begin (Actuator& _r) {
+	virtual void begin (ControlledRelay& _r) {
 		r = &_r;
 	}
 
 protected:
 	boolean onNotification (T& data) override {
 		ControlledRelayData rdata;
-		if (r -> read (&rdata)) {
+		if (r -> read (rdata)) {
 			if (rdata.controller == ControlledRelayData::CTRL_AUTO) {
 				// R is under our control
 				ControlledRelayData::State newState = checkEnable (data) ? ControlledRelayData::STATE_ON : ControlledRelayData::STATE_OFF;
 				if (newState != rdata.state) {
 					rdata.state = newState;
-					r -> write (&rdata);
+					r -> write (rdata);
 				}
 			} else {
 				DPRINTLN (F("Ignoring notification as relay is under manual control"));
@@ -59,7 +59,7 @@ private:
 	unsigned long startTime;
 
 public:
-	void begin (Actuator& _r) override {
+	void begin (ControlledRelay& _r) override {
 		RelayController<T>::begin (_r);
 		enabled = false;
 		startTime = 0;

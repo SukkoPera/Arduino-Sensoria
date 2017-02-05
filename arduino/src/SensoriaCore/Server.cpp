@@ -191,7 +191,7 @@ void SensoriaServer::handleNotificationReqs () {
 		if (millis () - req.timeLastSent >= req.period) {
 			Stereotype* st = getStereotype (req.transducer -> stereotype);
 			st -> clear ();
-			if (req.transducer -> read (st)) {
+			if (req.transducer -> readGeneric (st)) {
 				clearSensorBuffer ();
 				char *buf = st -> marshal (sensorBuf, SENSOR_BUF_SIZE);
 				if (buf) {
@@ -307,7 +307,7 @@ void SensoriaServer::cmd_rea (char *args) {
 		if (t) {
 			Stereotype *st = getStereotype (t -> stereotype);   // Can't be NULL by now!
 			st -> clear ();
-			if (t -> read (st)) {
+			if (t -> readGeneric (st)) {
 				// Try to marshal
 				clearSensorBuffer ();
 				char *buf = st -> marshal (sensorBuf, SENSOR_BUF_SIZE);
@@ -348,17 +348,15 @@ void SensoriaServer::cmd_wri (char *args) {
 		Transducer *t = getTransducer (args);
 		if (t) {
 			if (t -> type == Transducer::ACTUATOR) {
-				Actuator *a = (Actuator *) t;
-
 				if (rest) {
 					// Do the unmrshaling, baby!
-					Stereotype *st = getStereotype (a -> stereotype);
+					Stereotype *st = getStereotype (t -> stereotype);
 					st -> clear ();
 					if (st -> unmarshal (rest)) {
 						send_srv (F("WRI "));
-						send_srv (a -> name);
+						send_srv (t -> name);
 						send_srv (" ");   // No F() here saves flash and wastes no ram
-						send_srv (a -> write (st) ? F("OK") : F("ERR"), true);
+						send_srv (t -> writeGeneric (st) ? F("OK") : F("ERR"), true);
 					} else {
 						DPRINT (F("Unmarshaling with "));
 						DPRINT (st -> tag);

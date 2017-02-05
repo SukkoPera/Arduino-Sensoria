@@ -1,7 +1,7 @@
 #include <SensoriaCore/Actuator.h>
 #include <SensoriaStereotypes/RelayData.h>
 
-class Relay: public Actuator {
+class Relay: public Actuator<RelayData> {
 private:
   static const byte NO_PIN = ~0;
   byte pin;
@@ -31,7 +31,7 @@ public:
     }
   }
 
-  boolean write (Stereotype *st) override {
+  boolean write (RelayData& rd) override {
     if (pin != NO_PIN) {
       RelayData& rd = *static_cast<RelayData *> (st);
       if (rd.state != RelayData::STATE_UNKNOWN) {
@@ -46,8 +46,7 @@ public:
     return false;
   }
 
-  boolean read (Stereotype *st) override {
-    RelayData& rd = *static_cast<RelayData *> (st);
+  boolean read (RelayData& rd) override {
     rd.state = state;
     return true;
   }

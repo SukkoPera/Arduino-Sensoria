@@ -44,12 +44,40 @@ public:
 		}
 	}
 
+  /* Override to implement the actual sensor reading and reporting.
+	 *
+	 * An actuator might also have a state or some parameters to read, so you can
+	 * override this method for that.
+	 */
+	virtual boolean readGeneric (Stereotype* st) = 0;
+
+  /* Override to implement the actual Actuator writing.
+	 */
+	virtual boolean writeGeneric (Stereotype* st) = 0;
+};
+
+template <typename ST>
+class TransducerT: public Transducer {
+private:
+#ifdef ENABLE_NOTIFICATIONS
+  ST lastReading;
+#endif
+
+  virtual boolean readGeneric (Stereotype* st) override {
+    ST* tst = static_cast<ST*> (st);
+    return read (*tst);
+  }
+
+protected:
+  TransducerT (Type _type): Transducer (_type) {
+  }
+
 	/* Override to implement the actual sensor reading and reporting.
 	 *
 	 * An actuator might also have a state or some parameters to read, so you can
 	 * override this method for that.
 	 */
-	virtual boolean read (Stereotype *st _UNUSED) = 0;
+	virtual boolean read (ST& st) = 0;
 };
 
 #endif

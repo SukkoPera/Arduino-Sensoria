@@ -4,22 +4,27 @@
 #include "Transducer.h"
 //~ #include <SensoriaCore/utils.h>
 
-
-class Actuator: public Transducer {
+template <typename ST>
+class Actuator: public TransducerT<ST> {
 private:
+	virtual boolean writeGeneric (Stereotype* st) override {
+    ST* tst = static_cast<ST*> (st);
+    return write (*tst);
+  }
 
-public:
-	Actuator (): Transducer (Transducer::ACTUATOR) {
+protected:
+	Actuator (): TransducerT<ST> (Transducer::ACTUATOR) {
 	}
 
-	/* Override to implement the actual Actuator writing.
+  /* Override to implement the actual Actuator writing.
 	 */
-	virtual boolean write (Stereotype *st) = 0;
+	virtual boolean write (ST& st) = 0;
 
   /* Since not all actuators might be interested in this, provide a do-nothing
-   * default.
+   * default, but keep this virtual.
    */
-  virtual boolean read (Stereotype *st _UNUSED) override {
+  virtual boolean read (ST& st) override {
+    (void) st;
     return false;
   }
 

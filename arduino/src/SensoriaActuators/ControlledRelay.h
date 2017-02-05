@@ -1,7 +1,7 @@
 #include <SensoriaCore/Actuator.h>
 #include <SensoriaStereotypes/ControlledRelayData.h>
 
-class ControlledRelay: public Actuator {
+class ControlledRelay: public Actuator<ControlledRelayData> {
 private:
   static const byte NO_PIN = ~0;
   byte pin;
@@ -36,9 +36,8 @@ public:
     }
   }
 
-  boolean write (Stereotype *st) override {
+  boolean write (ControlledRelayData& rd) override {
     if (pin != NO_PIN) {
-      ControlledRelayData& rd = *static_cast<ControlledRelayData *> (st);
       if (rd.state != ControlledRelayData::STATE_UNKNOWN &&
           rd.controller != ControlledRelayData::CTRL_UNKNOWN) {
         state = rd.state;
@@ -53,8 +52,7 @@ public:
     return false;
   }
 
-  boolean read (Stereotype *st) override {
-    ControlledRelayData& rd = *static_cast<ControlledRelayData *> (st);
+  boolean read (ControlledRelayData& rd) override {
     rd.state = state;
     rd.controller = controller;
     return true;
