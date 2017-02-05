@@ -174,6 +174,8 @@ void SensoriaServer::process_cmd (char *buffer, IPAddress senderAddr, uint16_t s
 #ifdef ENABLE_NOTIFICATIONS
 	} else if (strcmp_P (cmd, PSTR ("NRQ")) == 0) {
 		cmd_nrq (args);
+	} else if (strcmp_P (cmd, PSTR ("NDL")) == 0) {
+		cmd_ndl (args);
 #endif
 	} else {
 		DPRINT (F("Unsupported command: \""));
@@ -189,7 +191,7 @@ void SensoriaServer::process_cmd (char *buffer, IPAddress senderAddr, uint16_t s
 void SensoriaServer::handleNotificationReqs () {
 #ifdef ENABLE_NOTIFICATIONS
 	/* This assumes that NRQs 0...nNotificationReqs-1 are always valid,
-	 * so take care on NRQ cancellation, if ever
+	 * so take care on sigle NRQ cancellation, if ever
 	 */
 	for (byte i = 0; i < nNotificationReqs; i++) {
 		NotificationRequest& req = notificationReqs[i];
@@ -473,4 +475,15 @@ void SensoriaServer::cmd_nrq (char *args) {
 		send_srv (F("ERR Missing transducer name"), true);
 	}
 }
+
+// Delete all notifications
+void SensoriaServer::cmd_ndl (char *args) {
+  (void) *args;
+
+  nNotificationReqs = 0;
+  DPRINTLN (F("Deleted all notification requests"));
+
+  send_srv (F("NDL OK"));
+}
+
 #endif
