@@ -1,7 +1,7 @@
 #include <SensoriaCore/Sensor.h>
 #include <SensoriaStereotypes/WeatherData.h>
 
-class LightSensorBH1750: public Sensor {
+class LightSensorBH1750: public Sensor<WeatherData> {
 private:
 	// https://github.com/claws/BH1750
 	BH1750 *lightMeter;
@@ -19,9 +19,7 @@ public:
 		}
 	}
 
-  boolean read (Stereotype *st) override {
-    WeatherData& wd = *static_cast<WeatherData *> (st);
-
+  boolean read (WeatherData& wd) override {
 		wd.lightLux = lightMeter -> readLightLevel ();
 		DPRINT (F("Light: "));
 		DPRINT (wd.lightLux);

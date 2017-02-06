@@ -19,6 +19,17 @@ public:
 	RelayData (): Stereotype ("RS") {
 	}
 
+  RelayData& operator= (RelayData& other) {
+    state = other.state;
+
+    return *this;
+  }
+
+  bool operator== (Stereotype const& genericOther) override {
+    RelayData const& other = static_cast<RelayData const&> (genericOther);
+    return state == other.state;
+  }
+
 	virtual void clear () override {
 		state = STATE_UNKNOWN;
 	}

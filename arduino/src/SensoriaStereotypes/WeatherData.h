@@ -9,6 +9,9 @@ class WeatherData: public Stereotype {
 private:
 	static const int MAX_SPLIT = 7;
 
+  static const int TEMP_DELTA = 1;
+  static const int LIGHT10BIT_DELTA = 75;
+
 public:
 	float temperature;
 	float humidity;
@@ -22,6 +25,20 @@ public:
 
 	WeatherData(): Stereotype ("WD") {
 	}
+
+  WeatherData& operator= (WeatherData& other) {
+    temperature = other.temperature;
+    light10bit = other.light10bit;
+
+    return *this;
+  }
+
+  bool operator== (Stereotype const& genericOther) override {
+  //~ bool operator== (WeatherData const& other) {
+    WeatherData const& other = static_cast<WeatherData const&> (genericOther);
+    return abs (temperature - other.temperature) <= TEMP_DELTA &&
+           abs (light10bit - other.light10bit) <= LIGHT10BIT_DELTA;
+  }
 
 	virtual void clear () override {
 		temperature = UNDEFINED;
@@ -67,7 +84,7 @@ public:
 
 	char *marshal (char *buf, unsigned int size) override {
 		// Start with an empty string
-		if (size > 0) {
+		if (size > 0) {   // FIXME
 			buf[0] = '\0';
 
 			// Go through each member and append

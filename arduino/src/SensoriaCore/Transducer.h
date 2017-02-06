@@ -44,6 +44,12 @@ public:
 		}
 	}
 
+#ifdef ENABLE_NOTIFICATIONS
+  virtual Stereotype& getLastReading () = 0;
+
+  virtual void setLastReading (Stereotype& reading) = 0;
+#endif
+
   /* Override to implement the actual sensor reading and reporting.
 	 *
 	 * An actuator might also have a state or some parameters to read, so you can
@@ -61,6 +67,15 @@ class TransducerT: public Transducer {
 private:
 #ifdef ENABLE_NOTIFICATIONS
   ST lastReading;
+
+  Stereotype& getLastReading () {
+    return lastReading;
+  }
+
+  void setLastReading (Stereotype& st) {
+    ST& tst = static_cast<ST&> (st);
+    lastReading = tst;
+  }
 #endif
 
   virtual boolean readGeneric (Stereotype* st) override {

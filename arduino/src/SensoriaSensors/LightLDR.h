@@ -1,7 +1,7 @@
 #include <SensoriaCore/Sensor.h>
 #include <SensoriaStereotypes/WeatherData.h>
 
-class PhotoSensor: public Sensor {
+class PhotoSensor: public Sensor<WeatherData> {
 private:
 	byte pin;
 	unsigned int resistance;
@@ -31,15 +31,14 @@ public:
 		return Sensor::begin (name, F("WD"), description, F("20160320"));
 	}
 
-  boolean read (Stereotype *st) override {
-    WeatherData& wd = *static_cast<WeatherData *> (st);
-
+  boolean read (WeatherData& wd) override {
 		// Assume reading extremes indicates some problem. Debatable, yeah.
 		do {
 			wd.light10bit = analogRead (pin);
 			DPRINT (F("Analog reading = "));
 			DPRINTLN (wd.light10bit);
-		} while (wd.light10bit == 0 || wd.light10bit == 1023);
+		//~ } while (wd.light10bit == 0 || wd.light10bit == 1023);
+		} while (0);
 
 		//~ float v = (float) readVcc () / (float) STEPS * (float) reading / 1000;
 		//~ DPRINT (F("Voltage across LDR = "));

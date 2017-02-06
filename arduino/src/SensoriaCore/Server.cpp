@@ -192,10 +192,10 @@ void SensoriaServer::handleNotificationReqs () {
 			Stereotype* st = getStereotype (req.transducer -> stereotype);
 			st -> clear ();
 			if (req.transducer -> readGeneric (st)) {
-				clearSensorBuffer ();
-				char *buf = st -> marshal (sensorBuf, SENSOR_BUF_SIZE);
-				if (buf) {
-					if (req.type == NT_PRD || strcmp (buf, req.lastReading) != 0) {
+        if (req.type == NT_PRD || !(*st == req.transducer -> getLastReading ())) {
+          clearSensorBuffer ();
+          char *buf = st -> marshal (sensorBuf, SENSOR_BUF_SIZE);
+          if (buf) {
 						DPRINT (F("Sending notification for "));
 						DPRINTLN (req.transducer -> name);
 
@@ -203,14 +203,15 @@ void SensoriaServer::handleNotificationReqs () {
 						send_srv (req.transducer -> name);
 						send_srv (" ");   // No F() here saves flash and wastes no ram
 						send_srv (buf, true, &req.destAddr, &req.destPort);
-						strlcpy (req.lastReading, buf, SENSOR_BUF_SIZE);
+
+            req.transducer -> setLastReading (*st);
 						req.timeLastSent = millis ();
-					}
-				} else {
-					send_srv (F("ERR Notification marshaling failed"), true);
-				}
+          } else {
+            DPRINTLN (F("ERR Notification marshaling failed"));
+          }
+        }
 			} else {
-				send_srv (F("ERR Read for notification failed"), true);
+				DPRINTLN (F("ERR Transducer read for notification failed"));
 			}
 		}
 	}

@@ -26,6 +26,18 @@ public:
 	ControlledRelayData (): Stereotype ("CR") {
 	}
 
+  ControlledRelayData& operator= (ControlledRelayData& other) {
+    state = other.state;
+    controller = other.controller;
+
+    return *this;
+  }
+
+  bool operator== (Stereotype const& genericOther) override {
+    ControlledRelayData const& other = static_cast<ControlledRelayData const&> (genericOther);
+    return state == other.state && controller == other.controller;
+  }
+
 	virtual void clear () override {
 		state = STATE_UNKNOWN;
 		controller = CTRL_UNKNOWN;
