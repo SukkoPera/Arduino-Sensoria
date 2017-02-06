@@ -475,7 +475,7 @@ void SensoriaServer::cmd_ndl (char *args) {
   nNotificationReqs = 0;
   DPRINTLN (F("Deleted all notification requests"));
 
-  send_srv (F("NDL OK"));
+  send_srv (F("NDL OK"), true);
 }
 
 #endif
