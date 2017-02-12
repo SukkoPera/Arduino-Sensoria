@@ -43,8 +43,13 @@ private:
 
 	void clearSensorBuffer ();
 
+#ifdef ENABLE_NOTIFICATIONS
+  int findNotification (IPAddress& addr, word port, NotificationType type, char* tName);
+
+  NotificationType parseNotificationTypeStr (char *nTypeStr);
 
 	void handleNotificationReqs ();
+#endif
 
 	void cmd_qry (char *args);
 
@@ -56,9 +61,11 @@ private:
 
 	void cmd_nrq (char *args);
 
+#ifdef ENABLE_NOTIFICATIONS
 	void cmd_ndl (char *args);
 
 	void cmd_ncl (char *args);
+#endif
 
 	boolean send_srv (const char *str, boolean cr = false, IPAddress* destAddr = NULL, word* destPort = NULL);
 

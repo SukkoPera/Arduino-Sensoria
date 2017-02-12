@@ -31,7 +31,9 @@
 
 enum NotificationType {
   NT_CHA,     // On change
-  NT_PRD      // Periodic
+  NT_PRD,     // Periodic
+
+  NT_UNK      // Used for error reporting
 };
 
 #endif

@@ -183,6 +183,49 @@ void SensoriaServer::process_cmd (char *buffer, IPAddress senderAddr, uint16_t s
 	}
 }
 
+#ifdef ENABLE_NOTIFICATIONS
+
+/**
+ * NOTE: This can modify tName
+ */
+int SensoriaServer::findNotification (IPAddress& addr, word port, NotificationType type, char* tName) {
+  int ret = -1;
+
+  strupr (tName);
+  for (byte i = 0; i < nNotificationReqs; i++) {
+    NotificationRequest& req = notificationReqs[i];
+
+    if (req.destAddr == addr &&
+        req.destPort == port &&
+        req.type == type &&
+        strcmp_P (tName, F_TO_PSTR (req.transducer -> name)) == 0) {
+
+      // Notification found!
+      ret = i;
+      break;
+    }
+  }
+
+  return ret;
+}
+
+/**
+ * NOTE: This can modify nTypeStr
+ */
+NotificationType SensoriaServer::parseNotificationTypeStr (char *nTypeStr) {
+  NotificationType type = NT_UNK;
+
+  strupr (nTypeStr);
+  if (strcmp_P (nTypeStr, PSTR ("CHA")) == 0) {
+    type = NT_CHA;
+  } else if (strcmp_P (nTypeStr, PSTR ("PRD")) == 0) {
+    type = NT_PRD;
+  }
+
+  return type;
+}
+#endif
+
 void SensoriaServer::handleNotificationReqs () {
 #ifdef ENABLE_NOTIFICATIONS
 	// This assumes NRQs 0...nNotificationReqs-1 are always valid
@@ -397,63 +440,75 @@ void SensoriaServer::cmd_nrq (char *args) {
 			char* tName = p[0];
 			char* nTypeStr = p[1];
 
-			Transducer *t = getTransducer (tName);
-			if (t) {
-				if (nNotificationReqs < MAX_NOTIFICATION_REQS) {
-					// FIXME: Check if request is already in list
-					NotificationRequest& req = notificationReqs[nNotificationReqs++];
-					req.destAddr = remoteAddress;
-					req.destPort = DEFAULT_NOTIFICATION_PORT;		// FIXME
-					req.transducer = t;
-					req.timeLastSent = 0;
-					req.lastReading[0] = '\0';
+      NotificationType type = parseNotificationTypeStr (nTypeStr);
+      if (type != NT_UNK) {
+        int i = findNotification (remoteAddress, DEFAULT_NOTIFICATION_PORT, type, tName);
+        if (i >= 0) {
+          // Request already exists, assume client lost track of it and return success
+          DPRINTLN (F("NRQ already exists"));
+          send_srv (F("NRQ OK"), true);
+        } else {
+          Transducer *t = getTransducer (tName);
+          if (t) {
+            if (nNotificationReqs < MAX_NOTIFICATION_REQS) {
+              NotificationRequest& req = notificationReqs[nNotificationReqs++];
+              req.destAddr = remoteAddress;
+              req.destPort = DEFAULT_NOTIFICATION_PORT;		// FIXME
+              req.type = type;
+              req.transducer = t;
+              req.timeLastSent = 0;
+              req.lastReading[0] = '\0';
 
-					strupr (nTypeStr);
-					if (strcmp_P (nTypeStr, PSTR ("CHA")) == 0) {
-						DPRINT (F("Notifying on change of "));
-						DPRINTLN (t -> name);
+              switch (type) {
+                case NT_CHA:
+                  DPRINT (F("Notifying on change of "));
+                  DPRINTLN (t -> name);
 
-						req.type = NT_CHA;
-						req.period = NOTIFICATION_POLL_INTERVAL;
+                  req.period = NOTIFICATION_POLL_INTERVAL;
 
-						send_srv (F("NRQ OK"), true);
-					} else if (strcmp_P (nTypeStr, PSTR ("PRD")) == 0) {
-						if (n < 3) {
-							nNotificationReqs--;
-							DPRINTLN (F("ERR No interval specified"));
-							send_srv (F("ERR No interval specified"), true);
-						} else {
-							word intv = atoi (p[2]);
+                  send_srv (F("NRQ OK"), true);
+                  break;
+                case NT_PRD:
+                  if (n < 3) {
+                    nNotificationReqs--;
+                    DPRINTLN (F("ERR No interval specified"));
+                    send_srv (F("MRQ ERR"), true);
+                  } else {
+                    word intv = atoi (p[2]);
 
-							DPRINT (F("Notifying values of "));
-							DPRINT (t -> name);
-							DPRINT (F(" every "));
-							DPRINT (intv);
-							DPRINTLN (F(" second(s)"));
+                    DPRINT (F("Notifying values of "));
+                    DPRINT (t -> name);
+                    DPRINT (F(" every "));
+                    DPRINT (intv);
+                    DPRINTLN (F(" second(s)"));
 
-							req.type = NT_PRD;
-							req.period = intv * 1000UL;
+                    req.type = NT_PRD;
+                    req.period = intv * 1000UL;
 
-							send_srv (F("NRQ OK"), true);
-						}
-					} else {
-						nNotificationReqs--;
-						DPRINT (F("ERR Bad notification request type: "));
-						DPRINTLN (nTypeStr);
+                    send_srv (F("NRQ OK"), true);
+                  }
+                  break;
+                default:
+                  break;
+              }
+            } else {
+              DPRINTLN (F("ERR Max notification requests reached"));
 
-						send_srv (F("NRQ ERR"), true);
-					}
-				} else {
-					DPRINTLN (F("ERR Max notification requests reached"));
+              send_srv (F("NRQ ERR"), true);
+            }
+          } else {
+            DPRINT (F("ERR No such transducer: "));
+            DPRINTLN (args);
 
-					send_srv (F("NRQ ERR"), true);
-				}
-			} else {
-				DPRINT (F("ERR No such transducer: "));
-				DPRINTLN (args);
+            send_srv (F("NRQ ERR"), true);
+          }
+        }
+      } else {
+        DPRINT (F("ERR Bad notification request type: "));
+        DPRINTLN (nTypeStr);
 
-				send_srv (F("NRQ ERR"), true);
-			}
+        send_srv (F("NRQ ERR"), true);
+      }
 		} else {
 			DPRINTLN (F("ERR Bad request"));
 			send_srv (F("ERR Bad request"), true);
@@ -477,42 +532,35 @@ void SensoriaServer::cmd_ndl (char *args) {
 			char* tName = p[0];
 			char* nTypeStr = p[1];
 
-			byte nNotificationReqsBefore = nNotificationReqs;
-			for (byte i = 0; i < nNotificationReqs; i++) {
-				NotificationRequest& req = notificationReqs[i];
+      NotificationType type = parseNotificationTypeStr (nTypeStr);
+      if (type != NT_UNK) {
+        int i = findNotification (remoteAddress, DEFAULT_NOTIFICATION_PORT, type, tName);
+        if (i >= 0) {
+          //  Notification found
+          DPRINT (F("Deleting notification request "));
+          DPRINTLN (i);
 
-				strupr (tName);
-				strupr (nTypeStr);
-				if (req.destAddr == remoteAddress &&
-						req.destPort == DEFAULT_NOTIFICATION_PORT &&
-						((strcmp_P (nTypeStr, PSTR ("CHA")) == 0 && req.type == NT_CHA) ||
-						 (strcmp_P (nTypeStr, PSTR ("PRD")) == 0 && req.type == NT_PRD)) &&
-						strcmp_P (tName, F_TO_PSTR (req.transducer -> name)) == 0) {
+          /* NRQs 0...nNotificationReqs-1 are always valid, so deleting a
+           * NRQ means we have to shift all subsequent NRQs down by one
+           * place
+           */
+          for (byte j = 0; i + j + 1 < nNotificationReqs; j++) {
+            notificationReqs[i + j] = notificationReqs[i + j + 1];
+          }
 
-							//  Notification found
-							DPRINT (F("Deleting notification request "));
-							DPRINTLN (i);
+          nNotificationReqs--;
 
-							/* NRQs 0...nNotificationReqs-1 are always valid, so deleting a
-							 * NRQ means we have to shift all subsequent NRQs down by one
-							 * place
-							 */
-							for (byte j = 0; i + j + 1 < nNotificationReqs; j++) {
-								notificationReqs[i + j] = notificationReqs[i + j + 1];
-							}
+          send_srv (F("NDL OK"), true);
+        } else {
+          DPRINT (F("ERR No such NRQ"));
+          send_srv (F("NDL ERR"), true);
+        }
+      } else {
+        DPRINT (F("ERR Bad notification request type: "));
+        DPRINTLN (nTypeStr);
 
-							nNotificationReqs--;
-							break;
-				}
-			}
-
-			send_srv (F("NDL "));
-			if (nNotificationReqs < nNotificationReqsBefore) {
-				send_srv (" OK", true);
-			} else {
-				DPRINT (F("ERR No such NRQ"));
-				send_srv (F(" ERR"), true);
-			}
+        send_srv (F("NDL ERR"), true);
+      }
 		} else {
 			DPRINTLN (F("ERR Bad request"));
 			send_srv (F("ERR Bad request"), true);
@@ -533,6 +581,5 @@ void SensoriaServer::cmd_ncl (char *args) {
 	// This can't really fail
 	send_srv (F("NCL OK"), true);
 }
-
 
 #endif    // ENABLE_NOTIFICATIONS
