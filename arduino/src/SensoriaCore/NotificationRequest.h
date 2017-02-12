@@ -20,8 +20,6 @@ public:
 	 */
 	unsigned long timeLastSent;
 
-	char lastReading[SENSOR_BUF_SIZE];
-
   NotificationRequest& operator= (const NotificationRequest& other) {
     destAddr = other.destAddr;
     destPort = other.destPort;

@@ -457,7 +457,6 @@ void SensoriaServer::cmd_nrq (char *args) {
               req.type = type;
               req.transducer = t;
               req.timeLastSent = 0;
-              req.lastReading[0] = '\0';
 
               switch (type) {
                 case NT_CHA:
