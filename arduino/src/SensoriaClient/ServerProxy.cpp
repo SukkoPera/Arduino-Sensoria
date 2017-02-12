@@ -59,6 +59,7 @@ boolean ServerProxy::sendcmd (const char *args, char*& reply) {
 				DPRINTLN (rc[1]);
 				ret = false;
 			} else if (strncmp (rc[0], args, CMD_LEN) != 0) {
+				// Reply doesn't start with the command we sent
 				DPRINT (F("Unexpected reply: "));
 				DPRINTLN (reply);
 				ret = false;
