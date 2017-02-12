@@ -85,7 +85,7 @@ void mypanic (int interval) {
 }
 
 
-void registerSensor (Sensor& sensor) {
+void registerTransducer (Transducer& sensor) {
   int b = srv.addTransducer (sensor);
   if (b >= 0) {
     DPRINT (F("Sensor "));
@@ -100,7 +100,7 @@ void registerSensor (Sensor& sensor) {
 }
 
 void setup (void) {
-  DSTART ();
+  DSTART (9600);
 
   // Wait for ESP8266 to init
   delay (3000);
@@ -118,7 +118,7 @@ void setup (void) {
 #if 0
   pinMode (LDR_PIN, INPUT);
   if (photoSensor.begin (F("L2"), F("Outdoor Light (LDR)"), LDR_PIN, LDR_RESISTANCE))
-    registerSensor (photoSensor);
+    registerTransducer (photoSensor);
 #endif
 
   // TSL2561
@@ -138,7 +138,7 @@ void setup (void) {
   lightMeter.setTiming (gain, time, ms);
   lightMeter.setPowerUp();
   if (lightSensor2561.begin (F("OR"), F("Outdoor Light (Lux)"), lightMeter, gain, ms))
-    registerSensor (lightSensor2561);
+    registerTransducer (lightSensor2561);
 #endif
 
   // Init DS18B20
@@ -165,24 +165,24 @@ void setup (void) {
   sensors.setResolution (outdoorThermometer, 12);
 
   if (dallasSensor.begin (F("T2"), F("Outdoor Temperature"), &sensors, outdoorThermometer))
-    registerSensor (dallasSensor);
+    registerTransducer (dallasSensor);
 #endif
 
 #if 0
   dht.begin ();
   if (dhtSensor.begin (F("H2"), F("Outdoor Humidity"), dht))
-    registerSensor (dhtSensor);
+    registerTransducer (dhtSensor);
 #endif
 
   //~ if (pressure.begin () && pressureSensor.begin (F("P2"), F("Outdoor Pressure"), pressure))
-    //~ registerSensor (pressureSensor);
+    //~ registerTransducer (pressureSensor);
 
   if (si7021.begin (F("H3"), F("Outdoor Humid+Temp")))
-    registerSensor (si7021);
+    registerTransducer (si7021);
 
   pinMode (LM35_PIN, INPUT);
   if (lm35Sensor.begin (F("T3"), F("Outdoor Temp (LM35)"), LM35_PIN))
-    registerSensor (lm35Sensor);
+    registerTransducer (lm35Sensor);
 
 
   // Signal we're ready!

@@ -2,7 +2,7 @@
 #include <SensoriaStereotypes/WeatherData.h>
 #include <SI7021.h>
 
-class SI7021HumiditySensor: public Sensor {
+class SI7021HumiditySensor: public Sensor<WeatherData> {
 private:
   SI7021 sensor;
 
@@ -27,12 +27,11 @@ public:
 		}
 	}
 
-  boolean read (Stereotype *st) override {
+  boolean read (WeatherData& wd) override {
     si7021_env reading = sensor.getHumidityAndTemperature();
   	float h = reading.humidityBasisPoints / 100.0;
 		float t = reading.celsiusHundredths / 100.0;
 		if (!isnan (h) && !isnan(t)) {
-      WeatherData& wd = *static_cast<WeatherData *> (st);
       wd.humidity = h;
       wd.temperature = t;
 		}

@@ -2,7 +2,7 @@
 #include <SensoriaStereotypes/WeatherData.h>
 #include <DallasTemperature.h>
 
-class TemperatureSensorLM35: public Sensor {
+class TemperatureSensorLM35: public Sensor<WeatherData> {
 private:
   // How many times to read the sensor, to smooth out inaccuracies
   static const byte N_SAMPLES = 3;
@@ -39,9 +39,7 @@ public:
 		return Sensor::begin (name, F("WD"), description, F("20160320"));
 	}
 
-  boolean read (Stereotype *st) override {
-    WeatherData& wd = *static_cast<WeatherData *> (st);
-
+  boolean read (WeatherData& wd) override {
     // Initial delay to let things settle down
     delay (50);
 

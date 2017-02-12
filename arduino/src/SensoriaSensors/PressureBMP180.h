@@ -7,7 +7,7 @@
 
 #define ALTITUDE 236.0
 
-class PressureSensor: public Sensor {
+class PressureSensor: public Sensor<WeatherData> {
 private:
 	SFE_BMP180 *sensor;
 
@@ -25,7 +25,7 @@ public:
 	}
 
 	// FIXME: Check for sensor != null
-  boolean read (Stereotype *st) override {
+  boolean read (WeatherData& wd) override {
 		char status;
 		double temp, px;
 
@@ -96,7 +96,6 @@ public:
 						//Serial.println(" feet");
 
 						if (!isnan (temp) && !isnan (px)) {
-              WeatherData& wd = *static_cast<WeatherData *> (st);
               wd.localPressure = px;
               wd.temperature = temp;
 						}

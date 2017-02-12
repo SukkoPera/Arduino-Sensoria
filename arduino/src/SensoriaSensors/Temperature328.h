@@ -1,7 +1,7 @@
 #include <SensoriaCore/Sensor.h>
 #include <SensoriaStereotypes/WeatherData.h>
 
-class TemperatureSensor328: public Sensor {
+class TemperatureSensor328: public Sensor<WeatherData> {
 private:
   /* Read ATmega temperature sensor (only available on 328 and 32u4)
    * http://playground.arduino.cc/Main/InternalTemperatureSensor
@@ -22,8 +22,7 @@ public:
 		return Sensor::begin (name, F("WD"), description, F("20160201"));
 	}
 
-  boolean read (Stereotype *st) override {
-    WeatherData& wd = *static_cast<WeatherData *> (st);
+  boolean read (WeatherData& wd) override {
     wd.temperature = readTemp ();
     return true;
   }

@@ -2,7 +2,7 @@
 #include <SensoriaStereotypes/WeatherData.h>
 #include <SparkFunTSL2561.h>
 
-class LightSensorTSL2561: public Sensor {
+class LightSensorTSL2561: public Sensor<WeatherData> {
 private:
 	// Use the SparkFun library
 	SFE_TSL2561 *lightMeter;
@@ -63,9 +63,7 @@ public:
 		}
 	}
 
-  boolean read (Stereotype *st) override {
-    WeatherData& wd = *static_cast<WeatherData *> (st);
-
+  boolean read (WeatherData& wd) override {
 		unsigned int data0, data1;
 		if (lightMeter -> getData (data0, data1)) {
 			// getData() returned true, communication was successful

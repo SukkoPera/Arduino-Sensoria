@@ -50,8 +50,8 @@ SensoriaEsp8266Communicator comm;
 SensoriaServer srv;
 
 // Wi-Fi parameters
-#define WIFI_SSID        ""
-#define WIFI_PASSWORD    ""
+#define WIFI_SSID        "ssid"
+#define WIFI_PASSWORD    "password"
 
 
 void mypanic (int interval) {
@@ -65,7 +65,7 @@ void mypanic (int interval) {
 	}
 }
 
-void registerSensor (Sensor& sensor) {
+void registerTransducer (Transducer& sensor) {
   int b = srv.addTransducer (sensor);
   if (b >= 0) {
     DPRINT (F("Sensor "));
@@ -98,7 +98,7 @@ void setup (void) {
 	pinMode (LDR_PIN, INPUT);
 	if (photoSensor.begin (F("PR"), F("Outdoor Light (LDR)"), LDR_PIN,
 	                       LDR_RESISTANCE)) {
-		registerSensor (photoSensor);
+		registerTransducer (photoSensor);
 	}
 
 	/*
@@ -112,7 +112,7 @@ void setup (void) {
 
 	lightMeter.begin ();
 	if (lightSensor1750.begin (F("OL"), F("Outdoor Light (Lux)"), lightMeter)) {
-		registerSensor (lightSensor1750);
+		registerTransducer (lightSensor1750);
 	}
 
 
@@ -141,18 +141,18 @@ void setup (void) {
 
 	if (dallasSensor.begin (F("OT"), F("Outdoor Temperature"), &sensors,
 	                        outdoorThermometer)) {
-		registerSensor (dallasSensor);
+		registerTransducer (dallasSensor);
 	}
 
 
 	dht.begin ();
 	if (dhtSensor.begin (F("OH"), F("Outdoor Humidity"), dht)) {
-		registerSensor (dhtSensor);
+		registerTransducer (dhtSensor);
 	}
 
 
   if (pressure.begin () && pressureSensor.begin (F("OP"), F("Outdoor Pressure"), pressure))
-    registerSensor (pressureSensor);
+    registerTransducer (pressureSensor);
 
 	// Signal we're ready!
 	//Serial.println (F("GO!"));

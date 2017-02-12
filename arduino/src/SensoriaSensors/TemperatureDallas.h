@@ -2,7 +2,7 @@
 #include <SensoriaStereotypes/WeatherData.h>
 #include <DallasTemperature.h>
 
-class DallasTemperatureSensor: public Sensor {
+class DallasTemperatureSensor: public Sensor<WeatherData> {
 private:
 	DallasTemperature *sensors;
 	DeviceAddress sensorAddress;
@@ -21,9 +21,7 @@ public:
 		}
 	}
 
-  boolean read (Stereotype *st) override {
-    WeatherData& wd = *static_cast<WeatherData *> (st);
-
+  boolean read (WeatherData& wd) override {
 		DPRINT (F("Requesting temperatures... "));
 		sensors -> requestTemperatures (); // Send the command to get temperatures
 		DPRINTLN (F("DONE"));

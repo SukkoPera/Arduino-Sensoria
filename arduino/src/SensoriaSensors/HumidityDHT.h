@@ -2,7 +2,7 @@
 #include <SensoriaStereotypes/WeatherData.h>
 #include <DHT.h>
 
-class DhtHumiditySensor: public Sensor {
+class DhtHumiditySensor: public Sensor<WeatherData> {
 private:
   DHT *dht;
 
@@ -52,11 +52,10 @@ public:
 		}
 	}
 
-  boolean read (Stereotype *st) override {
+  boolean read (WeatherData& wd) override {
     float h = dht -> readHumidity();
 		float t = dht -> readTemperature();
 		if (!isnan (h) && !isnan(t)) {
-      WeatherData& wd = *static_cast<WeatherData *> (st);
       wd.humidity = h;
       wd.temperature = t;
 		}

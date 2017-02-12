@@ -2,6 +2,7 @@
 
 #include <Sensoria.h>
 #include <SensoriaCore/Communicator.h>
+#include <SensoriaCore/common.h>
 #include <WiFiEsp.h>
 #include <WiFiEspUdp.h>
 #include <SensoriaCore/debug.h>
