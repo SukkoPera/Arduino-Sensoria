@@ -8,37 +8,34 @@
 
 template <typename T>
 class RelayController: public NotificationReceiver<T> {
-private:
-	ControlledRelay *r;
-
-public:
-	virtual void begin (ControlledRelay& _r) {
-		r = &_r;
-	}
-
 protected:
+	ControlledRelay *r;
+	TransducerProxy *t;
+
 	boolean onNotification (T& data) override {
-		ControlledRelayData rdata;
-		if (r -> read (rdata)) {
-			if (rdata.controller == ControlledRelayData::CTRL_AUTO) {
-				// R is under our control
-				ControlledRelayData::State newState = checkEnable (data) ? ControlledRelayData::STATE_ON : ControlledRelayData::STATE_OFF;
-				if (newState != rdata.state) {
-					rdata.state = newState;
-					r -> write (rdata);
-				}
-			} else {
-				DPRINTLN (F("Ignoring notification as relay is under manual control"));
-			}
-		} else {
-			DPRINTLN (F("Ignoring notification as relay actuator cannot be read"));
-		}
+		enableRelay (mustEnable (data));
 
 		return true;
 	}
 
-	virtual boolean checkEnable (T& data) {
-		return mustEnable (data);
+	void enableRelay (boolean enabled) {
+		ControlledRelayData rdata;
+		if (this -> r -> read (rdata)) {
+			if (rdata.controller == ControlledRelayData::CTRL_AUTO) {
+				// R is under our control
+				ControlledRelayData::State newState = enabled ? ControlledRelayData::STATE_ON : ControlledRelayData::STATE_OFF;
+				if (newState != rdata.state) {
+					rdata.state = newState;
+					if (!this -> r -> write (rdata)) {
+						DPRINTLN (F("Failed write to relay actuator"));
+					}
+				}
+			//~ } else {
+				//~ DPRINTLN (F("Relay is under manual control"));
+			}
+		} else {
+			DPRINTLN (F("Relay actuator cannot be read"));
+		}
 	}
 
 	virtual boolean toManual () {
@@ -50,6 +47,16 @@ protected:
 	}
 
 	virtual boolean mustEnable (T& data) = 0;
+
+public:
+	virtual void begin (ControlledRelay& _r, TransducerProxy& _t) {
+		r = &_r;
+		t = &_t;
+
+		// Set initial state
+		T& data = *static_cast<T *> (this -> t -> read ());
+		enableRelay (mustEnable (data));
+	}
 };
 
 template <typename T, unsigned long TIME_SEC>
@@ -59,27 +66,37 @@ private:
 	unsigned long startTime;
 
 public:
-	void begin (ControlledRelay& _r) override {
-		RelayController<T>::begin (_r);
-		enabled = false;
+	void begin (ControlledRelay& _r, TransducerProxy& _t) override {
+		this -> r = &_r;
+		this -> t = &_t;
 		startTime = 0;
+
+		// Set initial state
+		T& data = *static_cast<T *> (this -> t -> read ());
+		enabled = this -> mustEnable (data);
+	}
+
+	void loop () {
+		if (startTime != 0 && millis () - startTime >= TIME_SEC * 1000UL) {
+			enabled = !enabled;
+			startTime = 0;
+		}
+
+		this -> enableRelay (enabled);
 	}
 
 protected:
-	boolean checkEnable (T& data) override {
+	boolean onNotification (T& data) override {
 		if (this -> mustEnable (data) != enabled) {
 			if (startTime == 0) {
-				// First over thres
+				// Instant when we first detect a status change
 				startTime = millis ();
-			} else if (millis () - startTime >= TIME_SEC * 1000UL) {
-				enabled = !enabled;
-				startTime = 0;
 			}
 		} else {
 			startTime = 0;
 		}
 
-		return enabled;
+		return true;
 	}
 };
 
@@ -107,9 +124,13 @@ protected:
 };
 
 template <int LUX_THRES>
-class LowLightController: public DelayedRelayController<WeatherData, 5> {
+class LowLightController: public DelayedRelayController<WeatherData, 10> {
 protected:
 	boolean mustEnable (WeatherData& data) override {
+		//~ if (data.light10bit != WeatherData::UNDEFINED) {
+			//~ Serial.print (F("- Light 10bit = "));
+			//~ Serial.println (data.light10bit);
+		//~ }
 		return data.light10bit <= LUX_THRES;
 	}
 };
