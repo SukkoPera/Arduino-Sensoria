@@ -169,6 +169,8 @@ void SensoriaServer::process_cmd (char *buffer, IPAddress senderAddr, uint16_t s
 		cmd_nrq (args);
 	} else if (strcmp_P (cmd, PSTR ("NDL")) == 0) {
 		cmd_ndl (args);
+	} else if (strcmp_P (cmd, PSTR ("NCL")) == 0) {
+		cmd_ncl (args);
 #endif
 	} else {
 		DPRINT (F("Unsupported command: \""));
@@ -183,9 +185,7 @@ void SensoriaServer::process_cmd (char *buffer, IPAddress senderAddr, uint16_t s
 
 void SensoriaServer::handleNotificationReqs () {
 #ifdef ENABLE_NOTIFICATIONS
-	/* This assumes that NRQs 0...nNotificationReqs-1 are always valid,
-	 * so take care on sigle NRQ cancellation, if ever
-	 */
+	// This assumes NRQs 0...nNotificationReqs-1 are always valid
 	for (byte i = 0; i < nNotificationReqs; i++) {
 		NotificationRequest& req = notificationReqs[i];
 		if (millis () - req.timeLastSent >= req.period) {
@@ -201,7 +201,7 @@ void SensoriaServer::handleNotificationReqs () {
 
 						send_srv (F("NOT "));
 						send_srv (req.transducer -> name);
-						send_srv (" ");   // No F() here saves flash and wastes no ram
+						send_srv (" ");   // No F() here saves flash and wastes no RAM
 						send_srv (buf, true, &req.destAddr, &req.destPort);
 
             req.transducer -> setLastReading (*st);
@@ -468,14 +468,77 @@ void SensoriaServer::cmd_nrq (char *args) {
 	}
 }
 
-// Delete all notifications
+/* Delete single notification request
+ * --> NDL OT PRD [10]/NDL OT CHA
+ * <-- NDL OT PRD OK/NDL OT CHA OK
+ */
 void SensoriaServer::cmd_ndl (char *args) {
+	// Get first arg
+	if (args != NULL) {
+		char *p[3];
+		int n = splitString (args, p, 3);
+		if (n >= 2) {
+			char* tName = p[0];
+			char* nTypeStr = p[1];
+
+      byte nNotificationReqsBefore = nNotificationReqs;
+      for (byte i = 0; i < nNotificationReqs; i++) {
+        NotificationRequest& req = notificationReqs[i];
+
+        strupr (tName);
+        strupr (nTypeStr);
+        if (req.destAddr == remoteAddress &&
+            req.destPort == DEFAULT_NOTIFICATION_PORT &&
+            ((strcmp_P (nTypeStr, PSTR ("CHA")) == 0 && req.type == NT_CHA) ||
+             (strcmp_P (nTypeStr, PSTR ("PRD")) == 0 && req.type == NT_PRD)) &&
+            strcmp_P (tName, F_TO_PSTR (req.transducer -> name)) == 0) {
+
+              //  Notification found
+              DPRINT (F("Deleting notification request "));
+              DPRINTLN (i);
+
+              /* NRQs 0...nNotificationReqs-1 are always valid, so deleting a
+               * NRQ means we have to shift all subsequent NRQs down by one
+               * place
+               */
+              for (byte j = 0; i + j + 1 < nNotificationReqs; j++) {
+                notificationReqs[i + j] = notificationReqs[i + j + 1];
+              }
+
+              nNotificationReqs--;
+              break;
+        }
+      }
+
+      send_srv (F("NDL "));
+      send_srv (tName);
+      send_srv (F(" "));
+      send_srv (nTypeStr);
+      if (nNotificationReqs < nNotificationReqsBefore) {
+        send_srv (" OK", true);
+			} else {
+				DPRINT (F("ERR No such NRQ"));
+				send_srv (F(" ERR"), true);
+			}
+		} else {
+			DPRINTLN (F("ERR Bad request"));
+			send_srv (F("ERR Bad request"), true);
+		}
+	} else {
+		DPRINTLN (F("ERR Missing transducer name"));
+		send_srv (F("ERR Missing transducer name"), true);
+	}
+}
+
+// Clear (= Delete) all notification requests
+void SensoriaServer::cmd_ncl (char *args) {
   (void) *args;
 
   nNotificationReqs = 0;
-  DPRINTLN (F("Deleted all notification requests"));
+  DPRINTLN (F("Cleared all notification requests"));
 
-  send_srv (F("NDL OK"), true);
+  send_srv (F("NCL OK"), true);
 }
 
-#endif
+
+#endif    // ENABLE_NOTIFICATIONS

@@ -21,6 +21,17 @@ public:
 	unsigned long timeLastSent;
 
 	char lastReading[SENSOR_BUF_SIZE];
+
+  NotificationRequest& operator= (const NotificationRequest& other) {
+    destAddr = other.destAddr;
+    destPort = other.destPort;
+    type = other.type;
+		transducer = other.transducer;
+    period = other.period;
+		timeLastSent = other.timeLastSent;
+
+    return *this;
+  }
 };
 
 #endif

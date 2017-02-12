@@ -58,6 +58,8 @@ private:
 
 	void cmd_ndl (char *args);
 
+	void cmd_ncl (char *args);
+
 	boolean send_srv (const char *str, boolean cr = false, IPAddress* destAddr = NULL, word* destPort = NULL);
 
 #ifdef ENABLE_FLASH_STRINGS
