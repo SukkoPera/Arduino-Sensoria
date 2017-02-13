@@ -33,7 +33,6 @@ public:
 
   boolean write (RelayData& rd) override {
     if (pin != NO_PIN) {
-      RelayData& rd = *static_cast<RelayData *> (st);
       if (rd.state != RelayData::STATE_UNKNOWN) {
         state = rd.state;
         doSwitch ();
