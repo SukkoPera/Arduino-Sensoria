@@ -27,7 +27,7 @@ void mypanic (int interval) {
 }
 
 void setup (void) {
-  DSTART ();
+  DSTART (9600);
 
   swSerial.begin (9600);
   if (!comm.begin (swSerial, WIFI_SSID, WIFI_PASSWORD)) {
