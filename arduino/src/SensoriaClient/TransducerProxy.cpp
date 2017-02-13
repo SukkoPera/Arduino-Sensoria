@@ -20,52 +20,13 @@ TransducerProxy::TransducerProxy (ServerProxy* _srvpx, const char *_name,
 #endif
 }
 
-Stereotype *TransducerProxy::parseReply (char*& reply) {
-	Stereotype *ret = NULL;
+boolean TransducerProxy::read (Stereotype*& st) {
+  boolean ret = srvpx -> read (*this);
+  if (ret) {
+    st = stereotype;
+  }
 
-	if (stereotype) {
-		stereotype -> clear ();
-		if (stereotype -> unmarshal (reply)) {
-			ret = stereotype;
-		}
-	}
-
-	return ret;
-}
-
-boolean TransducerProxy::read (char*& reply) {
-	boolean ret;
-	char buf[8] = {0}, *r;
-	strcat (buf, "REA ");
-	strcat (buf, name);
-	strcat (buf, "\n");
-
-	if ((ret = srvpx -> sendcmd (buf, r))) {
-		char *p[2];
-		if (splitString (r, p, 2) != 2) {
-			DPRINT (F("AAA:"));
-			DPRINTLN (r);
-			ret = false;
-		} else if (strcmp (p[0], name) != 0) {
-			DPRINT (F("AAAAAA: "));
-			DPRINTLN (r);
-			ret = false;
-		} else {
-			reply = p[1];
-		}
-	}
-
-	return ret;
-}
-
-Stereotype *TransducerProxy::read () {
-	Stereotype *ret = NULL;
-	char *reply;
-	if (read (reply)) {
-		ret = parseReply (reply);
-	}
-
-	return ret;
+  return ret;
 }
 
 #define SZ_NRQ 24
@@ -114,25 +75,6 @@ ActuatorProxy::ActuatorProxy (ServerProxy* _srvpx, const char *_name, Stereotype
 	TransducerProxy (_srvpx, _name, TransducerType::TYPE_ACTUATOR, _stereotype, _description, _version) {
 }
 
-#define SZ 32
-
-boolean ActuatorProxy::write (char* what, char*& reply) {
-	boolean ret;
-
-	char buf[SZ];
-	buf[0] = '\0';
-	strncat_P (buf, PSTR ("WRI "), SZ);
-	strncat (buf, name, SZ);
-	strncat_P (buf, PSTR (" "), SZ);
-	strncat (buf, what, SZ);
-	strncat_P (buf, PSTR ("\n"), SZ);
-
-	ret = srvpx -> sendcmd (buf, reply);
-	return ret;
-}
-
 boolean ActuatorProxy::write (Stereotype& st) {
-	char *tmp, buf[16];
-	tmp = st.marshal (buf, 16);
-	return tmp && write (buf, tmp);
+  return srvpx -> write (*this, st);
 }

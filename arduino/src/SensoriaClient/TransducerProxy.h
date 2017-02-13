@@ -27,11 +27,7 @@ public:
 
   Stereotype* stereotype;
 
-  Stereotype* parseReply (char*& reply);
-
-  boolean read (char*& reply);
-
-  Stereotype* read ();
+  boolean read (Stereotype*& st);
 
   // Period is in seconds and is mandatory if type is periodic
   boolean requestNotification (NotificationType type, word period = 0);
@@ -47,8 +43,6 @@ public:
 class ActuatorProxy: public TransducerProxy {
 public:
   ActuatorProxy (ServerProxy* _srvpx, const char *name, Stereotype *stereotype, const char *description, const char *version = NULL);
-
-  boolean write (char* buf, char*& reply);
 
   boolean write (Stereotype& st);
 };

@@ -8,6 +8,7 @@
 class TransducerProxy;
 class SensorProxy;
 class ActuatorProxy;
+class Stereotype;
 
 
 class ServerProxy {
@@ -23,6 +24,10 @@ public:
   TransducerProxy* getTransducer (const char *name) const;
 
   SensorProxy* getSensor (const char *name) const;
+
+  boolean read (TransducerProxy& t);
+
+  boolean write (ActuatorProxy& a, Stereotype& st);
 
 private:
   SensoriaCommunicator *comm;

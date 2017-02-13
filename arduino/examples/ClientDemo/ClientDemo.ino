@@ -4,13 +4,13 @@
 #include <SensoriaStereotypes/WeatherData.h>
 #include <SensoriaCommunicators/ESPWifiAlt.h>
 
-IPAddress outdoor1 (192, 168, 1, 150);
+IPAddress outdoor1 (192, 168, 1, 152);
 
 // Wi-Fi parameters
 #define WIFI_SSID        "ssid"
 #define WIFI_PASSWORD    "password"
 
-SoftwareSerial swSerial (10, 11);
+SoftwareSerial swSerial (6, 7);
 SensoriaEsp8266Communicator comm;
 SensoriaClient client;
 
@@ -55,7 +55,7 @@ void loop () {
   Stereotype *st;
   SensorProxy *sensor;
   for (int i = 0; (sensor = sensors[i]); i++) {
-    if (!(st = sensor -> read ())) {
+    if (!(sensor -> read (st))) {
       Serial.println (F("Read FAILED"));
     } else {
       Serial.print (F("Reading sensor: "));

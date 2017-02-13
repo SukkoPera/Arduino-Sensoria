@@ -6,10 +6,10 @@
 #include "SensoriaCore/utils.h"
 #include "ServerProxy.h"
 #include "TransducerProxy.h"
+#include <SensoriaStereotypes/AllStereotypes.h>
 
 //~ #define DEBUG_COMMS
 #define CMD_LEN 3
-//~ #define min(x, y) (x <= y ? x : y)
 
 
 ServerProxy::ServerProxy (SensoriaCommunicator* _comm, IPAddress& _address, uint16_t _port): comm (_comm), address (_address), port (_port), nTransducers (0) {
@@ -18,17 +18,6 @@ ServerProxy::ServerProxy (SensoriaCommunicator* _comm, IPAddress& _address, uint
 
 // args is input, reply is output
 boolean ServerProxy::sendcmd (const char *args, char*& reply) {
-	//~ char cmd[CMD_LEN + 1];
-	//~ char *p = strchr (args, ' ');
-	//~ if (p == NULL) {
-		//~ strlcpy (cmd, args, min (strlen (args), CMD_LEN) + 1);
-	//~ } else {
-		//~ strlcpy (cmd, args, min (CMD_LEN, p - args) + 1);
-	//~ }
-
-	//~ DPRINT ("CMD = ");
-	//~ DPRINTLN (cmd);
-
 #ifdef DEBUG_COMMS
 	DPRINT (F("<-- "));
 	DPRINTLN (args);
@@ -109,6 +98,52 @@ SensorProxy* ServerProxy::getSensor (const char *name) const {
 	}
 
 	return spx;
+}
+
+boolean ServerProxy::read (TransducerProxy& t) {
+	boolean ret;
+	char buf[8] = {0}, *r;
+	strcat (buf, "REA ");
+	strcat (buf, t.name);
+	strcat (buf, "\n");
+
+	if ((ret = sendcmd (buf, r))) {
+		char *p[2];
+		if (splitString (r, p, 2) != 2) {
+			DPRINT (F("Unexpected REA reply: "));
+			DPRINTLN (r);
+			ret = false;
+		} else if (strcmp (p[0], t.name) != 0) {
+			DPRINT (F("Wrong transducer in REA reply: "));
+			DPRINTLN (r);
+			ret = false;
+		} else {
+			char *reply = p[1];
+      t.stereotype -> clear ();
+      ret = t.stereotype -> unmarshal (reply);
+		}
+	}
+
+	return ret;
+}
+
+#define SZ 32
+
+boolean ServerProxy::write (ActuatorProxy& a, Stereotype& st) {
+	boolean ret = false;
+
+  char buf[SZ] = {'\0'};
+  strncat_P (buf, PSTR ("WRI "), SZ);   // 4
+  strncat (buf, a.name, SZ);            // +2=6
+  strncat_P (buf, PSTR (" "), SZ - 9);  // +1=7
+  char *tmp = st.marshal (buf + 7, SZ - 9);
+  strncat_P (buf, PSTR ("\n"), SZ);
+
+  if (tmp) {
+    ret = sendcmd (buf, tmp);
+  }
+
+	return ret;
 }
 
 #endif

@@ -71,7 +71,7 @@ void setup () {
 		mypanic (2000);
 	}
   Stereotype *st;
-  if (!(st = relayActuator -> read ())) {
+  if (!relayActuator -> read (st)) {
 		Serial.println (F("Relay state read failed"));
 	} else {
 		RelayData &data = *static_cast<RelayData *> (st);

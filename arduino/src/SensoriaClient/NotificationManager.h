@@ -89,8 +89,12 @@ public:
 					DPRINT (F("Found interested NotificationReceiver: "));
 					DPRINTLN (i);
 
-					Stereotype* st = rec.transducer -> parseReply (p[2]);
-					rec.onGenericNotification (st);
+          rec.transducer -> stereotype -> clear ();
+          if (rec.transducer -> stereotype -> unmarshal (p[2])) {
+            rec.onGenericNotification (rec.transducer -> stereotype);
+          } else {
+            DPRINT (F("Unmarshaling failed, cannot deliver notification to interested NotificationReceiver"));
+          }
 					interested++;
 				}
 			}
