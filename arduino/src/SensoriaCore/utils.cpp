@@ -104,7 +104,6 @@ char *strupr(char *s) {
     return 0;
   }
 
-  int i = 0;
   while (*t != '\0') {
     if (*t >= 'a' && *t <= 'z') {
       *t = *t - ('a' - 'A');
