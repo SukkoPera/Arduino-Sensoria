@@ -35,7 +35,7 @@ boolean TransducerProxy::requestNotification (NotificationType type, word period
 	boolean ret = false;
 
 	if (type == NT_CHA || period > 0) {
-		char buf[8] = {0}, *r;
+		char buf[16] = {0}, *r;
 		strncat_P (buf, PSTR ("NRQ "), SZ_NRQ);
 		strncat (buf, name, SZ_NRQ);
 		switch (type) {
