@@ -3,6 +3,7 @@
 import sys
 import socket
 import select
+import threading
 
 import stereotypes
 
@@ -13,8 +14,9 @@ from Proxy import TransducerProxy, SensorProxy, ActuatorProxy
 class Client (object):
 	RECV_BUFSIZE = 16384
 	DEFAULT_LISTEN_PORT = 9999
+	AUTODISCOVER_TIMER = 30
 
-	def __init__ (self, servers = [], autodiscover = False):
+	def __init__ (self, servers = [], autodiscover = False, autodiscTimer = AUTODISCOVER_TIMER):
 		self._load_stereotypes ()
 		self.serverAddresses = {}
 		self.servers = {}
@@ -30,6 +32,29 @@ class Client (object):
 		if autodiscover:
 			self._discoverServers ()
 		self.discoverTransducers ()
+		if autodiscover:
+			self._autodiscTimer = autodiscTimer
+			self._startAutodiscoverTimer ()
+		else:
+			self._autodiscoverTimer = None
+
+	def _startAutodiscoverTimer (self):
+		#~ print "AutoTimer started"
+		self._autodiscoverTimer = threading.Timer (self._autodiscTimer, self._autodiscoverTimerCallback)
+		self._autodiscoverTimer.daemon = True
+		self._autodiscoverTimer.start ()
+
+
+	def _autodiscoverTimerCallback (self):
+		print "Running Autodiscover timer"
+		try:
+			self._discoverServers ()
+			self.discoverTransducers ()
+		except Error as ex:
+			print "Error in autodiscovery timer: %s" % str (ex)
+
+		# Restart
+		self._startAutodiscoverTimer ()
 
 	def _setupSocket (self):
 		self._sock = socket.socket (socket.AF_INET, socket.SOCK_DGRAM)
@@ -138,7 +163,6 @@ class Client (object):
 			#~ raise Error, "No such sensor: %s" % name
 
 	def _checkTransducers (self):
-		print "!"
 		for name, t in self._transducers.items ():
 			if t.failures >= ServerProxy.MAX_FAILURES:
 				print >> sys.stderr, "Removing transducer %s because of excessive failures" % name
