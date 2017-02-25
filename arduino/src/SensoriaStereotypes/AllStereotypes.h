@@ -5,8 +5,9 @@
 #include "WeatherData.h"
 #include "RelayData.h"
 #include "ControlledRelayData.h"
+#include "MotionData.h"
 
-#define N_STEREOTYPES 3
+#define N_STEREOTYPES 4
 
 extern Stereotype* stereotypes[N_STEREOTYPES];
 
