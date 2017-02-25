@@ -12,7 +12,7 @@ protected:
 	ControlledRelay *r;
 	TransducerProxy *t;
 
-	boolean onNotification (T& data) override {
+	virtual boolean onNotification (T& data) override {
 		enableRelay (mustEnable (data));
 
 		return true;
@@ -20,22 +20,24 @@ protected:
 
 	void enableRelay (boolean enabled) {
 		ControlledRelayData rdata;
-		if (this -> r -> read (rdata)) {
-			if (rdata.controller == ControlledRelayData::CTRL_AUTO) {
-				// R is under our control
-				ControlledRelayData::State newState = enabled ? ControlledRelayData::STATE_ON : ControlledRelayData::STATE_OFF;
-				if (newState != rdata.state) {
-					rdata.state = newState;
-					if (!this -> r -> write (rdata)) {
-						DPRINTLN (F("Failed write to relay actuator"));
-					}
-				}
-			//~ } else {
-				//~ DPRINTLN (F("Relay is under manual control"));
-			}
-		} else {
-			DPRINTLN (F("Relay actuator cannot be read"));
-		}
+    if (r) {
+      if (this -> r -> read (rdata)) {
+        if (rdata.controller == ControlledRelayData::CTRL_AUTO) {
+          // R is under our control
+          ControlledRelayData::State newState = enabled ? ControlledRelayData::STATE_ON : ControlledRelayData::STATE_OFF;
+          if (newState != rdata.state) {
+            rdata.state = newState;
+            if (!this -> r -> write (rdata)) {
+              DPRINTLN (F("Failed write to relay actuator"));
+            }
+          }
+        //~ } else {
+          //~ DPRINTLN (F("Relay is under manual control"));
+        }
+      } else {
+        DPRINTLN (F("Relay actuator cannot be read"));
+      }
+    }
 	}
 
 	virtual boolean toManual () {
@@ -54,14 +56,19 @@ public:
 		t = &_t;
 
 		// Set initial state
-		T& data = *static_cast<T *> (this -> t -> read ());
+		Stereotype* st;
+    while (!this -> t -> read (st)) {
+      delay (1000);
+    }
+
+    T& data = *static_cast<T *> (st);
 		enableRelay (mustEnable (data));
 	}
 };
 
 template <typename T, unsigned long TIME_SEC>
 class DelayedRelayController: public RelayController<T> {
-private:
+protected:
 	boolean enabled;
 	unsigned long startTime;
 
@@ -72,7 +79,12 @@ public:
 		startTime = 0;
 
 		// Set initial state
-		T& data = *static_cast<T *> (this -> t -> read ());
+		Stereotype* st;
+    while (!this -> t -> read (st)) {
+      delay (1000);
+    }
+
+    T& data = *static_cast<T *> (st);
 		enabled = this -> mustEnable (data);
 	}
 
@@ -86,7 +98,7 @@ public:
 	}
 
 protected:
-	boolean onNotification (T& data) override {
+	virtual boolean onNotification (T& data) override {
 		if (this -> mustEnable (data) != enabled) {
 			if (startTime == 0) {
 				// Instant when we first detect a status change
@@ -132,5 +144,28 @@ protected:
 			//~ Serial.println (data.light10bit);
 		//~ }
 		return data.light10bit <= LUX_THRES;
+	}
+};
+
+class MotionController: public DelayedRelayController<MotionData, 15> {
+protected:
+	boolean mustEnable (MotionData& data) override {
+		return data.motionDetected;
+	}
+
+	virtual boolean onNotification (MotionData& data) override {
+		if (enabled && !this -> mustEnable (data)) {
+			if (startTime == 0) {
+				// Instant when we detect end of motion
+				startTime = millis ();
+			}
+    } else if (!enabled && this -> mustEnable (data)) {
+      // Turn on immediately
+      enabled = true;
+		} else {
+			startTime = 0;
+		}
+
+		return true;
 	}
 };
