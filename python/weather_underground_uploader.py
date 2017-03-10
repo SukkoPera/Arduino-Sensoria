@@ -13,6 +13,7 @@ import urllib2
 import Sensoria
 
 
+ELEVATION = 230.0			# meters
 DEFAULT_INTERVAL = 30		# minutes
 WU_STATION_ID = ""
 WU_STATION_KEY = ""
@@ -27,6 +28,11 @@ def celsius2fahrenheit (t):
 
 def mbar2inches (p):
 	return float (p) * 0.0295301
+
+def local2sea (p):
+	"http://www.sandhurstweather.org.uk/barometric.pdf"
+	return p / math.exp (-ELEVATION / ((t + 273.15) * 29.263))
+
 
 # t is in celsius, h in percentage
 def dewPoint (t, h):
@@ -73,7 +79,8 @@ while True:
 		print "T=%f H=%f P=%f DP=%f" % (t, h, p, dp)
 
 		t_f = celsius2fahrenheit (t)
-		p_in = mbar2inches (p)
+		p_sea = local2sea (p)
+		p_in = mbar2inches (p_sea)
 		dp_f = celsius2fahrenheit (dp)
 
 		params = {
