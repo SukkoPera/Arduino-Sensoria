@@ -10,6 +10,7 @@ class ServerProxy:
 	RECV_BUFSIZE = 16384
 	DEFAULT_LISTEN_PORT = 9999
 	MAX_FAILURES = 3
+	DEBUG_COMMS = False
 
 	def __init__ (self, name, sock, ip, port = DEFAULT_LISTEN_PORT):
 		self.name = name
@@ -33,8 +34,12 @@ class ServerProxy:
 			raise Error, "sendcmd() FAILED: %s" % str (ex)
 
 	def send (self, args):
+		if self.DEBUG_COMMS:
+			print "<-- %s" % args
 		cmd = args.split (" ", 1)[0].upper ()
 		rep = self.sendcmd (args)
+		if self.DEBUG_COMMS:
+			print "--> %s" % rep
 		if rep is not None:
 			parts = rep.split (" ", 1)
 			rep0 = parts[0]
