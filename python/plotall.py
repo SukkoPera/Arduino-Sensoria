@@ -6,6 +6,7 @@ import datetime
 import argparse
 import smtplib
 import tempfile
+import math
 
 # Here are the email package modules we'll need
 from email.mime.image import MIMEImage
@@ -34,6 +35,10 @@ parser.add_argument ('--mailto', "-m", dest = 'mailaddr', action = 'store',
                      help = "Don't show graph, send by e-mail", metavar = "EMAIL_ADDRESS")
 parser.add_argument ('--hours', dest = 'hours', type = int, action='store', default = DEFAULT_HOURS,
                      help = 'Show data for last N hours (default: %d)' % DEFAULT_HOURS)
+parser.add_argument ('--from', dest = 'from_', type = str, action='store', default = None,
+                     help = 'Start date', metavar = "YYYYMMDD")
+parser.add_argument ('--to', dest = 'to', type = str, action='store', default = None,
+                     help = 'End date', metavar = "YYYYMMDD")
 
 args = parser.parse_args ()
 
@@ -60,10 +65,26 @@ ylux = []
 ylux2 = []
 yscale = []	#yldr
 yldr2 = []
-now = datetime.datetime.now ()
-limit = now - datetime.timedelta (hours = args.hours)
+
+if args.from_ is not None or args.to is not None:
+	if args.from_ is not None and args.to is not None:
+		start = datetime.datetime.strptime (args.from_, "%Y%m%d")
+		end = datetime.datetime.strptime (args.to, "%Y%m%d")
+		data = db.get_data_between (start, end)
+	else:
+		print "--from and --to must be used together"
+		sys.exit (1)
+elif args.hours is not None:
+	now = datetime.datetime.now ()
+	limit = now - datetime.timedelta (hours = args.hours)
+	data = db.get_data_since (limit)
+elif args.hours is not None:
+	now = datetime.datetime.now ()
+	limit = now - datetime.timedelta (hours = DEFAULT_HOURS)
+	data = db.get_data_since (limit)
+
 prev = None
-for dt, row in db.get_data_since (limit):
+for dt, row in data:
 	if prev is not None and dt - prev > datetime.timedelta (hours = 2):
 		x.append (dt - datetime.timedelta (hours = 1))
 		yti.append (float ('nan'))
@@ -91,7 +112,7 @@ for dt, row in db.get_data_since (limit):
 		ydht.append (row["OH"].temperature)
 		yh.append (row["OH"].humidity)
 	else:
-		print "No reading for sensor OH in data from %s" % (dt)
+		#~ print "No reading for sensor OH in data from %s" % (dt)
 		ydht.append (float ('nan'))
 		yh.append (float ('nan'))
 
@@ -99,7 +120,7 @@ for dt, row in db.get_data_since (limit):
 		ydht22.append (row["H2"].temperature)
 		yh2.append (row["H2"].humidity)
 	else:
-		print "No reading for sensor H2 in data from %s" % (dt)
+		#~ print "No reading for sensor H2 in data from %s" % (dt)
 		ydht22.append (float ('nan'))
 		yh2.append (float ('nan'))
 
@@ -107,39 +128,39 @@ for dt, row in db.get_data_since (limit):
 		yth3.append (row["H3"].temperature)
 		yh3.append (row["H3"].humidity)
 	else:
-		print "No reading for sensor H3 in data from %s" % (dt)
+		#~ print "No reading for sensor H3 in data from %s" % (dt)
 		yth3.append (float ('nan'))
 		yh3.append (float ('nan'))
 
 	if "OT" in row:
 		ydallas.append (row["OT"].temperature)
 	else:
-		print "No reading for sensor OT in data from %s" % (dt)
+		#~ print "No reading for sensor OT in data from %s" % (dt)
 		ydallas.append (float ('nan'))
 
 	if "IT" in row:
 		yti.append (row["IT"].temperature)
 	else:
-		print "No reading for sensor IT in data from %s" % (dt)
+		#~ print "No reading for sensor IT in data from %s" % (dt)
 		yti.append (float ('nan'))
 
 	if "T2" in row:
 		ydallas2.append (row["T2"].temperature)
 	else:
-		print "No reading for sensor T2 in data from %s" % (dt)
+		#~ print "No reading for sensor T2 in data from %s" % (dt)
 		ydallas2.append (float ('nan'))
 
 	if "T3" in row:
 		y35.append (row["T3"].temperature)
 	else:
-		print "No reading for sensor T3 in data from %s" % (dt)
+		#~ print "No reading for sensor T3 in data from %s" % (dt)
 		y35.append (float ('nan'))
 
 	if "OP" in row:
 		ypx.append (row["OP"].localPressure)
 		ybmp.append (row["OP"].temperature)
 	else:
-		print "No reading for sensor OP in data from %s" % (dt)
+		#~ print "No reading for sensor OP in data from %s" % (dt)
 		ypx.append (float ('nan'))
 		ybmp.append (float ('nan'))
 
@@ -147,21 +168,21 @@ for dt, row in db.get_data_since (limit):
 		ypx2.append (row["P2"].localPressure)
 		#~ ybmp.append (row["P2"].temperature)
 	else:
-		print "No reading for sensor P2 in data from %s" % (dt)
+		#~ print "No reading for sensor P2 in data from %s" % (dt)
 		ypx2.append (float ('nan'))
 
 	# Light sensor
 	if "OL" in row:
 		ylux.append (row["OL"].lightLux)
 	else:
-		print "No reading for sensor OL in data from %s" % (dt)
+		#~ print "No reading for sensor OL in data from %s" % (dt)
 		ylux.append (float ('nan'))
 
 	# Visible/Infrared light
 	if "OR" in row:
 		ylux2.append (row["OR"].lightLux)
 	else:
-		print "No reading for sensor OR in data from %s" % (dt)
+		#~ print "No reading for sensor OR in data from %s" % (dt)
 		ylux2.append (float ('nan'))
 
 	# LDR 1
@@ -169,14 +190,14 @@ for dt, row in db.get_data_since (limit):
 		yscale.append (row["PR"].light10bit)
 		#~ yv.append (row["light_v"])
 	else:
-		print "No reading for sensor PR in data from %s" % (dt)
+		#~ print "No reading for sensor PR in data from %s" % (dt)
 		yscale.append (float ('nan'))
 
 	# LDR 2
 	if "L2" in row:
 		yldr2.append (row["L2"].light10bit)	# Column name is misleading!
 	else:
-		print "No reading for sensor L2 in data from %s" % (dt)
+		#~ print "No reading for sensor L2 in data from %s" % (dt)
 		yldr2.append (float ('nan'))
 
 
@@ -185,16 +206,21 @@ fig.suptitle ("Weather Data over the last %d hours" % args.hours)
 
 # Temps
 
+# We'll need humidity for a few calculations, so choose the one with the most
+# samples
+notnans = lambda v: len (v) - len (filter (math.isnan, v))
+hs = tuple ((h, notnans (h)) for h in (yh, yh2, yh3))
+hs = sorted (hs, key = lambda t: t[1], reverse = True)
+#~ print [h[1] for h in hs]
+goodH = hs[0][0]
+
 # Dew Point
 # NOAA
 # reference (1) : http://wahiduddin.net/calc/density_algorithms.htm
 # reference (2) : http://www.colorado.edu/geography/weather_station/Geog_site/about.htm
 # (1) Saturation Vapor Pressure = ESGG(T)
-
-import math
-
 dp = []
-for celsius, humidity in zip (ydallas, yh3):
+for celsius, humidity in zip (ydallas, goodH):
 	if not math.isnan (celsius) and not math.isnan (humidity):
 		RATIO = 373.15 / (273.15 + celsius)
 		RHS = -7.90298 * (RATIO - 1)
@@ -217,27 +243,110 @@ for celsius, humidity in zip (ydallas, yh3):
 	else:
 		dp.append (float ("nan"))
 
+def celsius2fahrenheit (t):
+	return float (t) *  9 / 5 + 32
 
-#~ dpfast = []
-#~ for celsius, humidity in zip (ydallas, yh):
-    #~ # delta max = 0.6544 wrt dewPoint()
-    #~ # reference: http://en.wikipedia.org/wiki/Dew_point
-    #~ a = 17.271
-    #~ b = 237.7
-    #~ temp = (a * celsius) / (b + celsius) + math.log (humidity * 0.01)
-    #~ Td = (b * temp) / (a - temp)
-    #~ dpfast.append (Td);
+def fahrenheit2celsius (t):
+	return (float (t) - 32) * 5 / 9
+
+# Perceived temperature (AKA Heat Index)
+# https://en.wikipedia.org/wiki/Heat_index
+pt1 = []
+pt2 = []
+pt3 = []
+for tc, h in zip (ydallas, goodH):
+	if not math.isnan (tc) and not math.isnan (h):
+		t = celsius2fahrenheit (tc)		# American formulas... :(
+
+		if t >= 80 and h >= 40:
+			# Within +-1.3 degF.
+			c1 = -42.379
+			c2 = 2.04901523
+			c3 = 10.14333127
+			c4 = -0.22475541
+			c5 = -6.83783e-3
+			c6 = -5.481717e-2
+			c7 = 1.22874e-3
+			c8 = 8.5282e-4
+			c9 = -1.99e-6
+			hi1 = c1 + c2 * t + c3 * h + c4 * t * h + c5 * t * t + c6 * h * h + c7 * t * t * h + c8 * t * h * h + c9 * t * t * h * h
+			hi1 = fahrenheit2celsius (hi1)
+			pt1.append (hi1)
+
+			# Within 3 degrees of the NWS (US National Weather Service???)
+			# master table for all humidities from 0 to 80% and all temperatures
+			# between 70 and 115 degF and all heat indexes < 150 degF
+			# (Whatever that means)
+			c1 = 0.363445176
+			c2 = 0.988622465
+			c3 = 4.777114035
+			c4 = -0.114037667
+			c5 = -0.000850208
+			c6 = -0.020716198
+			c7 = 0.000687678
+			c8 = 0.000274954
+			c9 = 0
+			hi2 = c1 + c2 * t + c3 * h + c4 * t * h + c5 * t * t + c6 * h * h + c7 * t * t * h + c8 * t * h * h + c9 * t * t * h * h
+			hi2 = fahrenheit2celsius (hi2)
+			pt2.append (hi2)
+
+			# Who knows???
+			c1 = 16.923
+			c2 = 0.185212
+			c3 = 5.37941
+			c4 = -0.100254
+			c5 = 9.41695e-3
+			c6 = 7.28898e-3
+			c7 = 3.45372e-4
+			c8 = -8.14971e-4
+			c9 = 1.02102e-5
+			c10 = -3.8646e-5
+			c11 = 2.91583e-5
+			c12 = 1.42721e-6
+			c13 = 1.97483e-7
+			c14 = -2.18429e-8
+			c15 = 8.43296e-10
+			c16 = -4.81975e-11
+			hi3 = c1 + c2 * t + c3 * h + c4 * t * h + c5 * t * t + c6 * h * h + c7 * t * t * h + c8 * t * h * h + \
+				  c9 * t * t * h * h + c10 * t * t * t + c11 * h * h * h + c12 * t * t * t * h + c13 * t * h * h * h + \
+				  c14 * t * t * t * h * h + c15 * t * t * h * h * h + c16 * t * t * t * h * h * h
+			hi3 = fahrenheit2celsius (hi3)
+			pt3.append (hi3)
+		else:
+			pt1.append (tc)
+			pt2.append (tc)
+			pt3.append (tc)
+	else:
+		pt1.append (float ("nan"))
+		pt2.append (float ("nan"))
+		pt3.append (float ("nan"))
+
+dpfast = []
+for celsius, humidity in zip (ydallas, goodH):
+    # delta max = 0.6544 wrt dewPoint()
+    # reference: http://en.wikipedia.org/wiki/Dew_point
+    a = 17.271
+    b = 237.7
+    temp = (a * celsius) / (b + celsius) + math.log (humidity * 0.01)
+    Td = (b * temp) / (a - temp)
+    dpfast.append (Td);
 
 plt.subplot (2, 2, 1)
 plt.title ("Temperature")
-plt.plot (x, ydht, "y--", label = "DHT11")
-plt.plot (x, ydht22, "g", label = "DHT22")
-plt.plot (x, ybmp, "m", label = "BMP180")
+#~ plt.plot (x, ydht, "y--", label = "DHT11")
+#~ plt.plot (x, ydht22, "g", label = "DHT22")
+#~ plt.plot (x, ybmp, "m", label = "BMP180")
 plt.plot (x, ydallas, "b-", label = "DS18B20")
-plt.plot (x, y35, "c", label = "LM35")
-plt.plot (x, yth3, "r", label = "SI7021")
-plt.plot (x, yti, "b--", label = "Indoor")
-plt.plot (x, dp, "k--", label = "Dew Point")
+#~ plt.plot (x, y35, "c", label = "LM35")
+#~ plt.plot (x, yth3, "r", label = "SI7021")
+#~ plt.plot (x, yti, "b--", label = "Indoor")
+#~ plt.plot (x, dp, "k--", label = "Dew Point")
+plt.plot (x, pt1, "b--")
+#~ plt.plot (x, pt2, "g--", label = "Heat Index 2")
+#~ plt.plot (x, pt3, "b--", label = "Heat Index 3")
+plt.fill_between (x, ydallas, pt1, facecolor = 'b', alpha = 0.5)
+#~ plt.fill_between (x, ydallas, pt2, facecolor = 'r', alpha = 0.5)
+#~ plt.fill_between (x, ydallas, pt2, facecolor = 'g', alpha = 0.5)
 #~ plt.plot (x, dpfast, "m-", label = "Dew Point (Fast)")
 #~ plt.plot (x, ydallas2, "m-", label = "DS18B20 (2)")
 #~ plt.plot (x, ybmp, "g--", label = "BMP180")
