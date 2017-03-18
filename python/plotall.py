@@ -71,6 +71,7 @@ if args.from_ is not None or args.to is not None:
 		start = datetime.datetime.strptime (args.from_, "%Y%m%d")
 		end = datetime.datetime.strptime (args.to, "%Y%m%d")
 		data = db.get_data_between (start, end)
+		timeDesc = "from %s to %s" % (start.strftime ("%d/%m/%Y"), end.strftime ("%d/%m/%Y"))
 	else:
 		print "--from and --to must be used together"
 		sys.exit (1)
@@ -78,10 +79,12 @@ elif args.hours is not None:
 	now = datetime.datetime.now ()
 	limit = now - datetime.timedelta (hours = args.hours)
 	data = db.get_data_since (limit)
+	timeDesc = "over the last %d hours" % args.hours
 elif args.hours is not None:
 	now = datetime.datetime.now ()
 	limit = now - datetime.timedelta (hours = DEFAULT_HOURS)
 	data = db.get_data_since (limit)
+	timeDesc = "over the last %d hours" % DEFAULT_HOURS
 
 prev = None
 for dt, row in data:
@@ -202,7 +205,7 @@ for dt, row in data:
 
 
 fig = plt.figure (1, figsize = (16, 9), dpi = 120)
-fig.suptitle ("Weather Data over the last %d hours" % args.hours)
+fig.suptitle ("Weather Data %s" % timeDesc)
 
 # Temps
 
