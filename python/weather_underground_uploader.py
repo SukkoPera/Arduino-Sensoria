@@ -14,7 +14,7 @@ import Sensoria
 
 
 ELEVATION = 230.0			# meters
-DEFAULT_INTERVAL = 30		# minutes
+DEFAULT_INTERVAL = 10		# minutes
 WU_STATION_ID = ""
 WU_STATION_KEY = ""
 WU_UPLOAD_URL = "https://weatherstation.wunderground.com/weatherstation/updateweatherstation.php"
