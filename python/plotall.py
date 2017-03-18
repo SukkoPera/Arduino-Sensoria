@@ -124,11 +124,11 @@ for dt, row in data:
 		ydht22.append (float ('nan'))
 		yh2.append (float ('nan'))
 
-	if "H3" in row:
-		yth3.append (row["H3"].temperature)
-		yh3.append (row["H3"].humidity)
+	if "IH" in row:
+		yth3.append (row["IH"].temperature)
+		yh3.append (row["IH"].humidity)
 	else:
-		#~ print "No reading for sensor H3 in data from %s" % (dt)
+		#~ print "No reading for sensor IH in data from %s" % (dt)
 		yth3.append (float ('nan'))
 		yh3.append (float ('nan'))
 
@@ -333,20 +333,18 @@ for celsius, humidity in zip (ydallas, goodH):
 
 plt.subplot (2, 2, 1)
 plt.title ("Temperature")
-#~ plt.plot (x, ydht, "y--", label = "DHT11")
-#~ plt.plot (x, ydht22, "g", label = "DHT22")
-#~ plt.plot (x, ybmp, "m", label = "BMP180")
-plt.plot (x, ydallas, "b-", label = "DS18B20")
-#~ plt.plot (x, y35, "c", label = "LM35")
-#~ plt.plot (x, yth3, "r", label = "SI7021")
-#~ plt.plot (x, yti, "b--", label = "Indoor")
-#~ plt.plot (x, dp, "k--", label = "Dew Point")
+#plt.plot (x, ydht, "y--", label = "DHT22")
+#plt.plot (x, ydht22, "g", label = "DHT22")
+#plt.plot (x, ybmp, "m", label = "BMP180")
+plt.plot (x, ydallas, "b", label = "Outdoor")
+#plt.plot (x, y35, "c", label = "LM35")
+plt.plot (x, yth3, "r", label = "Indoor")
+#plt.plot (x, yti, "b--", label = "Indoor")
+plt.plot (x, dp, "g--", label = "Dew Point")
 plt.plot (x, pt1, "b--")
-#~ plt.plot (x, pt2, "g--", label = "Heat Index 2")
-#~ plt.plot (x, pt3, "b--", label = "Heat Index 3")
+#plt.plot (x, pt2, "g--", label = "Heat Index 2")
+#plt.plot (x, pt3, "b--", label = "Heat Index 3")
 plt.fill_between (x, ydallas, pt1, facecolor = 'b', alpha = 0.5)
-#~ plt.fill_between (x, ydallas, pt2, facecolor = 'r', alpha = 0.5)
-#~ plt.fill_between (x, ydallas, pt2, facecolor = 'g', alpha = 0.5)
 #~ plt.plot (x, dpfast, "m-", label = "Dew Point (Fast)")
 #~ plt.plot (x, ydallas2, "m-", label = "DS18B20 (2)")
 #~ plt.plot (x, ybmp, "g--", label = "BMP180")
@@ -359,7 +357,6 @@ plt.gca ().xaxis.set_major_formatter (xDateFmt)
 plt.legend (loc = 'best', fancybox = True, framealpha = 0.5)
 
 # Pressure
-
 # http://www.sandhurstweather.org.uk/barometric.pdf
 import math
 ELEVATION = 230.0
@@ -367,7 +364,7 @@ yslp = [p / math.exp (-ELEVATION / ((t + 273.15) * 29.263)) if p is not None els
 #~ print zip (x, yslp)
 
 plt.subplot (2, 2, 2)
-plt.title ("Local Pressure")
+plt.title ("Atmospheric Pressure")
 plt.plot (x, ypx, "b-", label = "Local")
 #~ plt.plot (x, ypx2, "g-", label = "Local 2")
 plt.plot (x, yslp, "r-", label = "Sea-Level")
@@ -380,10 +377,10 @@ plt.legend (loc = 'best', fancybox = True, framealpha = 0.5)
 
 # Humidity
 plt.subplot (2, 2, 3)
-plt.title ("Humidity")
-plt.plot (x, yh, "b-", label = "DHT11")
-plt.plot (x, yh2, "g-", label = "DHT22")
-plt.plot (x, yh3, "r-", label = "SI7021")
+plt.title ("Relative Humidity")
+plt.plot (x, yh, "b", label = "Outdoor")
+#plt.plot (x, yh2, "g-", label = "Outdoor")
+plt.plot (x, yh3, "r", label = "Indoor")
 #~ plt.xlabel ('Time')
 plt.ylabel ('Percentage')
 plt.grid (True)
