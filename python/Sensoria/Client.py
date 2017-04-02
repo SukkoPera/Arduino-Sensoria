@@ -211,7 +211,6 @@ class Client (object):
 		return srvpx
 
 	def _checkServers (self):
-		print "x"
 		for model in self._servers.keys ():	# Use .keys() so that we can delete while iterating
 			srvpx = self._servers[model]
 			if srvpx.failures >= Client.MAX_SERVER_FAILURES:
