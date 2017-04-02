@@ -21,7 +21,7 @@ WU_UPLOAD_URL = "https://weatherstation.wunderground.com/weatherstation/updatewe
 
 print "Logging data every %d minutes" % DEFAULT_INTERVAL
 
-sensoria = Sensoria.Client (autodiscover = True)
+sensoria = Sensoria.Client ()
 
 def celsius2fahrenheit (t):
 	return float (t) *  9 / 5 + 32
@@ -70,18 +70,22 @@ while True:
 		oh = sensoria.sensors["OH"]
 		op = sensoria.sensors["OP"]
 		#~ print "Found internal thermometer on %s at %s:%s" % (it.server.name, it.server.address, it.server.port)
-		print "Sensors found"
+		print "Sensors found!"
 
+		now = datetime.datetime.now ()
 		t = ot.read ().temperature
 		h = oh.read ().humidity
 		p = op.read ().localPressure
 		dp = dewPoint (t, h)
-		print "T=%f H=%f P=%f DP=%f" % (t, h, p, dp)
+		print "[%s] T=%f H=%f P=%f DP=%f" % (now.strftime ("%Y-%m-%d %H:%M:%S"), t, h, p, dp),
+
+
 
 		t_f = celsius2fahrenheit (t)
 		p_sea = local2sea (p)
 		p_in = mbar2inches (p_sea)
 		dp_f = celsius2fahrenheit (dp)
+		#~ print "After convs: T=%f H=%f P=%f DP=%f" % (t_f, h, p_in, dp_f)
 
 		params = {
 			"action": "updateraw",
@@ -95,7 +99,7 @@ while True:
 		}
 
 		url = "%s?%s" % (WU_UPLOAD_URL, urllib.urlencode (params))
-		print "Uploading data...",
+		#~ print "Uploading data...",
 		sys.stdout.flush ()
 		#~ print "Opening %s..." % url
 		f = urllib2.urlopen (url)
@@ -108,7 +112,6 @@ while True:
 			print "Failed :("
 			print "URL was: %s" % url
 			time.sleep (60)	# Retry in a minute
-		print "WOKE UP"
-	except Sensoria.Error as ex:
+	except (Sensoria.Error, KeyError) as ex:
 		print "Cannot get sensors: %s" % str (ex)
 		time.sleep (60)		# Retry in a minute
