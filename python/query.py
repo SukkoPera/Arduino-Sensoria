@@ -22,9 +22,9 @@ parser.add_argument ('--autodiscover', "-A", action = 'store', type = int, defau
 
 args = parser.parse_args ()
 if args.autodiscover is None:
-	sensoria = Sensoria.Client (servers = args.addresses, autodiscover = True)
+	sensoria = Sensoria.Client (servers = args.addresses)
 elif args.autodiscover > 0:
-	sensoria = Sensoria.Client (servers = args.addresses, autodiscover = True, autodiscTimer = args.autodiscover)
+	sensoria = Sensoria.Client (servers = args.addresses, autodiscTimer = args.autodiscover)
 else:
 	sensoria = Sensoria.Client (servers = args.addresses, autodiscover = False)
 while True:

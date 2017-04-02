@@ -17,7 +17,7 @@ class Client (object):
 	DEFAULT_AUTODISCOVER_TIMER = 60
 	MAX_SERVER_FAILURES = 3
 
-	def __init__ (self, servers = [], autodiscover = False, autodiscTimer = DEFAULT_AUTODISCOVER_TIMER):
+	def __init__ (self, servers = [], autodiscover = True, autodiscTimer = DEFAULT_AUTODISCOVER_TIMER):
 		self._load_stereotypes ()
 		self._servers = {}
 		self._setupSocket ()
