@@ -32,7 +32,7 @@ size_t strlcpy (char *dst, const char *src, size_t siz) {
 			;
 	}
 
-	return(s - src - 1);  /* count does not include NUL */
+	return (s - src - 1);  /* count does not include NUL */
 }
 #endif
 
@@ -48,8 +48,9 @@ char *floatToString (double val, char *outstr) {
 	temp[0] = '\0';
 	outstr[0] = '\0';
 
-	if (val < 0.0){
-		strcpy (outstr, "-\0");  //print "-" sign
+	if (val < 0.0) {
+		outstr[0] = '-';  //print "-" sign
+		outstr[1] = '\0';
 		val *= -1;
 	}
 
