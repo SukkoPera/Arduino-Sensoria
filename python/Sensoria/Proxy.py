@@ -16,7 +16,6 @@ class TransducerProxy (object):
 		self.description = description
 		self.version = version
 		self.notificationClients = []
-		self.failures = 0
 
 	def configure (self, name, value):
 		raise NotImplementedError
@@ -63,10 +62,14 @@ class TransducerProxy (object):
 
 
 class SensorProxy (TransducerProxy):
-	def __init__ (self, name, stereoclass, srv):
-		sdata = srv.send ("QRY %s" % name)
-		name, typ, stereotype, description, version = sdata.split ("|")
-		super (SensorProxy, self).__init__ (srv, SENSOR, name, stereotype, stereoclass, description, version)
+	#~ def __init__ (self, name, stereoclass, srv):
+		#~ sdata = srv.send ("QRY %s" % name)
+		#~ name, typ, stereotype, description, version = sdata.split ("|")
+		#~ super (SensorProxy, self).__init__ (srv, SENSOR, name, stereotype, stereoclass, description, version)
+
+	# This c'tor does not query sensor data, but since we'll only be missing the version, we are fine with it
+	def __init__ (self, name, typ, stereotype, description, stereoclass, srv):
+		super (SensorProxy, self).__init__ (srv, SENSOR, name, stereotype, stereoclass, description, "N/A")
 
 	def read (self, raw = False):
 		assert self.server is not None
@@ -83,7 +86,7 @@ class SensorProxy (TransducerProxy):
 				return self.stereoclass.unmarshalStatic (rest)
 		except Error as ex:
 			print >> sys.stderr, "Sensor read failed: %s" % str (ex)
-			self.failures += 1
+			self.server.failures += 1
 			raise
 
 class ActuatorProxy (TransducerProxy):

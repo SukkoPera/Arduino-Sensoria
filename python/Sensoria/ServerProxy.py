@@ -7,15 +7,16 @@ from common import *
 
 class ServerProxy:
 	DEBUG = False
-	RECV_BUFSIZE = 16384
-	DEFAULT_LISTEN_PORT = 9999
-	MAX_FAILURES = 3
+	RECV_BUFSIZE = 4096
+	DEFAULT_PORT = 9999
 	DEBUG_COMMS = False
 
-	def __init__ (self, name, sock, ip, port = DEFAULT_LISTEN_PORT):
+	def __init__ (self, name, transducerList, sock, ip, port = DEFAULT_PORT):
 		self.name = name
+		self.transducerList = transducerList		# Exactly as received
 		self.address = ip
 		self.port = port
+		self.failures = 0
 		#~ self._sock = socket.socket (socket.AF_INET, socket.SOCK_DGRAM)
 		#~ self._sock.settimeout (5)
 		self._sock = sock
@@ -57,26 +58,17 @@ class ServerProxy:
 			# This shouldn't really happen
 			raise Error, "No reply received (Command: '%s')" % args
 
-	def _checkTransducers (self):
-		for name, t in self._transducers.items ():
-			if t.failures >= self.MAX_FAILURES:
-				print >> sys.stderr, "Removing transducer %s because of excessive failures" % name
-				del self._transducers[name]
-
 	@property
 	def transducers (self):
 		"""Returns a dictionary of all transducers"""
-		self._checkTransducers ()
 		return self._transducers
 
 	@property
 	def sensors (self):
 		"""Returns a dictionary of sensors only"""
-		self._checkTransducers ()
 		return {name:t for (name, t) in self._transducers.iteritems () if t.genre == SENSOR}
 
 	@property
 	def actuators (self):
 		"""Returns a dictionary of actuators only"""
-		self._checkTransducers ()
 		return {name:t for (name, t) in self._transducers.iteritems () if t.genre == ACTUATOR}

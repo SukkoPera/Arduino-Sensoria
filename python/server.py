@@ -5,11 +5,17 @@ import sys
 import random
 import datetime
 import select
+import os
+import threading
+import time
 
 import Sensoria
 from Sensoria.stereotypes.WeatherData import WeatherData
+from Sensoria.stereotypes.RelayData import RelayData
+from Sensoria.stereotypes.ControlledRelayData import ControlledRelayData
 
 LISTEN_PORT = 9999
+NOTIFICATION_PORT = 9998
 RECV_BUFSIZE = 16384
 DEBUG = True
 
@@ -24,7 +30,9 @@ class NotificationRequest (object):
 		self._sock = sock
 
 	def _notify (self, reading):
-		self._sock.sendto ("NOT %s %s\r\n" % (self.sensor.name, reading.marshal ()), self.dest)
+		r = reading.marshal ()
+		print "[NOT %s:%u] %s %s" % (self.dest[0], self.dest[1], self.sensor.name, r)
+		self._sock.sendto ("NOT %s %s\r\n" % (self.sensor.name, r), self.dest)
 
 	def isDue (self):
 		raise NotImplementedError
@@ -54,7 +62,9 @@ class OnChangeNotificationRequest (NotificationRequest):
 
 	def process (self):
 		reading = self.sensor.read ()
-		if reading != self._lastReading:
+		# Use this particular form so that the stereotype's __eq__ rich
+		# comparison method gets called
+		if not reading == self._lastReading:
 			self._notify (reading)
 			self._lastReading = reading
 
@@ -132,11 +142,12 @@ class RelayActuator (Actuator):
 ##		random.choice (["ON", "OFF"])
 
 	def read (self):
+		rd = RelayData ()
 		if self.state == RelayActuator.State.ON:
-			val = "ON"
+			rd.state = RelayData.ON
 		else:
-		    val = "OFF"
-		return val
+		    rd.state = RelayData.OFF
+		return rd
 
 	#~ def write (self, value):
 		#~ if value.upper () == "ON" or int (value) > 0:
@@ -145,17 +156,70 @@ class RelayActuator (Actuator):
 			#~ self.state = RelayActuator.State.OFF
 		#~ return True, "Relay is now %s" % self.read ()[0]
 
+class ControlledRelayActuator (Actuator):
+	class State:
+		OFF = 0
+		ON = 1
+
+	class Controller:
+		AUTO = 0
+		MANUAL = 1
+
+	def __init__ (self, name, description = "", version = ""):
+		super (ControlledRelayActuator, self).__init__ (name, "CR", description, version)
+		self.state = ControlledRelayActuator.State.OFF
+		self.controller = ControlledRelayActuator.Controller.AUTO
+
+	def read (self):
+		crd = ControlledRelayData ()
+
+		if self.state == ControlledRelayActuator.State.ON:
+			crd.state = ControlledRelayData.ON
+		else:
+		    crd.state = ControlledRelayData.OFF
+
+		if self.controller == ControlledRelayActuator.Controller.AUTO:
+			crd.controller = ControlledRelayData.AUTO
+		else:
+			crd.controller = ControlledRelayData.MANUAL
+
+		return crd
+
+	def write (self, rawdata):		# FIXME: Get this unmarshaled earlier!
+		# Don't set fields to UNKNOWN!
+
+		data = ControlledRelayData ()
+		data.unmarshal (rawdata)
+
+		if data.state == ControlledRelayData.ON:
+			self.state = ControlledRelayActuator.State.ON
+		elif data.state == ControlledRelayData.OFF:
+			self.state = ControlledRelayActuator.State.OFF
+
+		if data.controller == ControlledRelayData.AUTO:
+			self.controller = ControlledRelayActuator.Controller.AUTO
+		elif data.controller == ControlledRelayData.MANUAL:
+			self.controller = ControlledRelayActuator.Controller.MANUAL
+
+		return True, "Relay is now %s/%s" % (self.state, self.controller)
+
+
 class RelayHeater (RelayActuator):
 	def __init__ (self):
 		super (RelayHeater, self).__init__ ("BH", "Bathroom Heater", "20160228 By SukkoPera <software@sukkology.net>")
 
+class RelayFan (ControlledRelayActuator):
+	def __init__ (self):
+		super (RelayFan, self).__init__ ("KF", "Kitchen Fan", "20170126 By SukkoPera <software@sukkology.net>")
+
 class CommandListener (object):
 	def __init__ (self, port = LISTEN_PORT):
+		self.serverName = "TestServer"
 		self.sensors = {}
 		self.notificationRequests = []
+		self._thread = None
 
 		self._sock = socket.socket (socket.AF_INET, socket.SOCK_DGRAM)
-		#server_address = ('localhost', port)
 		server_address = ('0', port)
 
 		print >> sys.stderr, 'Starting up on %s port %s' % server_address
@@ -167,6 +231,14 @@ class CommandListener (object):
 		else:
 			self.sensors[sensor.name] = sensor
 			print "Registered sensor %s" % (sensor.name)
+
+	def unregister_sensor (self, sensor):
+		if not sensor.name in self.sensors:
+			print >> sys.stderr, "Cannot unregister non-existing sensor: %s" % sensor.name
+		else:
+			del self.sensors[sensor.name]
+			print "Unregistered sensor %s" % (sensor.name)
+
 
 	def _reply (self, addr, what):
 		if DEBUG:
@@ -186,7 +258,11 @@ class CommandListener (object):
 			self._reply (addr, "QRY %s" % "|".join ("%s %s %s %s" % (sensor.name, sensor.get_type_string (), sensor.stereotype, sensor.description) for sensor in self.sensors.itervalues ()))
 
 	def _ver (self, addr, args):
-		self._reply (addr, "VER TestSensors 20160727")
+		self._reply (addr, "VER %s" % self.serverName)
+
+	def _hlo (self, addr, args):
+		self._reply (addr, "HLO %s %s" % (self.serverName, "|".join ("%s %s %s %s" % (sensor.name, sensor.get_type_string (), sensor.stereotype, sensor.description) for sensor in self.sensors.itervalues ())))
+
 
 	def _rea (self, addr, args):
 		if args is not None and len (args) > 0:
@@ -207,7 +283,7 @@ class CommandListener (object):
 
 	def _wri (self, addr, args):
 		if args is not None and len (args) > 0:
-			parts = args.split (" ")
+			parts = args.split (" ", 1)
 			name = parts[0].upper ()
 			val = parts[1]
 			try:
@@ -240,18 +316,18 @@ class CommandListener (object):
 					if typ == "CHA":
 						#~ rest = parts[2:]
 						print >> sys.stderr, "Notifying on change of %s" % sensor.name
-						req = OnChangeNotificationRequest (addr, self._sock, sensor)
+						req = OnChangeNotificationRequest ((addr[0], NOTIFICATION_PORT), self._sock, sensor)
 						self.notificationRequests.append (req)
-						self._reply (addr, "NRQ %s CHA OK" % sensor.name)
+						self._reply (addr, "NRQ OK")
 					elif typ == "PRD":
 						if len (parts) < 3:
 							self._reply (addr, "NRQ %s ERR No interval specified" % sensor.name)
 						else:
 							intv = int (parts[2])
 							print >> sys.stderr, "Notifying values of %s every %d seconds" % (sensor.name, intv)
-							req = PeriodicNotificationRequest (addr, self._sock, sensor, intv)
+							req = PeriodicNotificationRequest ((addr[0], NOTIFICATION_PORT), self._sock, sensor, intv)
 							self.notificationRequests.append (req)
-							self._reply (addr, "NRQ %s OK" % sensor.name)
+							self._reply (addr, "NRQ OK")
 				except KeyError:
 					self._reply (addr, "ERR No such sensor: %s" % name)
 			else:
@@ -259,21 +335,33 @@ class CommandListener (object):
 		else:
 			self._reply (addr, "ERR Missing or malformed args")
 
-	def go (self):
+	def start (self):
+		self._shallStop = False
+		self._quitPipe = os.pipe ()
+		self._thread = threading.Thread (target = self._serverThread, name = "Server Thread")
+		self._thread.daemon = True
+		self._thread.start ()
+
+	def _serverThread (self):
 		handlers = {
 			"VER": self._ver,
+			"HLO": self._hlo,
 			"REA": self._rea,
 			"WRI": self._wri,
 			"QRY": self._qry,
 			"NRQ": self._nrq
 		}
 
-		print >> sys.stderr, 'Waiting for commands...'
-		while True:
-			rlist = [self._sock]
+		print  >> sys.stderr, 'Waiting for commands...'
+		while not self._shallStop:
+			rlist = [self._sock, self._quitPipe[0]]
 			r, w, x = select.select (rlist, [], [], 5)
 
-			if self._sock in r:
+			if self._quitPipe[0] in r:
+				# Thread shall exit
+				print "Server thread exiting!"
+				os.read (self._quitPipe[0], 1)
+			elif self._sock in r:
 				line, client_address = self._sock.recvfrom (RECV_BUFSIZE)
 
 				if line == "":
@@ -310,13 +398,30 @@ class CommandListener (object):
 				# Periodically process notifications
 				for nrq in self.notificationRequests:
 					nrq.process ()
+		print "X"
+
+	def stop (self):
+		if self._thread is not None:
+			self._shallStop = True
+			os.write (self._quitPipe[1], "X")
+			self._thread.join ()
+			self._thread = None
 
 if __name__ == "__main__":
 	tk = KitchenTemperatureSensor ()
 	tb = BathroomTemperatureSensor ()
 	rh = RelayHeater ()
+	kf = RelayFan ()
 	listener = CommandListener ()
 	listener.register_sensor (tk)
 	listener.register_sensor (tb)
 	listener.register_sensor (rh)
-	listener.go ()
+	listener.register_sensor (kf)
+
+	listener.start ()
+	time.sleep (10)
+	listener.unregister_sensor (tk)
+	del tk
+	#~ listener.stop ()
+	while True:
+		time.sleep (1)
