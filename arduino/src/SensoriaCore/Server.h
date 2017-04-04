@@ -13,6 +13,8 @@
 #include "common.h"
 #include "debug.h"
 
+//~ #define ENABLE_CMD_QRY
+
 #define OUT_BUF_SIZE 192
 
 class SensoriaServer {
@@ -33,9 +35,6 @@ private:
 	char sensorBuf[SENSOR_BUF_SIZE];
 
 	FlashString serverName;
-	FlashString serverVersion;
-
-	uint32_t hash;
 
 	Stereotype* getStereotype (FlashString s);
 
@@ -51,7 +50,11 @@ private:
 	void handleNotificationReqs ();
 #endif
 
+	void cmd_hlo (char *args);
+
+#ifdef ENABLE_CMD_QRY
 	void cmd_qry (char *args);
+#endif
 
 	void cmd_ver (const char *args);
 

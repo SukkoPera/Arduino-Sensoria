@@ -9,16 +9,6 @@
  */
 char *strstrip (char *s);
 
-#ifndef ARDUINO_ARCH_ESP8266
-/* Copy src to string dst of size siz.  At most siz-1 characters
- * will be copied.  Always NUL terminates (unless siz == 0).
- * Returns strlen(src); if retval >= siz, truncation occurred.
- *
- * From: http://mirror.fsf.org/pmon2000/3.x/src/sdk/libc/string/strlcpy.c
- */
-size_t strlcpy (char *dst, const char *src, size_t siz);
-#endif
-
 /* Convert a float to a string.
  *
  * NOTE: Precision is fixed to two digits.
@@ -31,5 +21,7 @@ int splitString (char *str, char **parts, size_t n, const char sep = ' ');
 #ifdef ARDUINO_ARCH_ESP8266
 char *strupr (char * s);
 #endif
+
+uint16_t crc16_update_str (uint16_t crc, const char* s);
 
 #endif

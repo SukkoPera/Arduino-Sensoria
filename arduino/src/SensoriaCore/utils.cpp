@@ -9,33 +9,6 @@ char *strstrip (char *s) {
 	return s;
 }
 
-#ifndef ARDUINO_ARCH_ESP8266
-// From: http://mirror.fsf.org/pmon2000/3.x/src/sdk/libc/string/strlcpy.c
-size_t strlcpy (char *dst, const char *src, size_t siz) {
-	register char *d = dst;
-	register const char *s = src;
-	register size_t n = siz;
-
-	/* Copy as many bytes as will fit */
-	if (n != 0 && --n != 0) {
-		do {
-			if ((*d++ = *s++) == 0)
-				break;
-		} while (--n != 0);
-	}
-
-	/* Not enough room in dst, add NUL and traverse rest of src */
-	if (n == 0) {
-		if (siz != 0)
-			*d = '\0';    /* NUL-terminate dst */
-		while (*s++)
-			;
-	}
-
-	return (s - src - 1);  /* count does not include NUL */
-}
-#endif
-
 /* This is a modified version of the floatToString posted by the Arduino forums
  * user "zitron" at http://www.arduino.cc/cgi-bin/yabb2/YaBB.pl?num=1205038401.
  * This is slimmer than dstrtof() (350 vs. 1700 bytes!) and works well enough
@@ -115,4 +88,31 @@ char *strupr(char *s) {
   return s;
 }
 
+uint16_t _crc_xmodem_update (uint16_t crc, uint8_t data)
+  int i;
+
+  crc = crc ^ ((uint16_t) data << 8);
+  for (i = 0; i < 8; i++) {
+    if (crc & 0x8000)
+      crc = (crc << 1) ^ 0x1021;
+    else
+      crc <<= 1;
+  }
+
+  return crc;
+}
+
+#else  // ARDUINO_ARCH_ESP8266
+
+#include <util/crc16.h>
+
 #endif  // ARDUINO_ARCH_ESP8266
+
+uint16_t crc16_update_str (uint16_t crc, const char* s) {
+  char c;
+  while ((c = *s++)) {
+    crc = _crc_xmodem_update (crc, c);
+  }
+
+  return crc;
+}

@@ -1,6 +1,5 @@
 #include <Sensoria.h>
 #include <SensoriaStereotypes/AllStereotypes.h>
-//~ #include <RokkitHash.h>
 #include "Server.h"
 #include "common.h"
 
@@ -9,7 +8,6 @@ SensoriaServer::SensoriaServer (): comm (NULL) {
 
 boolean SensoriaServer::begin (FlashString _serverName, SensoriaCommunicator& _comm) {
 	serverName = _serverName;
-	serverVersion = F("20170130");
 	comm = &_comm;
 	nTransducers = 0;
 	clearBuffer ();
@@ -45,12 +43,6 @@ int SensoriaServer::addTransducer (Transducer& transducer) {
 		// Look up stereotype
 		if (getStereotype (transducer.stereotype)) {
 			transducers[nTransducers++] = &transducer;
-
-			// Update hash
-			//~ hash = rokkit (transducer.name, strlen_P (reinterpret_cast<PGM_P> (transducer.name)), hash);
-			//~ hash = rokkit (transducer.type == Transducer::SENSOR ? F("S") : F("A"), 1, hash);
-			//~ hash = rokkit (transducer.description, strlen_P (reinterpret_cast<PGM_P> (transducer.description)), hash);
-			//~ hash = rokkit (transducer.version, strlen_P (reinterpret_cast<PGM_P> (transducer.version)), hash);
 
 			return nTransducers - 1;
 		} else {
@@ -156,12 +148,14 @@ void SensoriaServer::process_cmd (char *buffer, IPAddress senderAddr, uint16_t s
 	DPRINT (cmd);
 	DPRINTLN (F("\""));
 
-	if (strcmp_P (cmd, PSTR ("QRY")) == 0) {
+  if (strcmp_P (cmd, PSTR ("HLO")) == 0) {
+		cmd_hlo (args);
+#ifdef ENABLE_CMD_QRY
+	} else if (strcmp_P (cmd, PSTR ("QRY")) == 0) {
 		cmd_qry (args);
+#endif
 	} else if (strcmp_P (cmd, PSTR ("REA")) == 0) {
 		cmd_rea (args);
-	} else if (strcmp_P (cmd, PSTR ("VER")) == 0) {
-		cmd_ver (args);
 	} else if (strcmp_P (cmd, PSTR ("WRI")) == 0) {
 		cmd_wri (args);
 #ifdef ENABLE_NOTIFICATIONS
@@ -226,8 +220,8 @@ NotificationType SensoriaServer::parseNotificationTypeStr (char *nTypeStr) {
 }
 #endif
 
-void SensoriaServer::handleNotificationReqs () {
 #ifdef ENABLE_NOTIFICATIONS
+void SensoriaServer::handleNotificationReqs () {
 	// This assumes NRQs 0...nNotificationReqs-1 are always valid
 	for (byte i = 0; i < nNotificationReqs; i++) {
 		NotificationRequest& req = notificationReqs[i];
@@ -258,8 +252,8 @@ void SensoriaServer::handleNotificationReqs () {
 			}
 		}
 	}
-#endif
 }
+#endif
 
 void SensoriaServer::loop () {
 	char *cmd;
@@ -270,7 +264,9 @@ void SensoriaServer::loop () {
 		process_cmd (cmd, addr, port);
 	}
 
+#ifdef ENABLE_NOTIFICATIONS
 	handleNotificationReqs ();
+#endif
 }
 
 /*******************************************************************************
@@ -278,6 +274,31 @@ void SensoriaServer::loop () {
  *******************************************************************************
  */
 
+void SensoriaServer::cmd_hlo (char *args) {
+  (void) args;
+
+  send_srv (F("HLO "));
+	send_srv (serverName);
+  send_srv (" ");
+
+  for (byte i = 0; i < nTransducers; i++) {
+    Transducer& t = *transducers[i];
+    send_srv (t.name);
+    send_srv (" ");		   // No F() here saves flash and wastes no RAM
+    send_srv (t.type == Transducer::SENSOR ? ("S") : ("A"));
+    send_srv (" ");
+    send_srv (t.stereotype);
+    send_srv (" ");
+
+    if (i < nTransducers - 1)
+      send_srv (F("|"));
+  }
+
+  // Send reply
+  send_srv ();
+}
+
+#ifdef ENABLE_CMD_QRY
 void SensoriaServer::cmd_qry (char *args) {
 	if (args != NULL) {
 		// Get first arg
@@ -327,18 +348,7 @@ void SensoriaServer::cmd_qry (char *args) {
 		send_srv ();
 	}
 }
-
-void SensoriaServer::cmd_ver (const char *args _UNUSED) {
-	send_srv (F("VER "));
-	send_srv (serverName);
-
-	if (serverVersion) {
-		send_srv (" ");
-		send_srv (serverVersion);
-	}
-
-	send_srv ();
-}
+#endif
 
 void SensoriaServer::cmd_rea (char *args) {
 	// Get first arg
