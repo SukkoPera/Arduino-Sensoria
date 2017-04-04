@@ -1,21 +1,13 @@
 #ifndef _COMMON_H_INCLUDED
 #define _COMMON_H_INCLUDED
 
-#include <Arduino.h>
-
 // Size of marshaling buffer
 #define SENSOR_BUF_SIZE 32
 
 // Uses ~1600b flash, ~120b RAM
 #define ENABLE_NOTIFICATIONS
 
-// Isn't there a ready-to-use macro in the ESP core headers??
-#ifdef ESP8266_CLOCK
-  //~ #warning Compiling for ESP8266
-  #define PLATFORM_ESP8266
-#endif
-
-#ifndef PLATFORM_ESP8266
+#ifndef ARDUINO_ARCH_ESP8266
   // Flash strings don't seem to work very well on ESP8266
   #define ENABLE_FLASH_STRINGS
 #endif

@@ -9,7 +9,7 @@ char *strstrip (char *s) {
 	return s;
 }
 
-#ifndef PLATFORM_ESP8266
+#ifndef ARDUINO_ARCH_ESP8266
 // From: http://mirror.fsf.org/pmon2000/3.x/src/sdk/libc/string/strlcpy.c
 size_t strlcpy (char *dst, const char *src, size_t siz) {
 	register char *d = dst;
@@ -96,7 +96,7 @@ int splitString (char *str, char **parts, size_t n, const char sep) {
 	return i + 1;
 }
 
-#ifdef PLATFORM_ESP8266
+#ifdef ARDUINO_ARCH_ESP8266
 
 char *strupr(char *s) {
   char *t = s;
@@ -115,4 +115,4 @@ char *strupr(char *s) {
   return s;
 }
 
-#endif  // PLATFORM_ESP8266
+#endif  // ARDUINO_ARCH_ESP8266

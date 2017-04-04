@@ -9,7 +9,7 @@
  */
 char *strstrip (char *s);
 
-#ifndef PLATFORM_ESP8266
+#ifndef ARDUINO_ARCH_ESP8266
 /* Copy src to string dst of size siz.  At most siz-1 characters
  * will be copied.  Always NUL terminates (unless siz == 0).
  * Returns strlen(src); if retval >= siz, truncation occurred.
@@ -28,8 +28,8 @@ char *floatToString (double val, char *outstr);
 // WARNING: str is updated in-place
 int splitString (char *str, char **parts, size_t n, const char sep = ' ');
 
-#ifdef PLATFORM_ESP8266
-char *strupr(char * s);
+#ifdef ARDUINO_ARCH_ESP8266
+char *strupr (char * s);
 #endif
 
 #endif
