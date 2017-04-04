@@ -471,7 +471,7 @@ void SensoriaServer::cmd_nrq (char *args) {
                   if (n < 3) {
                     nNotificationReqs--;
                     DPRINTLN (F("ERR No interval specified"));
-                    send_srv (F("MRQ ERR"), true);
+                    send_srv (F("NRQ ERR"), true);
                   } else {
                     word intv = atoi (p[2]);
 
