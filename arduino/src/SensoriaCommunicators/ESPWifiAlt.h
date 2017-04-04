@@ -23,7 +23,9 @@ private:
 
 public:
 	WiFiEspUDP udpMain;
+#ifdef ENABLE_NOTIFICATIONS
 	WiFiEspUDP udpNot;
+#endif
 
 	boolean begin (Stream& _serial, const char *_ssid, const char *_password, int channels = CC_SERVER) {
 		WiFi.init (&_serial);
@@ -76,6 +78,7 @@ public:
 		/* This can be enabled at will if you want to be able to RECEIVE
 		 * notifications
 		 */
+#ifdef ENABLE_NOTIFICATIONS
 		if (channels & CC_NOTIFICATIONS) {
 			if (!udpNot.begin (DEFAULT_NOTIFICATION_PORT)) {
 				DPRINTLN (F("Cannot setup notification listening socket"));
@@ -85,6 +88,7 @@ public:
 				DPRINTLN (DEFAULT_NOTIFICATION_PORT);
 			}
 		}
+#endif
 
 		return true;
 	}
@@ -150,9 +154,11 @@ public:
 			case CC_SERVER:
 				ret = receiveGeneric (udpMain, str, senderAddr, senderPort);
 				break;
+#ifdef ENABLE_NOTIFICATIONS
 			case CC_NOTIFICATIONS:
 				ret = receiveGeneric (udpNot, str, senderAddr, senderPort);
 				break;
+#endif
 			default:
 				break;
 		}
