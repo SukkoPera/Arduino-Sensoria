@@ -52,7 +52,7 @@ protected:
 };
 
 WeatherDataNotificationProcessor wdProc;
-
+int registrationId = -1;
 
 void setup () {
   Serial.begin (9600);
@@ -78,10 +78,38 @@ void setup () {
   TransducerProxy* ot = client.getTransducer ("KF");
   if (ot != NULL) {
     //~ notMgr.registerReceiver (wdProc, *ot, NT_PRD, 10);
-    notMgr.registerReceiver (wdProc, *ot, NT_CHA);
+    registrationId = notMgr.registerReceiver (wdProc, *ot, NT_CHA);
+  }
+
+  // Signal we're ready!
+  //Serial.println (F("GO!"));
+  pinMode (LED_PIN, OUTPUT);
+  for (int i = 0; i < 3; i++) {
+    digitalWrite (LED_PIN, HIGH);
+    delay (100);
+    digitalWrite (LED_PIN, LOW);
+    delay (100);
   }
 }
 
 void loop () {
+  client.loop ();
   notMgr.loop ();
+
+  if (!notMgr.isRegistered (registrationId) && (millis () / 500) % 2 == 0) {
+    digitalWrite (LED_PIN, LOW);
+  } else {
+    digitalWrite (LED_PIN, HIGH);
+  }
+
+  static unsigned long t = 0;
+  if (t == 0 || millis () - t >= 5000) {
+    TransducerProxy* ot = client.getTransducer ("KF");
+    if (ot != NULL) {
+      DPRINTLN ("Reading");
+      Stereotype* st;
+      ot -> read (st);
+      t = millis ();
+    }
+  }
 }

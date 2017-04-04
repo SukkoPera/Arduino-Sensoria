@@ -9,8 +9,11 @@
 
 class GenericNotificationReceiver {
 public:
+	boolean registered;
 	TransducerProxy* transducer;
 	NotificationType type;
+	word period;
+	unsigned long lastRegAttemptTime;
 
 	virtual boolean onGenericNotification (Stereotype *st) = 0;
 };
@@ -36,30 +39,45 @@ private:
 	GenericNotificationReceiver* receivers[MAX_RECEIVERS];
 	int nRec = 0;
 
+	void checkRegistrations () {
+		for (byte i = 0; i < nRec; i++) {
+			GenericNotificationReceiver& rec = *receivers[i];
+			if (!rec.registered && (rec.lastRegAttemptTime == 0 || millis () - rec.lastRegAttemptTime >= 30000UL)) {
+				// Try to register
+				rec.registered = rec.transducer -> requestNotification (rec.type, rec.period);
+				if (rec.registered) {
+					DPRINT (F("Notification request for "));
+					DPRINT (rec.transducer -> name);
+					DPRINTLN (F(" succeeded"));
+				} else {
+					DPRINTLN (F("Notification request failed"));
+				}
+
+				rec.lastRegAttemptTime = millis ();
+			}
+		}
+	}
+
+
 public:
 	void begin (SensoriaCommunicator& _comm) {
 		comm = &_comm;
 		nRec = 0;
 	}
 
-	boolean registerReceiver (GenericNotificationReceiver& rec, TransducerProxy& t, const NotificationType nType, const word period = 0) {
-		boolean ret = false;
+	int registerReceiver (GenericNotificationReceiver& rec, TransducerProxy& t, const NotificationType nType, const word period = 0) {
+		int ret = -1;
 		if (nType != NT_PRD || period != 0) {
 			// Parameters are good
 			if (nRec < MAX_RECEIVERS) {
-				if (t.requestNotification (nType, period)) {
-					receivers[nRec++] = &rec;
+				receivers[nRec] = &rec;
+				rec.registered = false;
+				rec.transducer = &t;
+				rec.type = nType;
+				rec.period = period;
+				rec.lastRegAttemptTime = 0;
 
-					rec.transducer = &t;
-					rec.type = nType;
-
-					DPRINT (F("Notification request for "));
-					DPRINT (t.name);
-					DPRINTLN (F(" succeeded"));
-					ret = true;
-				} else {
-					DPRINTLN (F("Notification request failed"));
-				}
+				ret = nRec++;;
 			}
 		}
 
@@ -83,18 +101,18 @@ public:
 			DPRINTLN ("\"");
 		} else {
 			int interested = 0;
-			for (int i = 0; i < nRec; i++) {
+			for (byte i = 0; i < nRec; i++) {
 				GenericNotificationReceiver& rec = *receivers[i];
 				if (strcmp (p[1], rec.transducer -> name) == 0) {
 					DPRINT (F("Found interested NotificationReceiver: "));
 					DPRINTLN (i);
 
-          rec.transducer -> stereotype -> clear ();
-          if (rec.transducer -> stereotype -> unmarshal (p[2])) {
-            rec.onGenericNotification (rec.transducer -> stereotype);
-          } else {
-            DPRINT (F("Unmarshaling failed, cannot deliver notification to interested NotificationReceiver"));
-          }
+					rec.transducer -> stereotype -> clear ();
+					if (rec.transducer -> stereotype -> unmarshal (p[2])) {
+						rec.onGenericNotification (rec.transducer -> stereotype);
+					} else {
+						DPRINT (F("Unmarshaling failed, cannot deliver notification to interested NotificationReceiver"));
+					}
 					interested++;
 				}
 			}
@@ -117,6 +135,12 @@ public:
 
 			processNotification (buffer, addr, port);
 		}
+
+		checkRegistrations ();
+	}
+
+	boolean isRegistered (int regId) {
+		return regId < nRec && receivers[regId] -> registered;
 	}
 };
 
