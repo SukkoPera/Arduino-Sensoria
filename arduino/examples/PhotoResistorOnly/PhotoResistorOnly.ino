@@ -19,14 +19,15 @@ SensoriaServer srv;
 #define WIFI_SSID        "ssid"
 #define WIFI_PASSWORD    "password"
 
+#define LED_PIN LED_BUILTIN
 
 void mypanic (int interval) {
-	pinMode (LED_BUILTIN, OUTPUT);
+	pinMode (LED_PIN, OUTPUT);
 
 	while (42) {
-		digitalWrite (LED_BUILTIN, HIGH);
+		digitalWrite (LED_PIN, HIGH);
 		delay (interval);
-		digitalWrite (LED_BUILTIN, LOW);
+		digitalWrite (LED_PIN, LOW);
 		delay (interval);
 	}
 }
@@ -61,11 +62,11 @@ void setup (void) {
 
 	// Signal we're ready!
 	Serial.println (F("GO!"));
-	pinMode (LED_BUILTIN, OUTPUT);
+	pinMode (LED_PIN, OUTPUT);
 	for (int i = 0; i < 3; i++) {
-		digitalWrite (LED_BUILTIN, HIGH);
+		digitalWrite (LED_PIN, HIGH);
 		delay (100);
-		digitalWrite (LED_BUILTIN, LOW);
+		digitalWrite (LED_PIN, LOW);
 		delay (100);
 	}
 }
