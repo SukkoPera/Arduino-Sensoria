@@ -405,7 +405,7 @@ void SensoriaServer::cmd_wri (char *args) {
 						DPRINT (F("Unmarshaling with "));
 						DPRINT (st -> tag);
 						DPRINT (F(" failed for: "));
-						DPRINTLN (buf);
+						DPRINTLN (rest);
 						send_srv (F("ERR Unmarshaling failed"), true);
 					}
 				} else {
