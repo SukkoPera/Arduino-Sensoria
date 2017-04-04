@@ -1,7 +1,7 @@
 #include <SoftwareSerial.h>
 #include <Sensoria.h>
 #include <SensoriaClient/SensoriaClient.h>
-#include <SensoriaCommunicators/ESPWifiAlt.h>
+#include <SensoriaCommunicators/ESPWifi.h>
 
 // Wi-Fi parameters
 #define WIFI_SSID        "ssid"
@@ -33,6 +33,7 @@ void setup() {
   }
 
   client.begin (comm);
+
 }
 
 void loop() {

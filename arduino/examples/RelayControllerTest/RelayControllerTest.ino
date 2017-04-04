@@ -5,7 +5,7 @@
 SensoriaServer srv;
 
 #include <SoftwareSerial.h>
-#include <SensoriaCommunicators/ESPWifiAlt.h>
+#include <SensoriaCommunicators/ESPWifi.h>
 SoftwareSerial swSerial (6, 7);
 SensoriaEsp8266Communicator comm;
 

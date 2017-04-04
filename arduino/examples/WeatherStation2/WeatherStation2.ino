@@ -63,7 +63,7 @@ TemperatureSensorLM35 lm35Sensor;
 #include <SoftwareSerial.h>
 SoftwareSerial swSerial (10, 11);
 
-#include <SensoriaCommunicators/ESPWifiAlt.h>
+#include <SensoriaCommunicators/ESPWifi.h>
 SensoriaEsp8266Communicator comm;
 
 #include <SensoriaCore/Server.h>

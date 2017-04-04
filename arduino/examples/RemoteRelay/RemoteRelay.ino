@@ -1,7 +1,7 @@
 #include <SoftwareSerial.h>
 #include <Sensoria.h>
 #include <SensoriaCore/Server.h>
-#include <SensoriaCommunicators/ESPWifiAlt.h>
+#include <SensoriaCommunicators/ESPWifi.h>
 
 #include <SensoriaActuators/Relay.h>
 

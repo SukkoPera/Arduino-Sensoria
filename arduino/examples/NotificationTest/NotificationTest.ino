@@ -3,7 +3,7 @@
 #include <SensoriaClient/SensoriaClient.h>
 #include <SensoriaClient/NotificationManager.h>
 #include <SensoriaStereotypes/WeatherData.h>
-#include <SensoriaCommunicators/ESPWifiAlt.h>
+#include <SensoriaCommunicators/ESPWifi.h>
 
 IPAddress outdoor1 (192, 168, 1, 154);
 

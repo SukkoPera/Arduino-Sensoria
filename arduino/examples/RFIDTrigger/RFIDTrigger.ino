@@ -18,7 +18,7 @@ byte GOOD_KEY[KEY_SIZE] = {0x85, 0xB1, 0x15, 0x53};
 #include <Sensoria.h>
 #include <SensoriaClient/SensoriaClient.h>
 #include <SensoriaStereotypes/RelayData.h>
-#include <SensoriaCommunicators/ESPWifiAlt.h>
+#include <SensoriaCommunicators/ESPWifi.h>
 
 IPAddress relayNodeAddr (192, 168, 1, 173);
 

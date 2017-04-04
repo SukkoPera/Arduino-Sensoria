@@ -1,146 +1,179 @@
-#if 0
+#if 1
 
-THIS NEEDS TO BE FIXED AFTER THE SWITCH TO COMMUNICATOR CLASS!
-
-#include <IPAddress.h>
+#include <Sensoria.h>
 #include <SensoriaCore/Communicator.h>
-#include <ESP8266.h>
+#include <SensoriaCore/common.h>
+#include <WiFiEsp.h>
+#include <WiFiEspUdp.h>
+#include <SensoriaCore/debug.h>
 
-#define HOST_NAME   "0"
-#define IN_BUF_SIZE 64
-#define TIMEOUT 500
+#define IN_BUF_SIZE 192
 
-class SensoriaWifiServer: public SensoriaServer {
+/* This uses Bruno Portaluri's WiFiEsp library:
+ * https://github.com/bportaluri/WiFiEsp
+ */
+class SensoriaEsp8266Communicator: public SensoriaCommunicator {
 private:
-	SoftwareSerial swSerial;
-	ESP8266 *wifi;
-
-	const char *ssid;
-	const char *password;
-
 	uint8_t buffer[IN_BUF_SIZE];
 
+	/* 255.255.255.255 does not seem to work, see:
+	 * https://github.com/bportaluri/WiFiEsp/issues/95
+	 */
+#define BROADCAST_ADDRESS 192, 168, 1, 255
+
 public:
-	SensoriaWifiServer (): wifi (NULL) {
-	}
+	WiFiEspUDP udpMain;
+#ifdef ENABLE_NOTIFICATIONS
+	WiFiEspUDP udpNot;
+#endif
 
-	boolean begin (Stream& _serial, const char *_ssid, const char *_password) {
-    SensoriaServer::begin (_serverName, F("20160202"));
-    ssid = _ssid;
-    password = _password;
+	boolean begin (Stream& _serial, const char *_ssid, const char *_password, int channels = CC_SERVER) {
+		WiFi.init (&_serial);
 
-    delay (2000);
+		// Check for the presence of ESP
+		if (WiFi.status() == WL_NO_SHIELD) {
+			DPRINTLN (F("ESP8266 not found"));
+			return false;
+		}
 
 		DPRINT (F("FW Version:"));
-		DPRINTLN (wifi.getVersion ().c_str ());
+		DPRINTLN (WiFi.firmwareVersion ());
 
-		if (!wifi.setOprToStation ()) {
-			DPRINTLN (F("to station err\r\n"));
-			return false;
-		}
+		// FIXME: Add max attempts
+		int status;
+		do {
+			DPRINT (F("Connecting to AP: "));
+			DPRINTLN (_ssid);
+			status = WiFi.begin (const_cast<char *> (_ssid), _password);
+		} while (status != WL_CONNECTED);
 
-		if (wifi.joinAP (ssid, password)) {
-			DPRINTLN (F("Join AP success"));
-			DPRINT (F("IP: "));
-			DPRINTLN (wifi.getLocalIP().c_str());
-		} else {
-			DPRINTLN (F("Join AP failure"));
-			return false;
-		}
+		//~ if (wifi.joinAP (ssid, password)) {
+			DPRINTLN (F("Joined AP"));
+			//~ DPRINT (F("IP: "));
+			//~ DPRINTLN (wifi.getLocalIP().c_str());
+		//~ } else {
+			//~ DPRINTLN (F("Join AP failure"));
+			//~ return false;
+		//~ }
 
 		// 0 will have us choose a random port for outgoing messages
-		if (!wifi.registerUDP (HOST_NAME, 0, INPUT_PORT, 2)) {
-			DPRINTLN (F("register udp err"));
-			return false;
+		//~ if (!wifi.registerUDP (HOST_NAME, 0, INPUT_PORT, 2)) {
+			//~ DPRINTLN (F("register udp err"));
+			//~ return false;
+		//~ }
+
+		DPRINT (F("IP address: "));
+		DPRINTLN (WiFi.localIP ());
+
+		/* Clients don't really need this, but how can we make an output-only
+		 * socket?
+		 */
+		if (channels & CC_SERVER) {
+			if (!udpMain.begin (DEFAULT_PORT)) {
+				DPRINTLN (F("Cannot setup main listening socket"));
+				return false;
+			}
 		}
+
+		/* This can be enabled at will if you want to be able to RECEIVE
+		 * notifications
+		 */
+#ifdef ENABLE_NOTIFICATIONS
+		if (channels & CC_NOTIFICATIONS) {
+			if (!udpNot.begin (DEFAULT_NOTIFICATION_PORT)) {
+				DPRINTLN (F("Cannot setup notification listening socket"));
+				return false;
+			} else {
+				DPRINT (F("Notification listening socket setup on port "));
+				DPRINTLN (DEFAULT_NOTIFICATION_PORT);
+			}
+		}
+#endif
 
 		return true;
 	}
 
-	//~ boolean send (const char *str) {
-		//~ return wifi.send ((const uint8_t *) str, strlen (str));
+	//~ boolean send (const char *str) override {
+		//~ udp.beginPacket (udp.remoteIP (), udp.remotePort ());
+		//~ udp.write ((const uint8_t *) str, strlen (str));
+		//~ udp.endPacket ();
+
+		//~ // FIXME
+		//~ return true;
 	//~ }
 
-  // FIXME
 	boolean send (const char *str, IPAddress& dest, uint16_t port) override {
-    /* FIXME: Find a better way to convert IPAddress to string. This
-     * uses ~2 kB of flash, because of the String class, which isn't
-     * used anywhere else!
-     */
-    String addr = String(dest[0]) + "." +  String(dest[1]) + "." + \
-      String(dest[2]) + "." + String(dest[3]);
-    DPRINT (F("Opening UDP socket to "));
-    DPRINT (addr);
-    DPRINT (F(":"));
-    DPRINTLN (port);
+		udpMain.beginPacket (dest, port);
+		udpMain.write ((const uint8_t *) str, strlen (str));
+		udpMain.endPacket ();
 
-    if (!wifi.registerUDP (addr.c_str (), port)) {
-      DPRINT (F("Cannot open UDP socket to "));
-      DPRINT (addr);
-      DPRINT (F(":"));
-      DPRINTLN (port);
-    }
-
-    boolean ret = wifi.send ((const uint8_t *) str, strlen (str));
-
-    //~ if (!wifi.unregisterUDP()) {
-      //~ DPRINTLN(F("Cannot close UDP socket"));
-    //~ }
-
-    return ret;
+		// FIXME
+		return true;
 	}
 
-  boolean receiveString (char **str, IPAddress *senderAddr, uint16_t *senderPort) override {
-		uint32_t len = wifi.recv (buffer, IN_BUF_SIZE - 1, TIMEOUT);
-		if (len > 0) {
-			buffer[len] = '\0';  // Ensure command is a valid string
-			char *charbuf = reinterpret_cast<char *> (buffer);
-
-			DPRINT (F("Received:["));
-			//~ for (uint32_t i = 0; i < len; i++) {
-				//~ DPRINT ((char) buffer[i]);
-			//~ }
-			DPRINT (charbuf);
-			DPRINT (F("]\r\n"));
-		} else {
-			DPRINTLN (F("Timeout"));
-		}
-
-		return (len > 0);
+	boolean broadcast (const char *str, uint16_t port) override {
+		IPAddress broadcastIp (BROADCAST_ADDRESS);
+		return send (str, broadcastIp, port);
 	}
 
-  char *receiveString () {
-    char *ret;
+	boolean receiveGeneric (WiFiEspUDP& udp, char **str, IPAddress *senderAddr, uint16_t *senderPort) {
+		// Assume we'll receive nothing
+		boolean ret = false;
 
-		uint32_t len = wifi.recv (buffer, IN_BUF_SIZE - 1, TIMEOUT);
-		if (len > 0) {
-			buffer[len] = '\0';  // Ensure command is a valid string
-			char *charbuf = reinterpret_cast<char *> (buffer);
+		int packetSize = udp.parsePacket ();
+		if (packetSize) {
+			*senderAddr = udp.remoteIP ();
+			*senderPort = udp.remotePort ();
 
-			DPRINT (F("Received:["));
-			//~ for (uint32_t i = 0; i < len; i++) {
-				//~ DPRINT ((char) buffer[i]);
-			//~ }
-			DPRINT (charbuf);
-			DPRINT (F("]\r\n"));
-
-			ret = charbuf;
-		} else {
-			DPRINTLN (F("TIMEOUT"));
-      ret = NULL;
+			// read the packet into packetBufffer
+			int len = udp.read (buffer, IN_BUF_SIZE - 1);
+			if (len > 0) {
+				buffer[len] = '\0';  // Ensure command is a valid string
+				*str = reinterpret_cast<char *> (buffer);
+			}
+#if 0
+			DPRINT (F("Received packet of size "));
+			DPRINT (packetSize);
+			DPRINT (F(" from "));
+			DPRINT (*senderAddr);
+			DPRINT (F(", port "));
+			DPRINT (*senderPort);
+			DPRINT (F(": \""));
+			DPRINT (*str);
+			DPRINTLN (F("\""));
+#endif
+			ret = true;
 		}
 
 		return ret;
 	}
 
-	boolean stop () {
-		if (!wifi.unregisterUDP ()) {
-			DPRINT ("unregister udp err\r\n");
-			return false;
-		} else {
-			return true;
+	boolean receiveString (char **str, IPAddress *senderAddr, uint16_t *senderPort, SensoriaChannel channel) override {
+		boolean ret = false;
+		switch (channel) {
+			case CC_SERVER:
+				ret = receiveGeneric (udpMain, str, senderAddr, senderPort);
+				break;
+#ifdef ENABLE_NOTIFICATIONS
+			case CC_NOTIFICATIONS:
+				ret = receiveGeneric (udpNot, str, senderAddr, senderPort);
+				break;
+#endif
+			default:
+				break;
 		}
+
+		return ret;
 	}
+
+	//~ boolean stop () override {
+		//~ if (!wifi.unregisterUDP ()) {
+			//~ DPRINT ("unregister udp err\r\n");
+			//~ return false;
+		//~ } else {
+			//~ return true;
+		//~ }
+	//~ }
 };
 
 #endif

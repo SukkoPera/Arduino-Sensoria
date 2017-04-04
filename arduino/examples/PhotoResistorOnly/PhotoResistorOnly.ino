@@ -9,7 +9,7 @@ PhotoSensor photoSensor;
 #include <SoftwareSerial.h>
 SoftwareSerial swSerial (6, 7);
 
-#include <SensoriaCommunicators/ESPWifiAlt.h>
+#include <SensoriaCommunicators/ESPWifi.h>
 SensoriaEsp8266Communicator comm;
 
 #include <SensoriaCore/Server.h>
