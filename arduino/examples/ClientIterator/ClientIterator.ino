@@ -3,14 +3,11 @@
 #include <SensoriaClient/SensoriaClient.h>
 #include <SensoriaCommunicators/ESPWifiAlt.h>
 
-IPAddress outdoor1(192, 168, 1, 170);
-IPAddress outdoor2(192, 168, 1, 171);
-
 // Wi-Fi parameters
 #define WIFI_SSID        "ssid"
 #define WIFI_PASSWORD    "password"
 
-SoftwareSerial swSerial (10, 11);
+SoftwareSerial swSerial (6, 7);
 SensoriaEsp8266Communicator comm;
 SensoriaClient client;
 
@@ -36,17 +33,9 @@ void setup() {
   }
 
   client.begin (comm);
+}
 
-  if (!client.registerNode (outdoor1)) {
-    Serial.println (F("Cannot register outdoor1 server"));
-  }
-
-  if (!client.registerNode (outdoor2)) {
-    Serial.println (F("Cannot register outdoor2 server"));
-  }
-
-  char *reply;
-
+void loop() {
   Serial.println (F("-- NODES --"));
   SensoriaIterator iter = client.getIterator ();
   ServerProxy *s;
@@ -70,10 +59,11 @@ void setup() {
     Serial.print (spx -> name);
     Serial.print (F(": "));
 
-    if (!spx -> read (reply)) {
-      Serial.println (F("Read failed"));
+    Stereotype *st;
+    if (!(spx -> read (st))) {
+      Serial.println (F("Read FAILED"));
     } else {
-      Serial.println (reply);
+      Serial.println (F("Read OK"));
     }
   }
   Serial.println (F("-------------"));
@@ -85,25 +75,8 @@ void setup() {
     Serial.println (apx -> name);
   }
   Serial.println (F("---------------"));
+
+  client.loop ();
+
+  delay (30000UL);
 }
-
-void loop() {
-  delay (5000);
-
-  Serial.println (F("-- SENSORS --"));
-  SensoriaIterator iter = client.getIterator ();
-  SensorProxy *spx;
-  while ((spx = iter.nextSensor ())) {
-    Serial.print (spx -> name);
-    Serial.print (F(": "));
-
-    char *reply;
-    if (!spx -> read (reply)) {
-      Serial.println (F("Read failed"));
-    } else {
-      Serial.println (reply);
-    }
-  }
-  Serial.println (F("-------------"));
-}
-

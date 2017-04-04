@@ -14,22 +14,18 @@
  */
 class SensoriaEsp8266Communicator: public SensoriaCommunicator {
 private:
-	//~ Stream *serial;
-
-	//~ const char *ssid;
-	//~ const char *password;
-
 	uint8_t buffer[IN_BUF_SIZE];
+
+	/* 255.255.255.255 does not seem to work, see:
+	 * https://github.com/bportaluri/WiFiEsp/issues/95
+	 */
+#define BROADCAST_ADDRESS 192, 168, 1, 255
 
 public:
 	WiFiEspUDP udpMain;
 	WiFiEspUDP udpNot;
 
 	boolean begin (Stream& _serial, const char *_ssid, const char *_password, int channels = CC_SERVER) {
-		//~ serial = &_serial;
-		//~ ssid = _ssid;
-		//~ password = _password;
-
 		WiFi.init (&_serial);
 
 		// Check for the presence of ESP
@@ -109,6 +105,11 @@ public:
 
 		// FIXME
 		return true;
+	}
+
+	boolean broadcast (const char *str, uint16_t port) override {
+		IPAddress broadcastIp (BROADCAST_ADDRESS);
+		return send (str, broadcastIp, port);
 	}
 
 	boolean receiveGeneric (WiFiEspUDP& udp, char **str, IPAddress *senderAddr, uint16_t *senderPort) {

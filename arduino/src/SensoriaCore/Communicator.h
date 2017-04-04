@@ -28,6 +28,8 @@ public:
 	// Override to implement actual sending of data
 	virtual boolean send (const char *str, IPAddress& dest, uint16_t port) = 0;
 
+	virtual boolean broadcast (const char *str, uint16_t port) = 0;
+
 	// Override to implement actual receiving of data
 	virtual boolean receiveString (char **str, IPAddress *senderAddr, uint16_t *senderPort, SensoriaChannel channel) = 0;
 

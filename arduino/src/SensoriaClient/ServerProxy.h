@@ -13,33 +13,44 @@ class Stereotype;
 
 class ServerProxy {
 public:
-  char name[MAX_SERVER_NAME];
+	enum CommandResult {
+		SEND_OK = 1,          // All good, reply is valid
+		SEND_ERR = -1,        // Command sent but got an error reply
+		SEND_UNEXP_ERR = -1,  // Command sent but got an unexpected reply
+		SEND_TIMEOUT = -99    // Send timed out
+	};
 
-  ServerProxy (SensoriaCommunicator* _comm, IPAddress& address, uint16_t port = DEFAULT_PORT);
+	char name[MAX_SERVER_NAME];
 
-  boolean sendcmd (const char *cmd, char*& reply);
+	byte nFailures;
 
-  boolean addTransducer (TransducerProxy *tpx);
+	ServerProxy (SensoriaCommunicator* _comm, IPAddress& address, uint16_t port = DEFAULT_PORT);
 
-  TransducerProxy* getTransducer (const char *name) const;
+	CommandResult sendcmd (const char *cmd, char*& reply);
 
-  SensorProxy* getSensor (const char *name) const;
+	boolean addTransducer (TransducerProxy *tpx);
 
-  boolean read (TransducerProxy& t);
+	TransducerProxy* getTransducer (const char *name) const;
 
-  boolean write (ActuatorProxy& a, Stereotype& st);
+	SensorProxy* getSensor (const char *name) const;
+
+	boolean read (TransducerProxy& t);
+
+	boolean write (ActuatorProxy& a, Stereotype& st);
 
 private:
-  SensoriaCommunicator *comm;
-  IPAddress address;
-  uint16_t port;
+	SensoriaCommunicator *comm;
+	IPAddress address;
+	uint16_t port;
 
-  byte nTransducers;
+	byte nTransducers;
 
-  TransducerProxy *transducers[MAX_TRANSDUCERS];
+	uint16_t checksum;
 
-  friend class SensoriaIterator;
-  friend class SensoriaClient;
+	TransducerProxy *transducers[MAX_TRANSDUCERS];
+
+	friend class SensoriaIterator;
+	friend class SensoriaClient;
 };
 
 #endif

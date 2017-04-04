@@ -21,8 +21,16 @@
 
 #define MAX_TRANSDUCER_VER (8 + 1)
 
+#define MAX_FAILURES 3
+
 // ms
 #define CLIENT_TIMEOUT 5000
+
+// ms
+#define DISCOVERY_INTERVAL 10000
+
+// ms
+#define DISCOVERY_TIMEOUT 1500
 
 /* When checking for if transducer readings have changed for notification
  * purposes, only poll at this interval (ms)

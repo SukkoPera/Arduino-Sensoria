@@ -8,32 +8,43 @@
 
 class SensoriaClient {
 private:
-  SensoriaCommunicator *comm;
+	SensoriaCommunicator *comm;
 
-  ServerProxy *servers[MAX_SERVERS];
+	ServerProxy *servers[MAX_SERVERS];
 
-  int nServers;
+	int nServers;
 
-  friend class SensoriaIterator;
+	// If 0, autodiscovery is disabled
+	unsigned long lastDiscoveryTime;
+
+	boolean parseHloReply (char *reply, char*& serverName, char** transducerList);
+
+	ServerProxy* realizeServer (IPAddress& addr, uint16_t port, char*& serverName, char** transducerList, uint16_t crc);
+
+	friend class SensoriaIterator;
+
+	void delServer (const char* name);
 
 public:
-  SensoriaClient ();
+	SensoriaClient ();
 
-  void begin (SensoriaCommunicator& comm);
+	void begin (SensoriaCommunicator& comm, const boolean autodiscover = true);
 
-  boolean registerNode (IPAddress& addr, uint16_t port = DEFAULT_PORT);
+	void discover ();
 
-  boolean discoverSensors (ServerProxy& srvpx);
+	boolean registerNode (IPAddress& addr, uint16_t port = DEFAULT_PORT);
 
-  ServerProxy *getServer (const char *name);
+	ServerProxy *getServer (const char *name);
 
-  TransducerProxy *getTransducer (const char *name);
+	TransducerProxy *getTransducer (const char *name);
 
-  SensorProxy *getSensor (const char *name);
+	SensorProxy *getSensor (const char *name);
 
-  ActuatorProxy *getActuator (const char *name);
+	ActuatorProxy *getActuator (const char *name);
 
-  SensoriaIterator getIterator ();
+	SensoriaIterator getIterator ();
+
+	void loop ();
 };
 
 #endif

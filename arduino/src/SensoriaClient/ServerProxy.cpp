@@ -12,26 +12,29 @@
 #define CMD_LEN 3
 
 
-ServerProxy::ServerProxy (SensoriaCommunicator* _comm, IPAddress& _address, uint16_t _port): comm (_comm), address (_address), port (_port), nTransducers (0) {
+ServerProxy::ServerProxy (SensoriaCommunicator* _comm, IPAddress& _address, uint16_t _port):
+		nFailures (0), comm (_comm), address (_address), port (_port), nTransducers (0) {
+
 	name[0] = '\0';
 }
 
 // args is input, reply is output
-boolean ServerProxy::sendcmd (const char *args, char*& reply) {
+ServerProxy::CommandResult ServerProxy::sendcmd (const char *args, char*& reply) {
 #ifdef DEBUG_COMMS
 	DPRINT (F("<-- "));
-	DPRINTLN (args);
+	DPRINT (args);   // Trailing CR is embedded in string, so no need for DPRINTLN
 #endif
 
+	CommandResult ret = SEND_OK;
 	reply = NULL;
 
-	boolean ret = comm -> send (args, address, port);
-	if (!ret) {
+	if (!comm -> send (args, address, port)) {
 		DPRINTLN (F("Cannot send command"));
+		ret = SEND_TIMEOUT;     // Assume network issue
 	} else {
 		IPAddress addr;
 		uint16_t port;
-		if ((ret = comm -> receiveStringWithTimeout (&reply, &addr, &port, CC_SERVER, CLIENT_TIMEOUT))) {
+		if ((comm -> receiveStringWithTimeout (&reply, &addr, &port, CC_SERVER, CLIENT_TIMEOUT))) {
 #ifdef DEBUG_COMMS
 			DPRINT (F("--> "));
 			DPRINTLN (reply);
@@ -46,15 +49,16 @@ boolean ServerProxy::sendcmd (const char *args, char*& reply) {
 			if (strcmp_P (rc[0], PSTR ("ERR")) == 0) {
 				DPRINT (F("Command failed: "));
 				DPRINTLN (rc[1]);
-				ret = false;
+				ret = SEND_ERR;
 			} else if (strncmp (rc[0], args, CMD_LEN) != 0) {
 				// Reply doesn't start with the command we sent
 				DPRINT (F("Unexpected reply: "));
 				DPRINTLN (reply);
-				ret = false;
+				ret = SEND_UNEXP_ERR;
 			}   // else command succeeded!
 		} else {
 			DPRINTLN (F("No reply received"));
+			ret = SEND_TIMEOUT;
 		}
 	}
 
@@ -101,27 +105,28 @@ SensorProxy* ServerProxy::getSensor (const char *name) const {
 }
 
 boolean ServerProxy::read (TransducerProxy& t) {
-	boolean ret;
+	boolean ret = false;
 	char buf[8] = {0}, *r;
 	strcat (buf, "REA ");
 	strcat (buf, t.name);
 	strcat (buf, "\n");
 
-	if ((ret = sendcmd (buf, r))) {
+	CommandResult res = sendcmd (buf, r);
+	if (res > 0) {
 		char *p[2];
 		if (splitString (r, p, 2) != 2) {
 			DPRINT (F("Unexpected REA reply: "));
 			DPRINTLN (r);
-			ret = false;
 		} else if (strcmp (p[0], t.name) != 0) {
 			DPRINT (F("Wrong transducer in REA reply: "));
 			DPRINTLN (r);
-			ret = false;
 		} else {
 			char *reply = p[1];
-      t.stereotype -> clear ();
-      ret = t.stereotype -> unmarshal (reply);
+			t.stereotype -> clear ();
+			ret = t.stereotype -> unmarshal (reply);
 		}
+	} else if (res == SEND_TIMEOUT) {
+		nFailures++;
 	}
 
 	return ret;
@@ -132,16 +137,21 @@ boolean ServerProxy::read (TransducerProxy& t) {
 boolean ServerProxy::write (ActuatorProxy& a, Stereotype& st) {
 	boolean ret = false;
 
-  char buf[SZ] = {'\0'};
-  strncat_P (buf, PSTR ("WRI "), SZ);   // 4
-  strncat (buf, a.name, SZ);            // +2=6
-  strncat_P (buf, PSTR (" "), SZ - 9);  // +1=7
-  char *tmp = st.marshal (buf + 7, SZ - 9);
-  strncat_P (buf, PSTR ("\n"), SZ);
+	char buf[SZ] = {'\0'};
+	strncat_P (buf, PSTR ("WRI "), SZ);   // 4
+	strncat (buf, a.name, SZ);            // +2=6
+	strncat_P (buf, PSTR (" "), SZ - 9);  // +1=7
+	char *tmp = st.marshal (buf + 7, SZ - 9);
+	strncat_P (buf, PSTR ("\n"), SZ);
 
-  if (tmp) {
-    ret = sendcmd (buf, tmp);
-  }
+	if (tmp) {
+		CommandResult res = sendcmd (buf, tmp);
+		if (res > 0) {
+			ret = true;
+		} else if (res == SEND_TIMEOUT) {
+			nFailures++;
+		}
+	}
 
 	return ret;
 }

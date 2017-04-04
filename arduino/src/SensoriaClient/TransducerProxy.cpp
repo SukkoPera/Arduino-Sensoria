@@ -14,23 +14,24 @@ TransducerProxy::TransducerProxy (ServerProxy* _srvpx, const char *_name,
 	if (_version != NULL)
 		strlcpy (version, _version, MAX_TRANSDUCER_VER);
 #else
-	// Make GCC happy
+	// Keep GCC happy
 	(void) _description;
 	(void) _version;
 #endif
 }
 
 boolean TransducerProxy::read (Stereotype*& st) {
-  boolean ret = srvpx -> read (*this);
-  if (ret) {
-    st = stereotype;
-  }
+	boolean ret = srvpx -> read (*this);
+	if (ret) {
+		st = stereotype;
+	}
 
-  return ret;
+	return ret;
 }
 
 #define SZ_NRQ 24
 
+// FIXME: Move to ServerProxy
 boolean TransducerProxy::requestNotification (NotificationType type, word period) {
 	boolean ret = false;
 
@@ -51,8 +52,11 @@ boolean TransducerProxy::requestNotification (NotificationType type, word period
 		}
 		strncat (buf, "\n", SZ_NRQ);
 
-		if ((ret = srvpx -> sendcmd (buf, r))) {
+		ServerProxy::CommandResult res = srvpx -> sendcmd (buf, r);
+		if ((res > 0)) {
 			ret = strcmp_P (r, PSTR ("OK")) == 0;
+		} else if (res == ServerProxy::SEND_TIMEOUT) {
+			srvpx -> nFailures++;
 		}
 	}
 
@@ -76,5 +80,5 @@ ActuatorProxy::ActuatorProxy (ServerProxy* _srvpx, const char *_name, Stereotype
 }
 
 boolean ActuatorProxy::write (Stereotype& st) {
-  return srvpx -> write (*this, st);
+	return srvpx -> write (*this, st);
 }
