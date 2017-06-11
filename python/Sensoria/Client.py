@@ -40,7 +40,7 @@ class Client (object):
 
 	def _addServer (self, srvpx):
 		if srvpx.name in self._servers:
-			print "WARNING: Duplicate server, ignoring: %s (%s)" % (srvpx.name, srv)
+			print "WARNING: Duplicate server, ignoring: %s (%s)" % (srvpx.name, srvpx.address)
 		else:
 			self._servers[srvpx.name] = srvpx
 
