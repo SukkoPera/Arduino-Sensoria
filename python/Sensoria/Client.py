@@ -77,6 +77,7 @@ class Client (object):
 						print "Server is unchanged"
 					else:
 						print "Server has changed, updating"
+						# FIXME: Delete old server?
 						self._addServer (self._realizeServer (srvpx))
 				else:
 					print "Server %s is new" % model
@@ -149,6 +150,7 @@ class Client (object):
 		while not timeout:
 			try:
 				reply, addr = s.recvfrom (1024)
+				# FIXME: Replace with _parseHloReply()
 				reply = reply.strip ()
 				#~ print "Got '%s' from %s" % (reply, addr)
 				parts = reply.split (" ", 2)
