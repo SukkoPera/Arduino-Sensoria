@@ -9,34 +9,34 @@
 
 class UdpAddress: public SensoriaAddress {
 public:
-  IPAddress ip;
-  uint16_t port;
-  boolean inUse;
+	IPAddress ip;
+	uint16_t port;
+	boolean inUse;
 
-  char* toString (char* buf, byte size) const override {
-    char tmp[6];    // Max length of a 16-bit integer + 1
+	char* toString (char* buf, byte size) const override {
+		char tmp[6];    // Max length of a 16-bit integer + 1
 
-    // Clear output string
-    buf[0] = '\0';
+		// Clear output string
+		buf[0] = '\0';
 
-    // Stringize IP
-    for (int i = 0; i < 4; i++) {
-       	utoa (ip[i], tmp, 10);
-        strncat (buf, tmp, size);
-        strncat (buf, ".", size);
-    }
+		// Stringize IP
+		for (int i = 0; i < 4; i++) {
+			 	utoa (ip[i], tmp, 10);
+				strncat (buf, tmp, size);
+				strncat (buf, ".", size);
+		}
 
-    // Replace last dot with a colon
-    buf[strlen (buf) - 1] = ':';
+		// Replace last dot with a colon
+		buf[strlen (buf) - 1] = ':';
 
-    // Append port
-    utoa (port, tmp, 10);
-    strncat (buf, tmp, size);
+		// Append port
+		utoa (port, tmp, 10);
+		strncat (buf, tmp, size);
 
-    return buf;
-  }
+		return buf;
+	}
 
-  // Default copy operator should be fine
+	// Default copy operator should be fine
 };
 
 /* This uses Bruno Portaluri's WiFiEsp library:
@@ -44,8 +44,8 @@ public:
  */
 class SensoriaEsp8266Communicator: public SensoriaCommunicator {
 private:
-  static const byte N_ADDRESSES = 4;
-  UdpAddress addressPool[N_ADDRESSES];
+	static const byte N_ADDRESSES = 4;
+	UdpAddress addressPool[N_ADDRESSES];
 
 	uint8_t buffer[IN_BUF_SIZE];
 
@@ -92,31 +92,31 @@ public:
 	WiFiEspUDP udpNot;
 #endif
 
-  SensoriaAddress* getAddress () override {
-    SensoriaAddress* ret = NULL;
+	SensoriaAddress* getAddress () override {
+		SensoriaAddress* ret = NULL;
 
-    for (byte i = 0; i < N_ADDRESSES && !ret; i++) {
-      if (!addressPool[i].inUse) {
-        addressPool[i].inUse = true;
-        ret = &(addressPool[i]);
-      }
-    }
+		for (byte i = 0; i < N_ADDRESSES && !ret; i++) {
+			if (!addressPool[i].inUse) {
+				addressPool[i].inUse = true;
+				ret = &(addressPool[i]);
+			}
+		}
 
-    return ret;
-  }
+		return ret;
+	}
 
-  void releaseAddress (SensoriaAddress* addr) override {
-    for (byte i = 0; i < N_ADDRESSES; i++) {
-      if (&(addressPool[i]) == addr) {
-        addressPool[i].inUse = false;
-      }
-    }
-  }
+	void releaseAddress (SensoriaAddress* addr) override {
+		for (byte i = 0; i < N_ADDRESSES; i++) {
+			if (&(addressPool[i]) == addr) {
+				addressPool[i].inUse = false;
+			}
+		}
+	}
 
 	boolean begin (Stream& _serial, const char *_ssid, const char *_password, int channels = CC_SERVER) {
-    for (byte i = 0; i < N_ADDRESSES; i++) {
-      addressPool[i].inUse = false;
-    }
+		for (byte i = 0; i < N_ADDRESSES; i++) {
+			addressPool[i].inUse = false;
+		}
 
 		WiFi.init (&_serial);
 
@@ -136,7 +136,7 @@ public:
 			DPRINTLN (_ssid);
 			status = WiFi.begin (const_cast<char *> (_ssid), _password);
 		} while (status != WL_CONNECTED);
-    DPRINTLN (F("Joined AP"));
+		DPRINTLN (F("Joined AP"));
 
 		DPRINT (F("IP address: "));
 		DPRINTLN (WiFi.localIP ());
@@ -167,40 +167,40 @@ public:
 		return true;
 	}
 
-  boolean receiveCmd (char*& cmd, SensoriaAddress* client) override {
-    UdpAddress& addr = *reinterpret_cast<UdpAddress*> (client);
-    return receiveGeneric (udpMain, cmd, addr.ip, addr.port);
-  }
+	boolean receiveCmd (char*& cmd, SensoriaAddress* client) override {
+		UdpAddress& addr = *reinterpret_cast<UdpAddress*> (client);
+		return receiveGeneric (udpMain, cmd, addr.ip, addr.port);
+	}
 
-  SendResult reply (const char* reply, const SensoriaAddress* client) override {
-    const UdpAddress& addr = *reinterpret_cast<const UdpAddress*> (client);
+	SendResult reply (const char* reply, const SensoriaAddress* client) override {
+		const UdpAddress& addr = *reinterpret_cast<const UdpAddress*> (client);
 
-    int ret = udpMain.beginPacket (addr.ip, addr.port);
-    if (ret) {
-      udpMain.write (reinterpret_cast<const uint8_t *> (reply), strlen (reply));
-      ret = udpMain.endPacket ();
-    }
+		int ret = udpMain.beginPacket (addr.ip, addr.port);
+		if (ret) {
+			udpMain.write (reinterpret_cast<const uint8_t *> (reply), strlen (reply));
+			ret = udpMain.endPacket ();
+		}
 
-    return ret ? SEND_OK : SEND_ERR;
-  }
+		return ret ? SEND_OK : SEND_ERR;
+	}
 
-  boolean notify (const char* notification, const SensoriaAddress* client) override {
-    return false;
-  }
+	boolean notify (const char* notification, const SensoriaAddress* client) override {
+		return false;
+	}
 
-  SendResult sendCmd (const char* cmd, const SensoriaAddress& server, char*& reply) override {
-    return SEND_ERR;
-  }
+	SendResult sendCmd (const char* cmd, const SensoriaAddress& server, char*& reply) override {
+		return SEND_ERR;
+	}
 
-  SendResult broadcast (const char* cmd, char*& reply, unsigned int replyTimeout) override {
-    //~ unsigned long startTime = millis ();
+	SendResult broadcast (const char* cmd, char*& reply, unsigned int replyTimeout) override {
+		//~ unsigned long startTime = millis ();
 		//~ while (millis () - startTime < DISCOVERY_TIMEOUT) {
-    return SEND_ERR;
-  }
+		return SEND_ERR;
+	}
 
-  boolean receiveNotification (char*& notification) override {
-    return false;
-  }
+	boolean receiveNotification (char*& notification) override {
+		return false;
+	}
 
 #if 0
 	boolean broadcast (const char *str, uint16_t port) override {

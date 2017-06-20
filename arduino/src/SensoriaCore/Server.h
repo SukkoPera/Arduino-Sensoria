@@ -18,7 +18,7 @@
 
 class SensoriaServer {
 private:
-  static const byte OUT_BUF_SIZE = 192;
+	static const byte OUT_BUF_SIZE = 192;
 
 	SensoriaCommunicator* comm;
 
@@ -33,7 +33,7 @@ private:
 #endif
 
 	char outBufRaw[OUT_BUF_SIZE];
-  PString outBuf;
+	PString outBuf;
 	char sensorBuf[SENSOR_BUF_SIZE];
 
 	FlashString serverName;
@@ -45,9 +45,9 @@ private:
 	void clearSensorBuffer ();
 
 #ifdef ENABLE_NOTIFICATIONS
-  int findNotification (const SensoriaAddress* clientAddr, NotificationType type, char* tName);
+	int findNotification (const SensoriaAddress* clientAddr, NotificationType type, char* tName);
 
-  NotificationType parseNotificationTypeStr (char *nTypeStr);
+	NotificationType parseNotificationTypeStr (char *nTypeStr);
 
 	void handleNotificationReqs ();
 #endif

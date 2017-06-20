@@ -14,7 +14,7 @@ enum SensoriaChannel {
 
 class SensoriaAddress {
 public:
-  virtual char* toString (char* buf, byte size) const = 0;
+	virtual char* toString (char* buf, byte size) const = 0;
 };
 
 class SensoriaCommunicator {
@@ -26,23 +26,23 @@ public:
 		SEND_TIMEOUT = -99    // Send timed out
 	};
 
-  virtual SensoriaAddress* getAddress () = 0;
-  virtual void releaseAddress (SensoriaAddress* addr) = 0;
+	virtual SensoriaAddress* getAddress () = 0;
+	virtual void releaseAddress (SensoriaAddress* addr) = 0;
 
-  // Functions for servers
-  virtual boolean receiveCmd (char*& cmd, SensoriaAddress* client) = 0;
+	// Functions for servers
+	virtual boolean receiveCmd (char*& cmd, SensoriaAddress* client) = 0;
 
-  virtual SendResult reply (const char* reply, const SensoriaAddress* client) = 0;
+	virtual SendResult reply (const char* reply, const SensoriaAddress* client) = 0;
 
-  virtual boolean notify (const char* notification, const SensoriaAddress* client) = 0;
+	virtual boolean notify (const char* notification, const SensoriaAddress* client) = 0;
 
 
-  // Function for clients
-  virtual SendResult sendCmd (const char* cmd, const SensoriaAddress& server, char*& reply) = 0;
+	// Function for clients
+	virtual SendResult sendCmd (const char* cmd, const SensoriaAddress& server, char*& reply) = 0;
 
-  virtual SendResult broadcast (const char* cmd, char*& reply, unsigned int replyTimeout) = 0;
+	virtual SendResult broadcast (const char* cmd, char*& reply, unsigned int replyTimeout) = 0;
 
-  virtual boolean receiveNotification (char*& notification) = 0;
+	virtual boolean receiveNotification (char*& notification) = 0;
 
 
 

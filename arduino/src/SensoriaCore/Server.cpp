@@ -92,7 +92,7 @@ void SensoriaServer::process_cmd (char *buffer, const SensoriaAddress* senderAdd
 	DPRINT (cmd);
 	DPRINTLN (F("\""));
 
-  if (strcmp_P (cmd, PSTR ("HLO")) == 0) {
+	if (strcmp_P (cmd, PSTR ("HLO")) == 0) {
 		cmd_hlo (senderAddr, args);
 #ifdef ENABLE_CMD_QRY
 	} else if (strcmp_P (cmd, PSTR ("QRY")) == 0) {
@@ -115,11 +115,11 @@ void SensoriaServer::process_cmd (char *buffer, const SensoriaAddress* senderAdd
 		DPRINT (cmd);
 		DPRINTLN (("\""));
 
-    outBuf.begin ();
+		outBuf.begin ();
 		outBuf.print (F("ERR Unsupported command: \""));
 		outBuf.print (cmd);
 		outBuf.print (F("\"\n"));
-    comm -> reply ((const char *) outBuf, senderAddr);
+		comm -> reply ((const char *) outBuf, senderAddr);
 	}
 }
 
@@ -129,43 +129,43 @@ void SensoriaServer::process_cmd (char *buffer, const SensoriaAddress* senderAdd
  * NOTE: This can modify tName
  */
 int SensoriaServer::findNotification (const SensoriaAddress* clientAddr, NotificationType type, char* tName) {
-  int ret = -1;
+	int ret = -1;
 
-  strupr (tName);
-  for (byte i = 0; i < nNotificationReqs; i++) {
-    NotificationRequest& req = notificationReqs[i];
+	strupr (tName);
+	for (byte i = 0; i < nNotificationReqs; i++) {
+		NotificationRequest& req = notificationReqs[i];
 
 // FIXME
 #if 0
-    if (req.destAddr == clientAddr &&
-        req.destPort == port &&
-        req.type == type &&
-        strcmp_P (tName, F_TO_PSTR (req.transducer -> name)) == 0) {
+		if (req.destAddr == clientAddr &&
+				req.destPort == port &&
+				req.type == type &&
+				strcmp_P (tName, F_TO_PSTR (req.transducer -> name)) == 0) {
 
-      // Notification found!
-      ret = i;
-      break;
-    }
+			// Notification found!
+			ret = i;
+			break;
+		}
 #endif
-  }
+	}
 
-  return ret;
+	return ret;
 }
 
 /**
  * NOTE: This can modify nTypeStr
  */
 NotificationType SensoriaServer::parseNotificationTypeStr (char *nTypeStr) {
-  NotificationType type = NT_UNK;
+	NotificationType type = NT_UNK;
 
-  strupr (nTypeStr);
-  if (strcmp_P (nTypeStr, PSTR ("CHA")) == 0) {
-    type = NT_CHA;
-  } else if (strcmp_P (nTypeStr, PSTR ("PRD")) == 0) {
-    type = NT_PRD;
-  }
+	strupr (nTypeStr);
+	if (strcmp_P (nTypeStr, PSTR ("CHA")) == 0) {
+		type = NT_CHA;
+	} else if (strcmp_P (nTypeStr, PSTR ("PRD")) == 0) {
+		type = NT_PRD;
+	}
 
-  return type;
+	return type;
 }
 
 void SensoriaServer::handleNotificationReqs () {
@@ -183,14 +183,14 @@ void SensoriaServer::handleNotificationReqs () {
 						DPRINT (F("Sending notification for "));
 						DPRINTLN (req.transducer -> name);
 
-            outBuf.begin ();
+						outBuf.begin ();
 						outBuf.print (F("NOT "));
 						outBuf.print (req.transducer -> name);
 						outBuf.print (" ");   // No F() here saves flash and wastes no RAM
 						outBuf.print (buf);
-            outBuf.print ('\n');
-            //~ comm -> notify ((const char *) outBuf, clientAddr);
-            // FIXME
+						outBuf.print ('\n');
+						//~ comm -> notify ((const char *) outBuf, clientAddr);
+						// FIXME
 
 						req.transducer -> setLastReading (*st);
 						req.timeLastSent = millis ();
@@ -208,25 +208,25 @@ void SensoriaServer::handleNotificationReqs () {
 
 void SensoriaServer::loop () {
 	SensoriaAddress* addr = comm -> getAddress ();
-  if (!addr) {
-    DPRINTLN (F("No address available"));
-  } else {
-    char *cmd;
+	if (!addr) {
+		DPRINTLN (F("No address available"));
+	} else {
+		char *cmd;
 
-    if (comm -> receiveCmd (cmd, addr)) {
+		if (comm -> receiveCmd (cmd, addr)) {
 #if 1
-      char buf[24];
+			char buf[24];
 			DPRINT (F("Received command from "));
 			DPRINT (addr -> toString (buf, sizeof (buf)));
 			DPRINT (F(": \""));
 			DPRINT (cmd);
 			DPRINTLN (F("\""));
 #endif
-      process_cmd (cmd, addr);
-    }
+			process_cmd (cmd, addr);
+		}
 
-    comm -> releaseAddress (addr);
-  }
+		comm -> releaseAddress (addr);
+	}
 
 #ifdef ENABLE_NOTIFICATIONS
 	handleNotificationReqs ();
@@ -239,29 +239,29 @@ void SensoriaServer::loop () {
  */
 
 void SensoriaServer::cmd_hlo (const SensoriaAddress* clientAddr, char *args) {
-  (void) args;
+	(void) args;
 
-  outBuf.begin ();
-  outBuf.print (F("HLO "));
+	outBuf.begin ();
+	outBuf.print (F("HLO "));
 	outBuf.print (serverName);
-  outBuf.print (' ');
+	outBuf.print (' ');
 
-  for (byte i = 0; i < nTransducers; i++) {
-    Transducer& t = *transducers[i];
-    outBuf.print (t.name);
-    outBuf.print (' ');
-    outBuf.print (t.type == Transducer::SENSOR ? ("S") : ("A"));
-    outBuf.print (' ');
-    outBuf.print (t.stereotype);
-    outBuf.print (' ');
+	for (byte i = 0; i < nTransducers; i++) {
+		Transducer& t = *transducers[i];
+		outBuf.print (t.name);
+		outBuf.print (' ');
+		outBuf.print (t.type == Transducer::SENSOR ? ("S") : ("A"));
+		outBuf.print (' ');
+		outBuf.print (t.stereotype);
+		outBuf.print (' ');
 
-    if (i < nTransducers - 1)
-      outBuf.print ('|');
-  }
+		if (i < nTransducers - 1)
+			outBuf.print ('|');
+	}
 
-  // Send reply
-  outBuf.print ('\n');
-  comm -> reply ((const char *) outBuf, clientAddr);
+	// Send reply
+	outBuf.print ('\n');
+	comm -> reply ((const char *) outBuf, clientAddr);
 }
 
 #ifdef ENABLE_CMD_QRY
@@ -317,7 +317,7 @@ void SensoriaServer::cmd_qry (const SensoriaAddress* clientAddr, char *args) {
 #endif
 
 void SensoriaServer::cmd_rea (const SensoriaAddress* clientAddr, char *args) {
-  outBuf.begin ();
+	outBuf.begin ();
 
 	// Get first arg
 	if (args != NULL) {
@@ -356,13 +356,13 @@ void SensoriaServer::cmd_rea (const SensoriaAddress* clientAddr, char *args) {
 		outBuf.print (F("ERR Missing transducer name"));
 	}
 
-  // Send reply
-  outBuf.print ('\n');
-  comm -> reply ((const char *) outBuf, clientAddr);
+	// Send reply
+	outBuf.print ('\n');
+	comm -> reply ((const char *) outBuf, clientAddr);
 }
 
 void SensoriaServer::cmd_wri (const SensoriaAddress* clientAddr, char *args) {
-  outBuf.begin ();
+	outBuf.begin ();
 
 	// Get first arg
 	if (args != NULL) {
@@ -410,9 +410,9 @@ void SensoriaServer::cmd_wri (const SensoriaAddress* clientAddr, char *args) {
 		outBuf.print (F("ERR Missing transducer name"));
 	}
 
-  // Send reply
-  outBuf.print ('\n');
-  comm -> reply ((const char *) outBuf, clientAddr);
+	// Send reply
+	outBuf.print ('\n');
+	comm -> reply ((const char *) outBuf, clientAddr);
 }
 
 #ifdef ENABLE_NOTIFICATIONS
@@ -420,7 +420,7 @@ void SensoriaServer::cmd_wri (const SensoriaAddress* clientAddr, char *args) {
  * <-- NRQ OT OK/NRQ OT OK
  */
 void SensoriaServer::cmd_nrq (const SensoriaAddress* clientAddr, char *args) {
-  outBuf.begin ();
+	outBuf.begin ();
 
 	// Get first arg
 	if (args != NULL) {
@@ -430,74 +430,74 @@ void SensoriaServer::cmd_nrq (const SensoriaAddress* clientAddr, char *args) {
 			char* tName = p[0];
 			char* nTypeStr = p[1];
 
-      NotificationType type = parseNotificationTypeStr (nTypeStr);
-      if (type != NT_UNK) {
-        int i = findNotification (clientAddr, DEFAULT_NOTIFICATION_PORT, type, tName);
-        if (i >= 0) {
-          // Request already exists, assume client lost track of it and return success
-          DPRINTLN (F("NRQ already exists"));
-          outBuf.print (F("NRQ OK"));
-        } else {
-          Transducer *t = getTransducer (tName);
-          if (t) {
-            if (nNotificationReqs < MAX_NOTIFICATION_REQS) {
-              NotificationRequest& req = notificationReqs[nNotificationReqs++];
-              req.destAddr = remoteAddress;
-              req.destPort = DEFAULT_NOTIFICATION_PORT;		// FIXME
-              req.type = type;
-              req.transducer = t;
-              req.timeLastSent = 0;
+			NotificationType type = parseNotificationTypeStr (nTypeStr);
+			if (type != NT_UNK) {
+				int i = findNotification (clientAddr, DEFAULT_NOTIFICATION_PORT, type, tName);
+				if (i >= 0) {
+					// Request already exists, assume client lost track of it and return success
+					DPRINTLN (F("NRQ already exists"));
+					outBuf.print (F("NRQ OK"));
+				} else {
+					Transducer *t = getTransducer (tName);
+					if (t) {
+						if (nNotificationReqs < MAX_NOTIFICATION_REQS) {
+							NotificationRequest& req = notificationReqs[nNotificationReqs++];
+							req.destAddr = remoteAddress;
+							req.destPort = DEFAULT_NOTIFICATION_PORT;		// FIXME
+							req.type = type;
+							req.transducer = t;
+							req.timeLastSent = 0;
 
-              switch (type) {
-                case NT_CHA:
-                  DPRINT (F("Notifying on change of "));
-                  DPRINTLN (t -> name);
+							switch (type) {
+								case NT_CHA:
+									DPRINT (F("Notifying on change of "));
+									DPRINTLN (t -> name);
 
-                  req.period = NOTIFICATION_POLL_INTERVAL;
+									req.period = NOTIFICATION_POLL_INTERVAL;
 
-                  outBuf.print (F("NRQ OK"));
-                  break;
-                case NT_PRD:
-                  if (n < 3) {
-                    nNotificationReqs--;
-                    DPRINTLN (F("ERR No interval specified"));
-                    outBuf.print (F("NRQ ERR"));
-                  } else {
-                    word intv = atoi (p[2]);
+									outBuf.print (F("NRQ OK"));
+									break;
+								case NT_PRD:
+									if (n < 3) {
+										nNotificationReqs--;
+										DPRINTLN (F("ERR No interval specified"));
+										outBuf.print (F("NRQ ERR"));
+									} else {
+										word intv = atoi (p[2]);
 
-                    DPRINT (F("Notifying values of "));
-                    DPRINT (t -> name);
-                    DPRINT (F(" every "));
-                    DPRINT (intv);
-                    DPRINTLN (F(" second(s)"));
+										DPRINT (F("Notifying values of "));
+										DPRINT (t -> name);
+										DPRINT (F(" every "));
+										DPRINT (intv);
+										DPRINTLN (F(" second(s)"));
 
-                    req.type = NT_PRD;
-                    req.period = intv * 1000UL;
+										req.type = NT_PRD;
+										req.period = intv * 1000UL;
 
-                    outBuf.print (F("NRQ OK"));
-                  }
-                  break;
-                default:
-                  break;
-              }
-            } else {
-              DPRINTLN (F("ERR Max notification requests reached"));
+										outBuf.print (F("NRQ OK"));
+									}
+									break;
+								default:
+									break;
+							}
+						} else {
+							DPRINTLN (F("ERR Max notification requests reached"));
 
-              outBuf.print (F("NRQ ERR"));
-            }
-          } else {
-            DPRINT (F("ERR No such transducer: "));
-            DPRINTLN (args);
+							outBuf.print (F("NRQ ERR"));
+						}
+					} else {
+						DPRINT (F("ERR No such transducer: "));
+						DPRINTLN (args);
 
-            outBuf.print (F("NRQ ERR"));
-          }
-        }
-      } else {
-        DPRINT (F("ERR Bad notification request type: "));
-        DPRINTLN (nTypeStr);
+						outBuf.print (F("NRQ ERR"));
+					}
+				}
+			} else {
+				DPRINT (F("ERR Bad notification request type: "));
+				DPRINTLN (nTypeStr);
 
-        outBuf.print (F("NRQ ERR"));
-      }
+				outBuf.print (F("NRQ ERR"));
+			}
 		} else {
 			DPRINTLN (F("ERR Bad request"));
 			outBuf.print (F("ERR Bad request"));
@@ -507,9 +507,9 @@ void SensoriaServer::cmd_nrq (const SensoriaAddress* clientAddr, char *args) {
 		outBuf.print (F("ERR Missing transducer name"));
 	}
 
-  // Send reply
-  outBuf.print ('\n');
-  comm -> reply ((const char *) outBuf, clientAddr);
+	// Send reply
+	outBuf.print ('\n');
+	comm -> reply ((const char *) outBuf, clientAddr);
 }
 
 /* Delete single notification request
@@ -517,7 +517,7 @@ void SensoriaServer::cmd_nrq (const SensoriaAddress* clientAddr, char *args) {
  * <-- NDL OT PRD OK/NDL OT CHA OK
  */
 void SensoriaServer::cmd_ndl (const SensoriaAddress* clientAddr, char *args) {
-  outBuf.begin ();
+	outBuf.begin ();
 
 	// Get first arg
 	if (args != NULL) {
@@ -527,35 +527,35 @@ void SensoriaServer::cmd_ndl (const SensoriaAddress* clientAddr, char *args) {
 			char* tName = p[0];
 			char* nTypeStr = p[1];
 
-      NotificationType type = parseNotificationTypeStr (nTypeStr);
-      if (type != NT_UNK) {
-        int i = findNotification (clientAddr, DEFAULT_NOTIFICATION_PORT, type, tName);
-        if (i >= 0) {
-          //  Notification found
-          DPRINT (F("Deleting notification request "));
-          DPRINTLN (i);
+			NotificationType type = parseNotificationTypeStr (nTypeStr);
+			if (type != NT_UNK) {
+				int i = findNotification (clientAddr, DEFAULT_NOTIFICATION_PORT, type, tName);
+				if (i >= 0) {
+					//  Notification found
+					DPRINT (F("Deleting notification request "));
+					DPRINTLN (i);
 
-          /* NRQs 0...nNotificationReqs-1 are always valid, so deleting a
-           * NRQ means we have to shift all subsequent NRQs down by one
-           * place
-           */
-          for (byte j = 0; i + j + 1 < nNotificationReqs; j++) {
-            notificationReqs[i + j] = notificationReqs[i + j + 1];
-          }
+					/* NRQs 0...nNotificationReqs-1 are always valid, so deleting a
+					 * NRQ means we have to shift all subsequent NRQs down by one
+					 * place
+					 */
+					for (byte j = 0; i + j + 1 < nNotificationReqs; j++) {
+						notificationReqs[i + j] = notificationReqs[i + j + 1];
+					}
 
-          nNotificationReqs--;
+					nNotificationReqs--;
 
-          outBuf.print (F("NDL OK"));
-        } else {
-          DPRINT (F("ERR No such NRQ"));
-          outBuf.print (F("NDL ERR"));
-        }
-      } else {
-        DPRINT (F("ERR Bad notification request type: "));
-        DPRINTLN (nTypeStr);
+					outBuf.print (F("NDL OK"));
+				} else {
+					DPRINT (F("ERR No such NRQ"));
+					outBuf.print (F("NDL ERR"));
+				}
+			} else {
+				DPRINT (F("ERR Bad notification request type: "));
+				DPRINTLN (nTypeStr);
 
-        outBuf.print (F("NDL ERR"));
-      }
+				outBuf.print (F("NDL ERR"));
+			}
 		} else {
 			DPRINTLN (F("ERR Bad request"));
 			outBuf.print (F("ERR Bad request"));
@@ -565,9 +565,9 @@ void SensoriaServer::cmd_ndl (const SensoriaAddress* clientAddr, char *args) {
 		outBuf.print (F("ERR Missing transducer name"));
 	}
 
-  // Send reply
-  outBuf.print ('\n');
-  comm -> reply ((const char *) outBuf, clientAddr);
+	// Send reply
+	outBuf.print ('\n');
+	comm -> reply ((const char *) outBuf, clientAddr);
 }
 
 // Clear (= Delete) all notification requests
@@ -578,9 +578,9 @@ void SensoriaServer::cmd_ncl (const SensoriaAddress* clientAddr, char *args) {
 	DPRINTLN (F("Cleared all notification requests"));
 
 	// This can't really fail
-  outBuf.begin ();
+	outBuf.begin ();
 	outBuf.print (F("NCL OK\n"));
-  comm -> reply ((const char *) outBuf, clientAddr);
+	comm -> reply ((const char *) outBuf, clientAddr);
 }
 
 #endif    // ENABLE_NOTIFICATIONS
