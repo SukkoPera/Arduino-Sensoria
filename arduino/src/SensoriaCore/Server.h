@@ -3,6 +3,7 @@
 
 #include <Arduino.h>
 #include <IPAddress.h>
+#include <PString.h>
 #include "Transducer.h"
 #include "Sensor.h"
 #include "Actuator.h"
@@ -15,10 +16,10 @@
 
 //~ #define ENABLE_CMD_QRY
 
-#define OUT_BUF_SIZE 192
-
 class SensoriaServer {
 private:
+  static const byte OUT_BUF_SIZE = 192;
+
 	SensoriaCommunicator* comm;
 
 	byte nTransducers;
@@ -31,7 +32,8 @@ private:
 	NotificationRequest notificationReqs[MAX_NOTIFICATION_REQS];
 #endif
 
-	char buf[OUT_BUF_SIZE];
+	char outBufRaw[OUT_BUF_SIZE];
+  PString outBuf;
 	char sensorBuf[SENSOR_BUF_SIZE];
 
 	FlashString serverName;
@@ -43,48 +45,33 @@ private:
 	void clearSensorBuffer ();
 
 #ifdef ENABLE_NOTIFICATIONS
-  int findNotification (IPAddress& addr, word port, NotificationType type, char* tName);
+  int findNotification (const SensoriaAddress* clientAddr, NotificationType type, char* tName);
 
   NotificationType parseNotificationTypeStr (char *nTypeStr);
 
 	void handleNotificationReqs ();
 #endif
 
-	void cmd_hlo (char *args);
+	void cmd_hlo (const SensoriaAddress* clientAddr, char *args);
 
 #ifdef ENABLE_CMD_QRY
-	void cmd_qry (char *args);
+	void cmd_qry (const SensoriaAddress* clientAddr, char *args);
 #endif
 
-	void cmd_ver (const char *args);
+	void cmd_rea (const SensoriaAddress* clientAddr, char *args);
 
-	void cmd_rea (char *args);
+	void cmd_wri (const SensoriaAddress* clientAddr, char *args);
 
-	void cmd_wri (char *args);
-
-	void cmd_nrq (char *args);
+	void cmd_nrq (const SensoriaAddress* clientAddr, char *args);
 
 #ifdef ENABLE_NOTIFICATIONS
-	void cmd_ndl (char *args);
+	void cmd_ndl (const SensoriaAddress* clientAddr, char *args);
 
-	void cmd_ncl (char *args);
+	void cmd_ncl (const SensoriaAddress* clientAddr, char *args);
 #endif
-
-	boolean send_srv (const char *str, boolean cr = false, IPAddress* destAddr = NULL, word* destPort = NULL);
-
-#ifdef ENABLE_FLASH_STRINGS
-	boolean send_srv (const __FlashStringHelper *str, boolean cr = false);
-#endif
-
-	// Commodity method to flush data to server
-	boolean send_srv ();
-
-	// Temp?
-	IPAddress remoteAddress;
-	word remotePort;
 
 protected:
-	void process_cmd (char *buffer, IPAddress senderAddr, uint16_t senderPort);
+	void process_cmd (char *buffer, const SensoriaAddress* senderAddr);
 
 public:
 	SensoriaServer ();

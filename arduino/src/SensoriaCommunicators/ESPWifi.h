@@ -1,5 +1,3 @@
-#if 1
-
 #include <Sensoria.h>
 #include <SensoriaCore/Communicator.h>
 #include <SensoriaCore/common.h>
@@ -9,11 +7,46 @@
 
 #define IN_BUF_SIZE 192
 
+class UdpAddress: public SensoriaAddress {
+public:
+  IPAddress ip;
+  uint16_t port;
+  boolean inUse;
+
+  char* toString (char* buf, byte size) const override {
+    char tmp[6];    // Max length of a 16-bit integer + 1
+
+    // Clear output string
+    buf[0] = '\0';
+
+    // Stringize IP
+    for (int i = 0; i < 4; i++) {
+       	utoa (ip[i], tmp, 10);
+        strncat (buf, tmp, size);
+        strncat (buf, ".", size);
+    }
+
+    // Replace last dot with a colon
+    buf[strlen (buf) - 1] = ':';
+
+    // Append port
+    utoa (port, tmp, 10);
+    strncat (buf, tmp, size);
+
+    return buf;
+  }
+
+  // Default copy operator should be fine
+};
+
 /* This uses Bruno Portaluri's WiFiEsp library:
  * https://github.com/bportaluri/WiFiEsp
  */
 class SensoriaEsp8266Communicator: public SensoriaCommunicator {
 private:
+  static const byte N_ADDRESSES = 4;
+  UdpAddress addressPool[N_ADDRESSES];
+
 	uint8_t buffer[IN_BUF_SIZE];
 
 	/* 255.255.255.255 does not seem to work, see:
@@ -21,13 +54,70 @@ private:
 	 */
 #define BROADCAST_ADDRESS 192, 168, 1, 255
 
+	boolean receiveGeneric (WiFiEspUDP& udp, char*& str, IPAddress& senderAddr, uint16_t& senderPort) {
+		// Assume we'll receive nothing
+		boolean ret = false;
+
+		int packetSize = udp.parsePacket ();
+		if (packetSize) {
+			senderAddr = udp.remoteIP ();
+			senderPort = udp.remotePort ();
+
+			// read the packet into packetBufffer
+			int len = udp.read (buffer, IN_BUF_SIZE - 1);
+			if (len > 0) {
+				buffer[len] = '\0';  // Ensure command is a valid string
+				str = reinterpret_cast<char *> (buffer);
+			}
+#if 0
+			DPRINT (F("Received packet of size "));
+			DPRINT (packetSize);
+			DPRINT (F(" from "));
+			DPRINT (senderAddr);
+			DPRINT (F(", port "));
+			DPRINT (senderPort);
+			DPRINT (F(": \""));
+			DPRINT (str);
+			DPRINTLN (F("\""));
+#endif
+			ret = true;
+		}
+
+		return ret;
+	}
+
 public:
 	WiFiEspUDP udpMain;
 #ifdef ENABLE_NOTIFICATIONS
 	WiFiEspUDP udpNot;
 #endif
 
+  SensoriaAddress* getAddress () override {
+    SensoriaAddress* ret = NULL;
+
+    for (byte i = 0; i < N_ADDRESSES && !ret; i++) {
+      if (!addressPool[i].inUse) {
+        addressPool[i].inUse = true;
+        ret = &(addressPool[i]);
+      }
+    }
+
+    return ret;
+  }
+
+  void releaseAddress (SensoriaAddress* addr) override {
+    for (byte i = 0; i < N_ADDRESSES; i++) {
+      if (&(addressPool[i]) == addr) {
+        addressPool[i].inUse = false;
+      }
+    }
+  }
+
 	boolean begin (Stream& _serial, const char *_ssid, const char *_password, int channels = CC_SERVER) {
+    for (byte i = 0; i < N_ADDRESSES; i++) {
+      addressPool[i].inUse = false;
+    }
+
 		WiFi.init (&_serial);
 
 		// Check for the presence of ESP
@@ -46,28 +136,12 @@ public:
 			DPRINTLN (_ssid);
 			status = WiFi.begin (const_cast<char *> (_ssid), _password);
 		} while (status != WL_CONNECTED);
-
-		//~ if (wifi.joinAP (ssid, password)) {
-			DPRINTLN (F("Joined AP"));
-			//~ DPRINT (F("IP: "));
-			//~ DPRINTLN (wifi.getLocalIP().c_str());
-		//~ } else {
-			//~ DPRINTLN (F("Join AP failure"));
-			//~ return false;
-		//~ }
-
-		// 0 will have us choose a random port for outgoing messages
-		//~ if (!wifi.registerUDP (HOST_NAME, 0, INPUT_PORT, 2)) {
-			//~ DPRINTLN (F("register udp err"));
-			//~ return false;
-		//~ }
+    DPRINTLN (F("Joined AP"));
 
 		DPRINT (F("IP address: "));
 		DPRINTLN (WiFi.localIP ());
 
-		/* Clients don't really need this, but how can we make an output-only
-		 * socket?
-		 */
+		// Clients don't need this
 		if (channels & CC_SERVER) {
 			if (!udpMain.begin (DEFAULT_PORT)) {
 				DPRINTLN (F("Cannot setup main listening socket"));
@@ -93,59 +167,45 @@ public:
 		return true;
 	}
 
-	//~ boolean send (const char *str) override {
-		//~ udp.beginPacket (udp.remoteIP (), udp.remotePort ());
-		//~ udp.write ((const uint8_t *) str, strlen (str));
-		//~ udp.endPacket ();
+  boolean receiveCmd (char*& cmd, SensoriaAddress* client) override {
+    UdpAddress& addr = *reinterpret_cast<UdpAddress*> (client);
+    return receiveGeneric (udpMain, cmd, addr.ip, addr.port);
+  }
 
-		//~ // FIXME
-		//~ return true;
-	//~ }
+  SendResult reply (const char* reply, const SensoriaAddress* client) override {
+    const UdpAddress& addr = *reinterpret_cast<const UdpAddress*> (client);
 
-	boolean send (const char *str, IPAddress& dest, uint16_t port) override {
-		udpMain.beginPacket (dest, port);
-		udpMain.write ((const uint8_t *) str, strlen (str));
-		udpMain.endPacket ();
+    int ret = udpMain.beginPacket (addr.ip, addr.port);
+    if (ret) {
+      udpMain.write (reinterpret_cast<const uint8_t *> (reply), strlen (reply));
+      ret = udpMain.endPacket ();
+    }
 
-		// FIXME
-		return true;
-	}
+    return ret ? SEND_OK : SEND_ERR;
+  }
 
+  boolean notify (const char* notification, const SensoriaAddress* client) override {
+    return false;
+  }
+
+  SendResult sendCmd (const char* cmd, const SensoriaAddress& server, char*& reply) override {
+    return SEND_ERR;
+  }
+
+  SendResult broadcast (const char* cmd, char*& reply, unsigned int replyTimeout) override {
+    //~ unsigned long startTime = millis ();
+		//~ while (millis () - startTime < DISCOVERY_TIMEOUT) {
+    return SEND_ERR;
+  }
+
+  boolean receiveNotification (char*& notification) override {
+    return false;
+  }
+
+#if 0
 	boolean broadcast (const char *str, uint16_t port) override {
 		IPAddress broadcastIp (BROADCAST_ADDRESS);
 		return send (str, broadcastIp, port);
-	}
-
-	boolean receiveGeneric (WiFiEspUDP& udp, char **str, IPAddress *senderAddr, uint16_t *senderPort) {
-		// Assume we'll receive nothing
-		boolean ret = false;
-
-		int packetSize = udp.parsePacket ();
-		if (packetSize) {
-			*senderAddr = udp.remoteIP ();
-			*senderPort = udp.remotePort ();
-
-			// read the packet into packetBufffer
-			int len = udp.read (buffer, IN_BUF_SIZE - 1);
-			if (len > 0) {
-				buffer[len] = '\0';  // Ensure command is a valid string
-				*str = reinterpret_cast<char *> (buffer);
-			}
-#if 0
-			DPRINT (F("Received packet of size "));
-			DPRINT (packetSize);
-			DPRINT (F(" from "));
-			DPRINT (*senderAddr);
-			DPRINT (F(", port "));
-			DPRINT (*senderPort);
-			DPRINT (F(": \""));
-			DPRINT (*str);
-			DPRINTLN (F("\""));
-#endif
-			ret = true;
-		}
-
-		return ret;
 	}
 
 	boolean receiveString (char **str, IPAddress *senderAddr, uint16_t *senderPort, SensoriaChannel channel) override {
@@ -174,6 +234,5 @@ public:
 			//~ return true;
 		//~ }
 	//~ }
-};
-
 #endif
+};
