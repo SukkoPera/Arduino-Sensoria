@@ -214,7 +214,7 @@ void SensoriaServer::loop () {
 		char *cmd;
 
 		if (comm -> receiveCmd (cmd, addr)) {
-#if 1
+#if 0
 			char buf[24];
 			DPRINT (F("Received command from "));
 			DPRINT (addr -> toString (buf, sizeof (buf)));
@@ -253,7 +253,6 @@ void SensoriaServer::cmd_hlo (const SensoriaAddress* clientAddr, char *args) {
 		outBuf.print (t.type == Transducer::SENSOR ? ("S") : ("A"));
 		outBuf.print (' ');
 		outBuf.print (t.stereotype);
-		outBuf.print (' ');
 
 		if (i < nTransducers - 1)
 			outBuf.print ('|');
