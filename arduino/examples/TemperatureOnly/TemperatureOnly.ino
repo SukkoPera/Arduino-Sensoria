@@ -13,7 +13,7 @@ TemperatureSensor328 tempSensor;
 
 #define LED_PIN LED_BUILTIN
 
-SoftwareSerial swSerial (10, 11);
+SoftwareSerial swSerial (6, 7);
 
 SensoriaEsp8266Communicator comm;
 SensoriaServer srv;
@@ -30,7 +30,7 @@ void mypanic (int interval) {
 }
 
 void setup (void) {
-  DSTART ();
+  DSTART (9600);
 
   swSerial.begin (9600);
   if (!comm.begin (swSerial, WIFI_SSID, WIFI_PASSWORD)) {
