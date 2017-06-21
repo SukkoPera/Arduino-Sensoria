@@ -52,10 +52,10 @@ boolean TransducerProxy::requestNotification (NotificationType type, word period
 		}
 		strncat (buf, "\n", SZ_NRQ);
 
-		ServerProxy::CommandResult res = srvpx -> sendcmd (buf, r);
+		SensoriaCommunicator::SendResult res = srvpx -> sendcmd (buf, r);
 		if ((res > 0)) {
 			ret = strcmp_P (r, PSTR ("OK")) == 0;
-		} else if (res == ServerProxy::SEND_TIMEOUT) {
+		} else if (res == SensoriaCommunicator::SEND_TIMEOUT) {
 			srvpx -> nFailures++;
 		}
 	}

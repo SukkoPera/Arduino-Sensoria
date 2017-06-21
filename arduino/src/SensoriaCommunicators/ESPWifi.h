@@ -36,7 +36,12 @@ public:
 		return buf;
 	}
 
-	// Default copy operator should be fine
+  bool equalTo (const SensoriaAddress& otherBase) const override {
+    const UdpAddress& other = static_cast<const UdpAddress&> (otherBase);
+    return ip == other.ip && port == other.port;
+  }
+
+	// Default copy/assignment operators should be fine
 };
 
 /* This uses Bruno Portaluri's WiFiEsp library:
@@ -44,15 +49,17 @@ public:
  */
 class SensoriaEsp8266Communicator: public SensoriaCommunicator {
 private:
-	static const byte N_ADDRESSES = 4;
+	static const byte N_ADDRESSES = 6;
 	UdpAddress addressPool[N_ADDRESSES];
 
 	uint8_t buffer[IN_BUF_SIZE];
 
+  unsigned long lastBroadcastTime;
+
 	/* 255.255.255.255 does not seem to work, see:
 	 * https://github.com/bportaluri/WiFiEsp/issues/95
 	 */
-#define BROADCAST_ADDRESS 192, 168, 1, 255
+#define BROADCAST_ADDRESS 192,168,1,255
 
 	boolean receiveGeneric (WiFiEspUDP& udp, char*& str, IPAddress& senderAddr, uint16_t& senderPort) {
 		// Assume we'll receive nothing
@@ -95,6 +102,14 @@ public:
 	SensoriaAddress* getAddress () override {
 		SensoriaAddress* ret = NULL;
 
+    byte cnt = 0;
+		for (byte i = 0; i < N_ADDRESSES && !ret; i++) {
+      if (!addressPool[i].inUse)
+        ++cnt;
+    }
+    DPRINT (F("Addresses not in use: "));
+    DPRINTLN (cnt);
+
 		for (byte i = 0; i < N_ADDRESSES && !ret; i++) {
 			if (!addressPool[i].inUse) {
 				addressPool[i].inUse = true;
@@ -104,6 +119,16 @@ public:
 
 		return ret;
 	}
+
+  UdpAddress* getAddress (byte ip1, byte ip2, byte ip3, byte ip4, uint16_t port) {
+    UdpAddress* addr = reinterpret_cast<UdpAddress*> (getAddress ());
+    if (addr) {
+      addr -> ip = IPAddress (ip1, ip2, ip3, ip4);
+      addr -> port = port;
+    }
+
+    return addr;
+  }
 
 	void releaseAddress (SensoriaAddress* addr) override {
 		for (byte i = 0; i < N_ADDRESSES; i++) {
@@ -188,26 +213,67 @@ public:
 		return false;
 	}
 
-	SendResult sendCmd (const char* cmd, const SensoriaAddress& server, char*& reply) override {
-		return SEND_ERR;
+	SendResult sendCmd (const char* cmd, const SensoriaAddress* server, char*& reply) override {
+    SendResult res = this -> reply (cmd, server);
+    if (res > 0) {
+      unsigned long start = millis ();
+
+      while (millis () - start < CLIENT_TIMEOUT) {
+        UdpAddress addr;    // Dummy address
+        if (receiveGeneric (udpMain, reply, addr.ip, addr.port)) {
+          // Got something
+          break;
+        }
+      }
+
+      if (millis () - start >= CLIENT_TIMEOUT)
+        res = SEND_TIMEOUT;
+    }
+
+		return res;
 	}
 
-	SendResult broadcast (const char* cmd, char*& reply, unsigned int replyTimeout) override {
-		//~ unsigned long startTime = millis ();
-		//~ while (millis () - startTime < DISCOVERY_TIMEOUT) {
-		return SEND_ERR;
+	SendResult broadcast (const char* cmd) override {
+    UdpAddress bcAddr;
+    bcAddr.ip = IPAddress (BROADCAST_ADDRESS);
+    bcAddr.port = DEFAULT_BROADCAST_PORT;
+    SendResult ret = this -> reply (cmd, &bcAddr);
+    if (ret == SEND_OK) {
+      lastBroadcastTime = millis ();
+    }
+
+    return ret;
+  }
+
+  boolean receiveBroadcastReply (char*& reply, SensoriaAddress*& sender, unsigned int timeout) override {
+    boolean ret = false;
+
+    while (!ret && millis () - lastBroadcastTime < timeout) {
+      UdpAddress addr;
+      ret = receiveGeneric (udpMain, reply, addr.ip, addr.port);
+      if (ret) {
+        // Got something
+        UdpAddress* senderUdp = reinterpret_cast<UdpAddress*> (getAddress ());
+        if (senderUdp) {
+          *senderUdp = addr;
+          sender = senderUdp;
+        } else {
+          DPRINTLN (F("Cannot allocate address for broadcast reply"));
+          ret = false;
+        }
+      }
+    }
+
+		return ret;
 	}
 
 	boolean receiveNotification (char*& notification) override {
 		return false;
 	}
 
-#if 0
-	boolean broadcast (const char *str, uint16_t port) override {
-		IPAddress broadcastIp (BROADCAST_ADDRESS);
-		return send (str, broadcastIp, port);
-	}
 
+
+#if 0
 	boolean receiveString (char **str, IPAddress *senderAddr, uint16_t *senderPort, SensoriaChannel channel) override {
 		boolean ret = false;
 		switch (channel) {

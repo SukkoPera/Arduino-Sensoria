@@ -15,6 +15,17 @@ enum SensoriaChannel {
 class SensoriaAddress {
 public:
 	virtual char* toString (char* buf, byte size) const = 0;
+
+  bool operator== (const SensoriaAddress& other) const {
+      return equalTo (other);
+  }
+
+  bool operator!= (const SensoriaAddress& other) const {
+    return !(*this == other);
+  }
+
+protected:
+  virtual bool equalTo (const SensoriaAddress& other) const = 0;
 };
 
 class SensoriaCommunicator {
@@ -38,9 +49,11 @@ public:
 
 
 	// Function for clients
-	virtual SendResult sendCmd (const char* cmd, const SensoriaAddress& server, char*& reply) = 0;
+	virtual SendResult sendCmd (const char* cmd, const SensoriaAddress* server, char*& reply) = 0;
 
-	virtual SendResult broadcast (const char* cmd, char*& reply, unsigned int replyTimeout) = 0;
+	virtual SendResult broadcast (const char* cmd) = 0;
+
+  virtual boolean receiveBroadcastReply (char*& reply, SensoriaAddress*& sender, unsigned int timeout) = 0;
 
 	virtual boolean receiveNotification (char*& notification) = 0;
 

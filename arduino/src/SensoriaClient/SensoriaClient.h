@@ -19,7 +19,7 @@ private:
 
 	boolean parseHloReply (char *reply, char*& serverName, char** transducerList);
 
-	ServerProxy* realizeServer (IPAddress& addr, uint16_t port, char*& serverName, char** transducerList, uint16_t crc);
+	ServerProxy* realizeServer (SensoriaAddress* addr, char*& serverName, char** transducerList, uint16_t crc);
 
 	friend class SensoriaIterator;
 
@@ -32,7 +32,7 @@ public:
 
 	void discover ();
 
-	boolean registerNode (IPAddress& addr, uint16_t port = DEFAULT_PORT);
+	boolean registerNode (SensoriaAddress* addr);
 
 	ServerProxy *getServer (const char *name);
 
