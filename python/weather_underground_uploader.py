@@ -21,7 +21,7 @@ WU_UPLOAD_URL = "https://weatherstation.wunderground.com/weatherstation/updatewe
 
 print "Logging data every %d minutes" % DEFAULT_INTERVAL
 
-sensoria = Sensoria.Client ()
+sensoria = Sensoria.Client (autodiscTimer = 5 * 60)
 
 def celsius2fahrenheit (t):
 	return float (t) *  9 / 5 + 32
@@ -101,17 +101,22 @@ while True:
 		url = "%s?%s" % (WU_UPLOAD_URL, urllib.urlencode (params))
 		#~ print "Uploading data...",
 		sys.stdout.flush ()
-		#~ print "Opening %s..." % url
-		f = urllib2.urlopen (url)
-		reply = f.read ().strip ()
-		#~ print "-%s-" % reply
-		if reply == "success":
-			print "Success!"
-			time.sleep (DEFAULT_INTERVAL * 60)
-		else:
-			print "Failed :("
-			print "URL was: %s" % url
-			time.sleep (60)	# Retry in a minute
+
+		try:
+			#~ print "Opening %s..." % url
+			f = urllib2.urlopen (url)
+			reply = f.read ().strip ()
+			#~ print "-%s-" % reply
+			if reply == "success":
+				print "Success!"
+				time.sleep (DEFAULT_INTERVAL * 60)
+			else:
+				print "Failed (Server failure)"
+				#print "URL was: %s" % url
+				time.sleep (60)	# Retry in a minute
+		except urllib2.URLError as ex:
+			print "Failed (%s)" % str (ex)
+			time.sleep (60) # Retry in a minute
 	except (Sensoria.Error, KeyError) as ex:
 		print "Cannot get sensors: %s" % str (ex)
 		time.sleep (60)		# Retry in a minute
