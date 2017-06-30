@@ -10,7 +10,8 @@ TransducerProxy::TransducerProxy (ServerProxy* _srvpx, const char *_name,
 
 	strlcpy (name, _name, MAX_TRANSDUCER_NAME);
 #ifndef SAVE_RAM
-	strlcpy (description, _description, MAX_TRANSDUCER_DESC);
+	if (_description != NULL)
+		strlcpy (description, _description, MAX_TRANSDUCER_DESC);
 	if (_version != NULL)
 		strlcpy (version, _version, MAX_TRANSDUCER_VER);
 #else

@@ -1,3 +1,4 @@
+#include <Arduino.h>
 #include <Sensoria.h>
 #include <SensoriaCore/common.h>
 #include <SensoriaCore/debug.h>
@@ -147,14 +148,14 @@ ServerProxy* SensoriaClient::realizeServer (SensoriaAddress* addr, char*& server
 			if (t[1][0] == 'S') {
 				// We got a sensor
 				// FIXME: Remove dynamic allocation
-				SensorProxy *spx = new SensorProxy (srvpx, t[0], st, t[3]);
+				SensorProxy *spx = new SensorProxy (srvpx, t[0], st);
 				if (!srvpx -> addTransducer (spx)) {
 					DPRINT (F("Cannot register sensor: "));
 					DPRINTLN (t[0]);
 				}
 			} else if (t[1][0] == 'A') {
 				// Actuator
-				ActuatorProxy *apx = new ActuatorProxy (srvpx, t[0], st, t[3]);
+				ActuatorProxy *apx = new ActuatorProxy (srvpx, t[0], st);
 				if (!srvpx -> addTransducer (apx)) {
 					DPRINT (F("Cannot register actuator: "));
 					DPRINTLN (t[0]);
@@ -226,14 +227,14 @@ boolean SensoriaClient::registerNode (SensoriaAddress* addr) {
 						if (t[1][0] == 'S') {
 							// We got a sensor
 							// FIXME: Remove dynamic allocation
-							SensorProxy *spx = new SensorProxy (srvpx, t[0], st, t[3]);
+							SensorProxy *spx = new SensorProxy (srvpx, t[0], st);
 							if (!srvpx -> addTransducer (spx)) {
 								DPRINT (F("Cannot register sensor: "));
 								DPRINTLN (t[0]);
 							}
 						} else if (t[1][0] == 'A') {
 							// Actuator
-							ActuatorProxy *apx = new ActuatorProxy (srvpx, t[0], st, t[3]);
+							ActuatorProxy *apx = new ActuatorProxy (srvpx, t[0], st);
 							if (!srvpx -> addTransducer (apx)) {
 								DPRINT (F("Cannot register actuator: "));
 								DPRINTLN (t[0]);
