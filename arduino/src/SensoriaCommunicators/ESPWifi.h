@@ -44,6 +44,9 @@ public:
 	// Default copy/assignment operators should be fine
 };
 
+/******************************************************************************/
+
+
 /* This uses Bruno Portaluri's WiFiEsp library:
  * https://github.com/bportaluri/WiFiEsp
  */
@@ -70,7 +73,7 @@ private:
 			senderAddr = udp.remoteIP ();
 			senderPort = udp.remotePort ();
 
-			// read the packet into packetBufffer
+			// Read the packet into packetBufffer
 			int len = udp.read (buffer, IN_BUF_SIZE - 1);
 			if (len > 0) {
 				buffer[len] = '\0';  // Ensure command is a valid string
@@ -102,6 +105,7 @@ public:
 	SensoriaAddress* getAddress () override {
 		SensoriaAddress* ret = NULL;
 
+#if 0
     byte cnt = 0;
 		for (byte i = 0; i < N_ADDRESSES && !ret; i++) {
       if (!addressPool[i].inUse)
@@ -109,6 +113,7 @@ public:
     }
     DPRINT (F("Addresses not in use: "));
     DPRINTLN (cnt);
+#endif
 
 		for (byte i = 0; i < N_ADDRESSES && !ret; i++) {
 			if (!addressPool[i].inUse) {
