@@ -2,7 +2,7 @@ package com.sensoria.typhosoft.sensapp.network;
 
 import com.sensoria.typhosoft.sensapp.SensActivity;
 import com.sensoria.typhosoft.sensapp.core.SensParser;
-import com.sensoria.typhosoft.sensapp.data.ASensor;
+import com.sensoria.typhosoft.sensapp.data.Transducer;
 import com.sensoria.typhosoft.sensapp.data.SensCommandEnum;
 import com.sensoria.typhosoft.sensapp.data.SensModel;
 import com.sensoria.typhosoft.sensapp.data.Sensor;
@@ -15,7 +15,6 @@ import java.net.InterfaceAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.net.UnknownHostException;
-import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
 
@@ -133,8 +132,8 @@ public class SensClient extends Thread {
         }
     }
 
-    private void requestREA(List<ASensor> retVal) {
-        for (ASensor sensor : retVal) {
+    private void requestREA(List<Transducer> retVal) {
+        for (Transducer sensor : retVal) {
             sendMessage("REA " + sensor.getName());
         }
     }

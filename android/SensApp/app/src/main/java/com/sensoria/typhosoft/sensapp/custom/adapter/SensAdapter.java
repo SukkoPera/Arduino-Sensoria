@@ -9,7 +9,8 @@ import android.widget.Switch;
 import android.widget.TextView;
 
 import com.sensoria.typhosoft.sensapp.R;
-import com.sensoria.typhosoft.sensapp.data.ASensor;
+import com.sensoria.typhosoft.sensapp.data.SensStereotypeEnum;
+import com.sensoria.typhosoft.sensapp.data.Transducer;
 import com.sensoria.typhosoft.sensapp.data.Actuator;
 import com.sensoria.typhosoft.sensapp.data.Sensor;
 import com.sensoria.typhosoft.sensapp.data.SensorTypeEnum;
@@ -20,11 +21,11 @@ import java.util.List;
  * Created by santonocitom on 27/06/17.
  */
 
-public class SensAdapter extends ArrayAdapter<ASensor> {
+public class SensAdapter extends ArrayAdapter<Transducer> {
 
     public LayoutInflater inflater;
 
-    public SensAdapter(Context context, int resource, List<ASensor> items) {
+    public SensAdapter(Context context, int resource, List<Transducer> items) {
         super(context, resource, items);
         setNotifyOnChange(true);
         inflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
@@ -32,47 +33,72 @@ public class SensAdapter extends ArrayAdapter<ASensor> {
 
     @Override
     public int getItemViewType(int position) {
-        return getItem(position).getType().ordinal();
+        return getItem(position).getStereoType().ordinal();
     }
 
 
     @Override
     public int getViewTypeCount() {
-        return SensorTypeEnum.values().length;
+        return SensStereotypeEnum.values().length;
     }
 
 
     @Override
     public View getView(int position, View convertView, ViewGroup parent) {
-        ASensor currentRowItem = getItem(position);
+        Transducer currentRowItem = getItem(position);
         int itemViewType = getItemViewType(position);
 
         View vi = convertView;
         if (convertView == null) {
-            switch (SensorTypeEnum.values()[itemViewType]) {
+            switch (currentRowItem.getType()) {
                 case ACTUATOR:
-                    vi = inflater.inflate(R.layout.listview_a_item_layout, parent, false);
+                    switch(currentRowItem.getStereoType()){
+                        case WEATHER_DATA:
+                            break;
+                        case RELAY_DATA:
+                            vi = inflater.inflate(R.layout.sensadapter_a_rs_item_layout, parent, false);
+                            break;
+                        case CONTROLLED_RELAY_DATA:
+                            vi = inflater.inflate(R.layout.sensadapter_a_cr_item_layout, parent, false);
+                            break;
+                        case MOTION_DATA:
+                            break;
+                    }
                     break;
                 case SENSOR:
-                    vi = inflater.inflate(R.layout.listview_s_item_layout, parent, false);
+                    vi = inflater.inflate(R.layout.sensadapter_s_item_layout, parent, false);
                     break;
                 default:
-                    vi = inflater.inflate(R.layout.listview_s_item_layout, parent, false);
+                    vi = inflater.inflate(R.layout.sensadapter_s_item_layout, parent, false);
 
             }
 
         }
 
+        // common
         TextView typeText = (TextView) vi.findViewById(R.id.textRow1);
         TextView nameText = (TextView) vi.findViewById(R.id.textRow21);
         TextView descriptionText = (TextView) vi.findViewById(R.id.textRow22);
 
 
-        switch (SensorTypeEnum.values()[itemViewType]) {
+        switch (currentRowItem.getType()) {
             case ACTUATOR:
                 Actuator act = (Actuator) currentRowItem;
                 Switch onOffSwitch = (Switch) vi.findViewById(R.id.switch1);
                 onOffSwitch.setChecked(act.getOnOff());
+
+                switch(currentRowItem.getStereoType()){
+                    case WEATHER_DATA:
+                        break;
+                    case RELAY_DATA:
+                        break;
+                    case CONTROLLED_RELAY_DATA:
+                        Switch autoManualSwitch = (Switch) vi.findViewById(R.id.switch2);
+                        autoManualSwitch.setChecked(act.getAutoManual());
+                        break;
+                    case MOTION_DATA:
+                        break;
+                }
                 break;
             case SENSOR:
                 Sensor sens = (Sensor) currentRowItem;

@@ -4,9 +4,10 @@ package com.sensoria.typhosoft.sensapp.data;
  * Created by santonocitom on 29/06/17.
  */
 
-public class Actuator extends ASensor {
+public class Actuator extends Transducer {
 
     private Boolean onOff;
+    private Boolean autoManual;
 
     public Actuator(String string) {
         super(SensorTypeEnum.ACTUATOR);
@@ -16,8 +17,7 @@ public class Actuator extends ASensor {
     protected void parse(String command){
         super.parse(command);
         onOff = false;
-
-
+        autoManual = false;
     }
 
     public Boolean getOnOff() {
@@ -26,5 +26,13 @@ public class Actuator extends ASensor {
 
     public void setOnOff(Boolean onOff) {
         this.onOff = onOff;
+    }
+
+    public boolean getAutoManual() {
+        return autoManual;
+    }
+
+    public void setAutoManual(Boolean autoManual) {
+        this.autoManual = autoManual;
     }
 }

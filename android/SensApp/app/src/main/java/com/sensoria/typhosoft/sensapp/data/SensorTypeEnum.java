@@ -6,9 +6,8 @@ package com.sensoria.typhosoft.sensapp.data;
 
 public enum SensorTypeEnum {
     ACTUATOR("A", "Actuator"),
-    NODE("N", "Node"),
     SENSOR("S", "Sensor"),
-    TRANSDUCER("T", "Transducer");
+    NODE("N", "Node");
 
     private String stringType;
     private String description;

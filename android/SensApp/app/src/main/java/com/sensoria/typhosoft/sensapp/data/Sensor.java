@@ -1,15 +1,10 @@
 package com.sensoria.typhosoft.sensapp.data;
 
-import com.sensoria.typhosoft.sensapp.data.SensStereotypeEnum;
-import com.sensoria.typhosoft.sensapp.data.SensorTypeEnum;
-
-import java.io.Serializable;
-
 /**
  * Created by santonocitom on 27/06/17.
  */
 
-public class Sensor extends ASensor{
+public class Sensor extends Transducer {
     private String data;
 
     public Sensor(String command) {

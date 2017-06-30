@@ -2,12 +2,12 @@
     <string name="app_name">SensApp</string>
     <string name="service_name">SensAppService</string>
     <string name="button">Update</string>
-    <string name="broadcast">255.255.255.255</string>
-    <string name="command">qry</string>
+    <string name="command">QRY</string>
     <string name="drawer_open">Open navigation drawer</string>
     <string name="drawer_close">Close navigation drawer</string>
     <string name="action_settings">Settings</string>
-    <string name="switchString">OFF</string>
-    <string name="switchOFF">OFF</string>
-    <string name="switchON">ON</string>
+    <string name="cr_switchOFF">OFF</string>
+    <string name="cr_switchON">ON</string>
+    <string name="cr_switch">State</string>
+    <string name="cr_control">Control</string>
 </resources>

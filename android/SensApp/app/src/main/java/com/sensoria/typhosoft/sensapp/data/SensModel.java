@@ -9,7 +9,7 @@ import java.util.ArrayList;
 public class SensModel {
     private static final SensModel ourInstance = new SensModel();
 
-    private final ArrayList<ASensor> items = new ArrayList<>();
+    private final ArrayList<Transducer> items = new ArrayList<>();
 
     public static SensModel getInstance() {
         return ourInstance;
@@ -18,12 +18,12 @@ public class SensModel {
     private SensModel() {
     }
 
-    public ArrayList<ASensor> getItems() {
+    public ArrayList<Transducer> getItems() {
         return items;
     }
 
-    public ASensor getItemsByName(String name){
-        for (ASensor sensor : items) {
+    public Transducer getItemsByName(String name){
+        for (Transducer sensor : items) {
             if(sensor.getName().equalsIgnoreCase(name))
                 return sensor;
         }

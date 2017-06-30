@@ -16,13 +16,9 @@ import android.widget.EditText;
 import android.widget.ListView;
 
 import com.sensoria.typhosoft.sensapp.custom.adapter.SensAdapter;
-import com.sensoria.typhosoft.sensapp.data.ASensor;
-import com.sensoria.typhosoft.sensapp.data.Sensor;
 import com.sensoria.typhosoft.sensapp.data.SensModel;
 import com.sensoria.typhosoft.sensapp.network.SensClient;
 import com.sensoria.typhosoft.sensapp.service.SensAppService;
-
-import java.util.List;
 
 public class SensActivity extends AppCompatActivity {
     private SensAdapter adapter;

@@ -27,12 +27,37 @@
             android:layout_weight="1"
             android:textAlignment="textStart"
             android:textAppearance="@android:style/TextAppearance.DeviceDefault.Small" />
+
     </LinearLayout>
 
-    <Switch
-        android:id="@+id/switch1"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:textOff="@string/switchOFF"
-        android:textOn="@string/switchON" />
+        android:orientation="horizontal">
+
+        <Switch
+            android:id="@+id/switch1"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="0.5"
+            android:paddingLeft="@dimen/activity_horizontal_margin"
+            android:paddingRight="@dimen/activity_horizontal_margin"
+            android:text="@string/cr_switch"
+            android:textAlignment="textEnd"
+            android:textOff="@string/cr_switchOFF"
+            android:textOn="@string/cr_switchON" />
+
+        <Switch
+            android:id="@+id/switch2"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="0.5"
+            android:paddingLeft="@dimen/activity_horizontal_margin"
+            android:paddingRight="@dimen/activity_horizontal_margin"
+            android:text="@string/cr_control"
+            android:textAlignment="textEnd"
+            android:textOff="@string/cr_switchOFF"
+            android:textOn="@string/cr_switchON" />
+    </LinearLayout>
+
 </LinearLayout>

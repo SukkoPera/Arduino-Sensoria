@@ -5,6 +5,26 @@ package com.sensoria.typhosoft.sensapp.data;
  */
 
 public enum SensStereotypeEnum {
-    Stereotype1,
-    Stereotipe2;
+    WEATHER_DATA("WD"),
+    RELAY_DATA("RS"),
+    CONTROLLED_RELAY_DATA("CR"),
+    MOTION_DATA("MD");
+
+    private String stringType;
+
+    SensStereotypeEnum(String stringType) {
+        this.stringType = stringType;
+    }
+
+    public String getStringType() {
+        return stringType;
+    }
+
+    public static SensStereotypeEnum convert(String type){
+        for (SensStereotypeEnum t:SensStereotypeEnum.values()) {
+            if(t.stringType.equalsIgnoreCase(type))
+                return t;
+        }
+        return null;
+    }
 }

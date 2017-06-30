@@ -1,6 +1,5 @@
 package com.sensoria.typhosoft.sensapp.core;
 
-import com.sensoria.typhosoft.sensapp.data.ASensor;
 import com.sensoria.typhosoft.sensapp.data.Actuator;
 import com.sensoria.typhosoft.sensapp.data.Node;
 import com.sensoria.typhosoft.sensapp.data.SensCommandEnum;
@@ -23,8 +22,8 @@ public class SensParser {
         return SensCommandEnum.valueOf(cmd.substring(0, 3));
     }
 
-    public static ASensor makeSens(String item) {
-        ASensor sensor = null;
+    public static Transducer makeSens(String item) {
+        Transducer sensor = null;
         SensorTypeEnum sensorType = SensorTypeEnum.convert(item.substring(3, 4));
         switch (sensorType) {
             case ACTUATOR:
@@ -36,16 +35,13 @@ public class SensParser {
             case SENSOR:
                 sensor = new Sensor(item);
                 break;
-            case TRANSDUCER:
-                sensor = new Transducer(item);
-                break;
         }
 
         return sensor;
     }
 
-    public static List<ASensor> makeSensors(String items) {
-        ArrayList<ASensor> sensors = new ArrayList<>();
+    public static List<Transducer> makeSensors(String items) {
+        ArrayList<Transducer> sensors = new ArrayList<>();
         String payload = items.substring(4);
         String[] itemsStrings = payload.split("\\|");
         for (String item : itemsStrings) {
@@ -75,28 +71,39 @@ public class SensParser {
     }
 
     public static void parseREA(String sentence) {
-        ASensor sensor = SensModel.getInstance().getItemsByName(SensParser.parseName(sentence));
-        if (sensor != null)
-            switch (sensor.getType()) {
+        Transducer transducer = SensModel.getInstance().getItemsByName(SensParser.parseName(sentence));
+        if (transducer != null)
+            switch (transducer.getType()) {
                 case ACTUATOR:
-                    ((Actuator) sensor).setOnOff(parseActuatorREA(sentence));
-                    break;
-                case NODE:
+                    Actuator actuator = ((Actuator) transducer);
+                    parseActuatorREA(sentence, actuator);
                     break;
                 case SENSOR:
-                    ((Sensor) sensor).setData(parseSensorREA(sentence));
+                    Sensor sensor = ((Sensor) transducer);
+                    parseSensorREA(sentence, sensor);
                     break;
-                case TRANSDUCER:
+                case NODE:
                     break;
             }
 
     }
 
-    private static String parseSensorREA(String sentence) {
-        return sentence.substring(7);
+    private static void parseSensorREA(String sentence, Sensor sensor) {
+        sensor.setData(sentence.substring(7));
     }
 
-    private static Boolean parseActuatorREA(String sentence) {
-        return sentence.substring(8).contains("ON");
+    private static void parseActuatorREA(String sentence, Actuator actuator) {
+        switch (actuator.getStereoType()) {
+            case WEATHER_DATA:
+                break;
+            case RELAY_DATA:
+                actuator.setOnOff(sentence.substring(8).contains("ON"));
+                break;
+            case CONTROLLED_RELAY_DATA:
+                actuator.setAutoManual(sentence.substring(10).contains("AUT"));
+                break;
+            case MOTION_DATA:
+                break;
+        }
     }
 }
