@@ -1,12 +1,13 @@
 #if 1
 
-#include "Sensoria.h"
-#include "SensoriaCore/common.h"
-#include "SensoriaCore/debug.h"
-#include "SensoriaCore/utils.h"
-#include "ServerProxy.h"
-#include "TransducerProxy.h"
+#include <Arduino.h>
+#include <Sensoria.h>
+#include <SensoriaCore/common.h>
+#include <SensoriaCore/debug.h>
+#include <SensoriaCore/utils.h>
 #include <SensoriaStereotypes/AllStereotypes.h>
+#include "TransducerProxy.h"
+#include "ServerProxy.h"
 
 //~ #define DEBUG_COMMS
 #define CMD_LEN 3
