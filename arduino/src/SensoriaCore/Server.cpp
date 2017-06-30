@@ -430,22 +430,24 @@ void SensoriaServer::cmd_nrq (const SensoriaAddress* clientAddr, char *args) {
 
 			NotificationType type = parseNotificationTypeStr (nTypeStr);
 			if (type != NT_UNK) {
-				int i = findNotification (clientAddr, type, tName);
-				if (i >= 0) {
-					// Request already exists, assume client lost track of it and return success
-					DPRINTLN (F("NRQ already exists"));
-					outBuf.print (F("NRQ OK"));
-				} else {
-					Transducer *t = getTransducer (tName);
-					if (t) {
-						if (nNotificationReqs < MAX_NOTIFICATION_REQS) {
-							NotificationRequest& req = notificationReqs[nNotificationReqs++];
-							req.destAddr = comm -> getAddress ();
-							if (req.destAddr) {
-								*req.destAddr = *clientAddr;
+				bool added = false;
+				SensoriaAddress* notAddr = comm -> getNotificationAddress (clientAddr);
+				if (notAddr) {
+					int i = findNotification (notAddr, type, tName);
+					if (i >= 0) {
+						// Request already exists, assume client lost track of it and return success
+						DPRINTLN (F("NRQ already exists"));
+						outBuf.print (F("NRQ OK"));
+					} else {
+						Transducer *t = getTransducer (tName);
+						if (t) {
+							if (nNotificationReqs < MAX_NOTIFICATION_REQS) {
+								NotificationRequest& req = notificationReqs[nNotificationReqs++];
+								req.destAddr = notAddr;
 								req.type = type;
 								req.transducer = t;
 								req.timeLastSent = 0;
+								added = true;
 
 								switch (type) {
 									case NT_CHA:
@@ -480,21 +482,24 @@ void SensoriaServer::cmd_nrq (const SensoriaAddress* clientAddr, char *args) {
 										break;
 								}
 							} else {
-								DPRINTLN (F("ERR No address available"));
+								DPRINTLN (F("ERR Max notification requests reached"));
 
 								outBuf.print (F("NRQ ERR"));
 							}
 						} else {
-							DPRINTLN (F("ERR Max notification requests reached"));
+							DPRINT (F("ERR No such transducer: "));
+							DPRINTLN (args);
 
 							outBuf.print (F("NRQ ERR"));
 						}
-					} else {
-						DPRINT (F("ERR No such transducer: "));
-						DPRINTLN (args);
-
-						outBuf.print (F("NRQ ERR"));
 					}
+
+					if (!added)
+						comm -> releaseAddress (notAddr);
+				} else {
+					DPRINTLN (F("ERR No address available"));
+
+					outBuf.print (F("NRQ ERR"));
 				}
 			} else {
 				DPRINT (F("ERR Bad notification request type: "));
@@ -533,28 +538,36 @@ void SensoriaServer::cmd_ndl (const SensoriaAddress* clientAddr, char *args) {
 
 			NotificationType type = parseNotificationTypeStr (nTypeStr);
 			if (type != NT_UNK) {
-				int i = findNotification (clientAddr, type, tName);
-				if (i >= 0) {
-					//  Notification found
-					DPRINT (F("Deleting notification request "));
-					DPRINTLN (i);
+				SensoriaAddress* notAddr = comm -> getNotificationAddress (clientAddr);
+				if (notAddr) {
+					int i = findNotification (notAddr, type, tName);
+					if (i >= 0) {
+						//  Notification found
+						DPRINT (F("Deleting notification request "));
+						DPRINTLN (i);
 
-					NotificationRequest& req = notificationReqs[nNotificationReqs++];
-					comm -> releaseAddress (req.destAddr);
+						NotificationRequest& req = notificationReqs[i];
+						comm -> releaseAddress (req.destAddr);
 
-					/* NRQs 0...nNotificationReqs-1 are always valid, so deleting a
-					 * NRQ means we have to shift all subsequent NRQs down by one
-					 * place
-					 */
-					for (byte j = 0; i + j + 1 < nNotificationReqs; j++) {
-						notificationReqs[i + j] = notificationReqs[i + j + 1];
+						/* NRQs 0...nNotificationReqs-1 are always valid, so deleting a
+						 * NRQ means we have to shift all subsequent NRQs down by one
+						 * place
+						 */
+						for (byte j = 0; i + j + 1 < nNotificationReqs; j++) {
+							notificationReqs[i + j] = notificationReqs[i + j + 1];
+						}
+
+						nNotificationReqs--;
+
+						outBuf.print (F("NDL OK"));
+					} else {
+						DPRINTLN (F("ERR No such NRQ"));
+						outBuf.print (F("NDL ERR"));
 					}
 
-					nNotificationReqs--;
-
-					outBuf.print (F("NDL OK"));
+					comm -> releaseAddress (notAddr);
 				} else {
-					DPRINT (F("ERR No such NRQ"));
+					DPRINTLN (F("ERR No address available"));
 					outBuf.print (F("NDL ERR"));
 				}
 			} else {

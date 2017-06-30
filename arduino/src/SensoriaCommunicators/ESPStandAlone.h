@@ -159,6 +159,17 @@ public:
 		}
 	}
 
+	virtual SensoriaAddress* getNotificationAddress (const SensoriaAddress* client) override {
+		UdpAddress* addr = reinterpret_cast<UdpAddress*> (getAddress ());
+		if (addr) {
+			const UdpAddress& clientUdpAddr = *reinterpret_cast<const UdpAddress*> (client);
+			addr -> ip = clientUdpAddr.ip;
+			addr -> port = DEFAULT_NOTIFICATION_PORT;
+		}
+
+		return addr;
+	}
+
 	/*****/
 
 	boolean begin (const char *_ssid, const char *_password, int channels = CC_SERVER) {

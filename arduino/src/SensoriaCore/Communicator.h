@@ -45,7 +45,10 @@ public:
 	};
 
 	virtual SensoriaAddress* getAddress () = 0;
+
 	virtual void releaseAddress (SensoriaAddress* addr) = 0;
+
+  virtual SensoriaAddress* getNotificationAddress (const SensoriaAddress* client) = 0;
 
 	// Functions for servers
 	virtual boolean receiveCmd (char*& cmd, SensoriaAddress* client) = 0;
