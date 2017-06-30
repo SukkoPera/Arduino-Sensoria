@@ -43,7 +43,8 @@ public class SensActivity extends AppCompatActivity {
         initMenu();
         cmd = (EditText) findViewById(R.id.editTextCMD);
 
-        adapter = new SensAdapter(this, R.id.list, SensModel.getInstance().getItems());
+        sensClient = new SensClient(this);
+        adapter = new SensAdapter(this, R.id.list, SensModel.getInstance().getItems(), sensClient);
 
         listView = (ListView) findViewById(R.id.list);
         listView.setAdapter(adapter);
@@ -52,7 +53,6 @@ public class SensActivity extends AppCompatActivity {
         serviceIntent.setData(Uri.parse("sens://sensapp"));
         // startService(serviceIntent);
 
-        sensClient = new SensClient(this);
         sensClient.start();
     }
 

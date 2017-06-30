@@ -5,15 +5,17 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
+import android.widget.CompoundButton;
 import android.widget.Switch;
 import android.widget.TextView;
 
 import com.sensoria.typhosoft.sensapp.R;
-import com.sensoria.typhosoft.sensapp.data.SensStereotypeEnum;
-import com.sensoria.typhosoft.sensapp.data.Transducer;
 import com.sensoria.typhosoft.sensapp.data.Actuator;
+import com.sensoria.typhosoft.sensapp.data.SensCommandEnum;
+import com.sensoria.typhosoft.sensapp.data.SensStereotypeEnum;
 import com.sensoria.typhosoft.sensapp.data.Sensor;
-import com.sensoria.typhosoft.sensapp.data.SensorTypeEnum;
+import com.sensoria.typhosoft.sensapp.data.Transducer;
+import com.sensoria.typhosoft.sensapp.network.SensClient;
 
 import java.util.List;
 
@@ -23,10 +25,12 @@ import java.util.List;
 
 public class SensAdapter extends ArrayAdapter<Transducer> {
 
-    public LayoutInflater inflater;
+    public final LayoutInflater inflater;
+    private final SensClient sensClient;
 
-    public SensAdapter(Context context, int resource, List<Transducer> items) {
+    public SensAdapter(Context context, int resource, List<Transducer> items, SensClient sensClient) {
         super(context, resource, items);
+        this.sensClient = sensClient;
         setNotifyOnChange(true);
         inflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
     }
@@ -46,13 +50,11 @@ public class SensAdapter extends ArrayAdapter<Transducer> {
     @Override
     public View getView(int position, View convertView, ViewGroup parent) {
         Transducer currentRowItem = getItem(position);
-        int itemViewType = getItemViewType(position);
-
         View vi = convertView;
         if (convertView == null) {
             switch (currentRowItem.getType()) {
                 case ACTUATOR:
-                    switch(currentRowItem.getStereoType()){
+                    switch (currentRowItem.getStereoType()) {
                         case WEATHER_DATA:
                             break;
                         case RELAY_DATA:
@@ -73,28 +75,48 @@ public class SensAdapter extends ArrayAdapter<Transducer> {
 
             }
 
+
+            ViewHolder holder = new ViewHolder();
+            holder.typeText = (TextView) vi.findViewById(R.id.textRow1);
+            holder.nameText = (TextView) vi.findViewById(R.id.textRow21);
+            holder.descriptionText = (TextView) vi.findViewById(R.id.textRow22);
+            holder.dataText = (TextView) vi.findViewById(R.id.textData);
+            holder.onOffSwitch = (Switch) vi.findViewById(R.id.switch1);
+            holder.autoManualSwitch = (Switch) vi.findViewById(R.id.switch2);
+
+            if(holder.onOffSwitch != null){
+                holder.onOffSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+                    @Override
+                    public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                        ViewHolder holder = (ViewHolder) ((View)buttonView.getParent()).getTag();
+                        String name = holder.nameText.getText().toString();
+                        sensClient.sendMessage(SensCommandEnum.WRI.getCmd() + " " + name + " " + (isChecked ? "ON":"OFF"));
+                    }
+                });
+            }
+
+            if(holder.autoManualSwitch != null){
+
+
+            }
+
+            vi.setTag(holder);
         }
 
-        // common
-        TextView typeText = (TextView) vi.findViewById(R.id.textRow1);
-        TextView nameText = (TextView) vi.findViewById(R.id.textRow21);
-        TextView descriptionText = (TextView) vi.findViewById(R.id.textRow22);
-
+        ViewHolder holder = (ViewHolder) vi.getTag();
 
         switch (currentRowItem.getType()) {
             case ACTUATOR:
                 Actuator act = (Actuator) currentRowItem;
-                Switch onOffSwitch = (Switch) vi.findViewById(R.id.switch1);
-                onOffSwitch.setChecked(act.getOnOff());
+                holder.onOffSwitch.setChecked(act.getOnOff());
 
-                switch(currentRowItem.getStereoType()){
+                switch (currentRowItem.getStereoType()) {
                     case WEATHER_DATA:
                         break;
                     case RELAY_DATA:
                         break;
                     case CONTROLLED_RELAY_DATA:
-                        Switch autoManualSwitch = (Switch) vi.findViewById(R.id.switch2);
-                        autoManualSwitch.setChecked(act.getAutoManual());
+                        holder.autoManualSwitch.setChecked(act.getAutoManual());
                         break;
                     case MOTION_DATA:
                         break;
@@ -102,8 +124,7 @@ public class SensAdapter extends ArrayAdapter<Transducer> {
                 break;
             case SENSOR:
                 Sensor sens = (Sensor) currentRowItem;
-                TextView dataText = (TextView) vi.findViewById(R.id.textData);
-                dataText.setText(sens.getData());
+                holder.dataText.setText(sens.getData());
                 break;
             default:
 
@@ -113,10 +134,19 @@ public class SensAdapter extends ArrayAdapter<Transducer> {
         String type = currentRowItem.getType().getDescription();
         String name = currentRowItem.getName();
         String description = currentRowItem.getDescriptor();
-        typeText.setText(type);
-        nameText.setText(name);
-        descriptionText.setText(description);
+        holder.typeText.setText(type);
+        holder.nameText.setText(name);
+        holder.descriptionText.setText(description);
 
         return vi;
+    }
+
+    static class ViewHolder {
+        TextView typeText;
+        TextView nameText;
+        TextView descriptionText;
+        TextView dataText;
+        Switch onOffSwitch;
+        Switch autoManualSwitch;
     }
 }
