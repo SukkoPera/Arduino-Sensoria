@@ -88,11 +88,13 @@ void SensoriaServer::process_cmd (char *buffer, const SensoriaAddress* senderAdd
 	cmd = buffer;
 	strupr (cmd);	// Done in place
 
-	char addrbuf[32];
-	DPRINT (F("Processing command: \""));
-	DPRINT (cmd);
-	DPRINT (F("\" from "));
-	DPRINT (senderAddr -> toString (addrbuf, sizeof (addrbuf)));
+	{
+		char addrbuf[32];
+		DPRINT (F("Processing command: \""));
+		DPRINT (cmd);
+		DPRINT (F("\" from "));
+		DPRINTLN (senderAddr -> toString (addrbuf, sizeof (addrbuf)));
+	}
 
 	if (strcmp_P (cmd, PSTR ("HLO")) == 0) {
 		cmd_hlo (senderAddr, args);
