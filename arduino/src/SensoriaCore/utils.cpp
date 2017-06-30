@@ -88,7 +88,7 @@ char *strupr(char *s) {
   return s;
 }
 
-uint16_t _crc_xmodem_update (uint16_t crc, uint8_t data)
+uint16_t _crc_xmodem_update (uint16_t crc, uint8_t data) {
   int i;
 
   crc = crc ^ ((uint16_t) data << 8);

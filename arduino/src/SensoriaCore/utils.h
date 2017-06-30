@@ -1,6 +1,7 @@
 #ifndef _UTILS_H_INCLUDED
 #define _UTILS_H_INCLUDED
 
+#include <Arduino.h>
 #include "common.h"
 
 /* Remove trailing whitespace from a string.
