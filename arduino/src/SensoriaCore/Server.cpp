@@ -451,8 +451,14 @@ void SensoriaServer::cmd_nrq (const SensoriaAddress* clientAddr, char *args) {
 
 								switch (type) {
 									case NT_CHA:
-										DPRINT (F("Notifying on change of "));
-										DPRINTLN (t -> name);
+										{
+											char addrBuf[32];
+
+											DPRINT (F("Notifying "));
+											DPRINT (req.destAddr -> toString (addrBuf, sizeof (addrBuf)));
+											DPRINT (F(" on change of "));
+											DPRINTLN (t -> name);
+										}
 
 										req.period = NOTIFICATION_POLL_INTERVAL;
 
@@ -466,11 +472,17 @@ void SensoriaServer::cmd_nrq (const SensoriaAddress* clientAddr, char *args) {
 										} else {
 											word intv = atoi (p[2]);
 
-											DPRINT (F("Notifying values of "));
-											DPRINT (t -> name);
-											DPRINT (F(" every "));
-											DPRINT (intv);
-											DPRINTLN (F(" second(s)"));
+											{
+												char addrBuf[32];
+
+												DPRINT (F("Notifying "));
+												DPRINT (req.destAddr -> toString (addrBuf, sizeof (addrBuf)));
+												DPRINT (F("of values of "));
+												DPRINT (t -> name);
+												DPRINT (F(" every "));
+												DPRINT (intv);
+												DPRINTLN (F(" second(s)"));
+											}
 
 											req.type = NT_PRD;
 											req.period = intv * 1000UL;
