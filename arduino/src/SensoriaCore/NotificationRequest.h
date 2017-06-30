@@ -8,8 +8,7 @@
 
 class NotificationRequest {
 public:
-	IPAddress destAddr;
-	word destPort;
+	SensoriaAddress* destAddr;
 	NotificationType type;
 	Transducer* transducer;
 
@@ -22,7 +21,6 @@ public:
 
   NotificationRequest& operator= (const NotificationRequest& other) {
     destAddr = other.destAddr;
-    destPort = other.destPort;
     type = other.type;
 		transducer = other.transducer;
     period = other.period;

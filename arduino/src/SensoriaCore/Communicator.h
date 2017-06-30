@@ -16,6 +16,11 @@ class SensoriaAddress {
 public:
 	virtual char* toString (char* buf, byte size) const = 0;
 
+  SensoriaAddress& operator=(const SensoriaAddress& other) {
+    clone (other);
+    return *this;
+  }
+
   bool operator== (const SensoriaAddress& other) const {
       return equalTo (other);
   }
@@ -26,6 +31,8 @@ public:
 
 protected:
   virtual bool equalTo (const SensoriaAddress& other) const = 0;
+
+  virtual void clone (const SensoriaAddress& otherBase) = 0;
 };
 
 class SensoriaCommunicator {

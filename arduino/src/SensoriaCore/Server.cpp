@@ -88,9 +88,11 @@ void SensoriaServer::process_cmd (char *buffer, const SensoriaAddress* senderAdd
 	cmd = buffer;
 	strupr (cmd);	// Done in place
 
+	char addrbuf[32];
 	DPRINT (F("Processing command: \""));
 	DPRINT (cmd);
-	DPRINTLN (F("\""));
+	DPRINT (F("\" from "));
+	DPRINT (senderAddr -> toString (addrbuf, sizeof (addrbuf)));
 
 	if (strcmp_P (cmd, PSTR ("HLO")) == 0) {
 		cmd_hlo (senderAddr, args);
@@ -104,11 +106,11 @@ void SensoriaServer::process_cmd (char *buffer, const SensoriaAddress* senderAdd
 		cmd_wri (senderAddr, args);
 #ifdef ENABLE_NOTIFICATIONS
 	} else if (strcmp_P (cmd, PSTR ("NRQ")) == 0) {
-		cmd_nrq (senderAddr,args);
+		cmd_nrq (senderAddr, args);
 	} else if (strcmp_P (cmd, PSTR ("NDL")) == 0) {
-		cmd_ndl (senderAddr,args);
+		cmd_ndl (senderAddr, args);
 	} else if (strcmp_P (cmd, PSTR ("NCL")) == 0) {
-		cmd_ncl (senderAddr,args);
+		cmd_ncl (senderAddr, args);
 #endif
 	} else {
 		DPRINT (F("Unsupported command: \""));
@@ -135,10 +137,7 @@ int SensoriaServer::findNotification (const SensoriaAddress* clientAddr, Notific
 	for (byte i = 0; i < nNotificationReqs; i++) {
 		NotificationRequest& req = notificationReqs[i];
 
-// FIXME
-#if 0
-		if (req.destAddr == clientAddr &&
-				req.destPort == port &&
+		if (*req.destAddr == *clientAddr &&
 				req.type == type &&
 				strcmp_P (tName, F_TO_PSTR (req.transducer -> name)) == 0) {
 
@@ -146,7 +145,6 @@ int SensoriaServer::findNotification (const SensoriaAddress* clientAddr, Notific
 			ret = i;
 			break;
 		}
-#endif
 	}
 
 	return ret;
@@ -189,8 +187,7 @@ void SensoriaServer::handleNotificationReqs () {
 						outBuf.print (" ");   // No F() here saves flash and wastes no RAM
 						outBuf.print (buf);
 						outBuf.print ('\n');
-						//~ comm -> notify ((const char *) outBuf, clientAddr);
-						// FIXME
+						comm -> notify ((const char *) outBuf, req.destAddr);
 
 						req.transducer -> setLastReading (*st);
 						req.timeLastSent = millis ();
@@ -431,7 +428,7 @@ void SensoriaServer::cmd_nrq (const SensoriaAddress* clientAddr, char *args) {
 
 			NotificationType type = parseNotificationTypeStr (nTypeStr);
 			if (type != NT_UNK) {
-				int i = findNotification (clientAddr, DEFAULT_NOTIFICATION_PORT, type, tName);
+				int i = findNotification (clientAddr, type, tName);
 				if (i >= 0) {
 					// Request already exists, assume client lost track of it and return success
 					DPRINTLN (F("NRQ already exists"));
@@ -441,43 +438,49 @@ void SensoriaServer::cmd_nrq (const SensoriaAddress* clientAddr, char *args) {
 					if (t) {
 						if (nNotificationReqs < MAX_NOTIFICATION_REQS) {
 							NotificationRequest& req = notificationReqs[nNotificationReqs++];
-							req.destAddr = remoteAddress;
-							req.destPort = DEFAULT_NOTIFICATION_PORT;		// FIXME
-							req.type = type;
-							req.transducer = t;
-							req.timeLastSent = 0;
+							req.destAddr = comm -> getAddress ();
+							if (req.destAddr) {
+								*req.destAddr = *clientAddr;
+								req.type = type;
+								req.transducer = t;
+								req.timeLastSent = 0;
 
-							switch (type) {
-								case NT_CHA:
-									DPRINT (F("Notifying on change of "));
-									DPRINTLN (t -> name);
+								switch (type) {
+									case NT_CHA:
+										DPRINT (F("Notifying on change of "));
+										DPRINTLN (t -> name);
 
-									req.period = NOTIFICATION_POLL_INTERVAL;
-
-									outBuf.print (F("NRQ OK"));
-									break;
-								case NT_PRD:
-									if (n < 3) {
-										nNotificationReqs--;
-										DPRINTLN (F("ERR No interval specified"));
-										outBuf.print (F("NRQ ERR"));
-									} else {
-										word intv = atoi (p[2]);
-
-										DPRINT (F("Notifying values of "));
-										DPRINT (t -> name);
-										DPRINT (F(" every "));
-										DPRINT (intv);
-										DPRINTLN (F(" second(s)"));
-
-										req.type = NT_PRD;
-										req.period = intv * 1000UL;
+										req.period = NOTIFICATION_POLL_INTERVAL;
 
 										outBuf.print (F("NRQ OK"));
-									}
-									break;
-								default:
-									break;
+										break;
+									case NT_PRD:
+										if (n < 3) {
+											nNotificationReqs--;
+											DPRINTLN (F("ERR No interval specified"));
+											outBuf.print (F("NRQ ERR"));
+										} else {
+											word intv = atoi (p[2]);
+
+											DPRINT (F("Notifying values of "));
+											DPRINT (t -> name);
+											DPRINT (F(" every "));
+											DPRINT (intv);
+											DPRINTLN (F(" second(s)"));
+
+											req.type = NT_PRD;
+											req.period = intv * 1000UL;
+
+											outBuf.print (F("NRQ OK"));
+										}
+										break;
+									default:
+										break;
+								}
+							} else {
+								DPRINTLN (F("ERR No address available"));
+
+								outBuf.print (F("NRQ ERR"));
 							}
 						} else {
 							DPRINTLN (F("ERR Max notification requests reached"));
@@ -528,11 +531,14 @@ void SensoriaServer::cmd_ndl (const SensoriaAddress* clientAddr, char *args) {
 
 			NotificationType type = parseNotificationTypeStr (nTypeStr);
 			if (type != NT_UNK) {
-				int i = findNotification (clientAddr, DEFAULT_NOTIFICATION_PORT, type, tName);
+				int i = findNotification (clientAddr, type, tName);
 				if (i >= 0) {
 					//  Notification found
 					DPRINT (F("Deleting notification request "));
 					DPRINTLN (i);
+
+					NotificationRequest& req = notificationReqs[nNotificationReqs++];
+					comm -> releaseAddress (req.destAddr);
 
 					/* NRQs 0...nNotificationReqs-1 are always valid, so deleting a
 					 * NRQ means we have to shift all subsequent NRQs down by one
@@ -572,6 +578,11 @@ void SensoriaServer::cmd_ndl (const SensoriaAddress* clientAddr, char *args) {
 // Clear (= Delete) all notification requests
 void SensoriaServer::cmd_ncl (const SensoriaAddress* clientAddr, char *args) {
 	(void) *args;
+
+	for (byte i = 0; i < nNotificationReqs; i++) {
+		NotificationRequest& req = notificationReqs[i];
+		comm -> releaseAddress (req.destAddr);
+	}
 
 	nNotificationReqs = 0;
 	DPRINTLN (F("Cleared all notification requests"));
