@@ -39,12 +39,13 @@ public:
 		return buf;
 	}
 
-	bool equalTo (const SensoriaAddress& otherBase) const override {
+protected:
+	virtual bool equalTo (const SensoriaAddress& otherBase) const override {
 		const UdpAddress& other = static_cast<const UdpAddress&> (otherBase);
 		return ip == other.ip && port == other.port;
 	}
 
-	void clone (const SensoriaAddress& otherBase) override {
+	virtual void clone (const SensoriaAddress& otherBase) override {
 		const UdpAddress& other = static_cast<const UdpAddress&> (otherBase);
 		ip = other.ip;
 		port = other.port;
@@ -214,9 +215,6 @@ public:
 
 	boolean notify (const char* notification, const SensoriaAddress* client) override {
 		UdpAddress& addr = *const_cast<UdpAddress*> (reinterpret_cast<const UdpAddress*> (client));
-
-DPRINT (F("DEST NOT IP: "));
-DPRINTLN (addr.ip);
 
 		// Notifications use a fixed port, not the one we have in addr
 		return sendGeneric (notification, addr.ip, DEFAULT_NOTIFICATION_PORT) ? SEND_OK : SEND_ERR;
