@@ -1,14 +1,6 @@
 #ifndef SENSORIA_H_INCLUDED
 #define SENSORIA_H_INCLUDED
 
-// This is just a placeholder header
-
-#define DEFAULT_PORT 9999
-
-#define DEFAULT_BROADCAST_PORT DEFAULT_PORT
-
-//~ #define DEFAULT_NOTIFICATION_PORT 9998
-
 #define MAX_SERVERS 4
 
 #define MAX_TRANSDUCERS 8

@@ -63,6 +63,10 @@ private:
 	static const byte N_ADDRESSES = 16;
 	UdpAddress addressPool[N_ADDRESSES];
 
+	static const uint16_t DEFAULT_PORT = 9999;
+
+	static const uint16_t DEFAULT_BROADCAST_PORT = DEFAULT_PORT;
+
 	static const uint16_t DEFAULT_NOTIFICATION_PORT = 9998;
 
 	WiFiUDP udpMain;
@@ -114,7 +118,7 @@ private:
 			ret = udpMain.endPacket ();
 		}
 
-		return true;
+		return ret;
 	}
 
 public:

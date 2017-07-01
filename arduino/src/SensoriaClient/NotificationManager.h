@@ -128,7 +128,7 @@ public:
 		IPAddress addr;
 		uint16_t port;
 
-		if (comm -> receiveNotification (&buffer)) {
+		if (comm -> receiveNotification (buffer)) {
 			strstrip (buffer);
 			DPRINT (F("Received on notifications socket: "));
 			DPRINTLN (buffer);
