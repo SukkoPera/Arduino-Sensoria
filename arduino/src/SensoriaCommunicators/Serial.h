@@ -179,7 +179,7 @@ public:
 
 		byte destAddr;
 		return receiveGeneric (cmd, bAddr.addr, destAddr) && bAddr.addr != myAddr &&
-		       destAddr == myAddr;
+		       (destAddr == myAddr || destAddr == BROADCAST_ADDRESS);
 	}
 
 	virtual SendResult reply (const char* reply, const SensoriaAddress* client) override {
