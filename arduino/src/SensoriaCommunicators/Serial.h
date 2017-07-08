@@ -1,10 +1,11 @@
 #include <Sensoria.h>
 #include <SensoriaCore/Communicator.h>
 #include <SensoriaCore/common.h>
+#include <SensoriaCore/utils.h>
 
 class ByteAddress: public SensoriaAddress {
 public:
-	uint8_t addr;
+	byte addr;		// 0 = Broadcast, 1-255 = Valid client addresses
 	boolean inUse;
 
 	char* toString (char* buf, byte size) const override {
@@ -41,6 +42,10 @@ private:
 
   Stream *serial;
 
+  byte myAddr;
+
+  static const byte BROADCAST_ADDRESS = 0;
+
   char *readSerialString () {
     static char buf[BUF_SIZE];
     static int i = 0;
@@ -73,12 +78,65 @@ private:
     return ret;
   }
 
+	boolean receiveGeneric (char*& str, byte& senderAddr, byte& destAddr) {
+		// Assume we'll receive nothing
+		boolean ret = false;
+
+		if ((str = readSerialString ())) {
+			char *p[3];
+			if (splitString (str, p, 3) == 3) {
+				int n = atoi (p[0]);
+				if (n > 0 && n <= 255) {		// Sender cannot be broadcast address
+					senderAddr = n;
+
+					n = atoi (p[1]);
+					if (n >= 0 && n <= 255) {
+						destAddr = n;
+
+						str = p[2];
+
+#if 0
+						DPRINT (F("Received packet of size "));
+						DPRINT (packetSize);
+						DPRINT (F(" from "));
+						DPRINT (senderAddr);
+						DPRINT (F(" to "));
+						DPRINT (destAddr);
+						DPRINT (F(": \""));
+						DPRINT (str);
+						DPRINTLN (F("\""));
+#endif
+
+						ret = true;
+					} else {
+						DPRINTLN (F("Invalid destination address"));
+					}
+				} else {
+					DPRINTLN (F("Invalid source address"));
+				}
+			} else {
+				DPRINTLN (F("Received malformed message"));
+			}
+		}
+
+		return ret;
+	}
+
+	boolean sendGeneric (const char *str, byte destAddr) {
+		return serial -> print (myAddr) && serial -> print (' ') &&
+		    serial -> print (destAddr) && serial -> print (' ') &&
+		    serial -> print (str);
+	}
+
 public:
   SensoriaSerialCommunicator () {
   }
 
-  void begin (Stream& _serial) {
-    serial = &_serial;
+  bool begin (Stream& _serial, byte addr) {
+		serial = &_serial;
+		myAddr = addr;
+
+		return myAddr != BROADCAST_ADDRESS;
   }
 
 	virtual SensoriaAddress* getAddress () override {
@@ -116,23 +174,17 @@ public:
 		return NULL;
 	}
 
-	// Functions for servers
 	virtual boolean receiveCmd (char*& cmd, SensoriaAddress* client) override {
-		bool ret = false;
-		if ((cmd = readSerialString ())) {
-			ret = true;
-		}
+		ByteAddress& bAddr = *const_cast<ByteAddress*> (reinterpret_cast<const ByteAddress*> (client));
 
-		return ret;
+		byte destAddr;
+		return receiveGeneric (cmd, bAddr.addr, destAddr) && bAddr.addr != myAddr &&
+		       destAddr == myAddr;
 	}
 
 	virtual SendResult reply (const char* reply, const SensoriaAddress* client) override {
-		SendResult res = SEND_ERR;
-		if (serial -> print (reply)) {
-			res = SEND_OK;
-		}
-
-		return res;
+		ByteAddress& bAddr = *const_cast<ByteAddress*> (reinterpret_cast<const ByteAddress*> (client));
+		return sendGeneric (reply, bAddr.addr) ? SEND_OK : SEND_ERR;
 	}
 
 	virtual boolean notify (const char* notification, const SensoriaAddress* client) override {
@@ -140,9 +192,23 @@ public:
 	}
 
 	SendResult sendCmd (const char* cmd, const SensoriaAddress* server, char*& reply) override {
-		SendResult res = SEND_ERR;
-		if (serial -> print (cmd)) {
-			res = SEND_OK;
+		ByteAddress& bAddr = *const_cast<ByteAddress*> (reinterpret_cast<const ByteAddress*> (server));
+
+		SendResult res = sendGeneric (cmd, bAddr.addr) ? SEND_OK : SEND_ERR;
+		if (res > 0) {
+			unsigned long start = millis ();
+
+			while (millis () - start < CLIENT_TIMEOUT) {
+				byte srcAddr, destAddr;
+				if (receiveGeneric (reply, srcAddr, destAddr) &&
+				    srcAddr == bAddr.addr && destAddr == myAddr) {
+					// Got something
+					break;
+				}
+			}
+
+			if (millis () - start >= CLIENT_TIMEOUT)
+				res = SEND_TIMEOUT;
 		}
 
 		return res;
