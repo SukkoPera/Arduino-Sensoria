@@ -1,4 +1,4 @@
-package com.sensoria.typhosoft.sensapp.data;
+package com.sensoria.typhosoft.sensapp.datamodel;
 
 /**
  * Created by santonocitom on 29/06/17.

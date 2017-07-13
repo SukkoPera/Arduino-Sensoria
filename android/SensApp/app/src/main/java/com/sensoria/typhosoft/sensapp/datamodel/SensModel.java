@@ -1,4 +1,4 @@
-package com.sensoria.typhosoft.sensapp.data;
+package com.sensoria.typhosoft.sensapp.datamodel;
 
 import java.util.ArrayList;
 

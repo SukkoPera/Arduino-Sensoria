@@ -1,10 +1,11 @@
-package com.sensoria.typhosoft.sensapp.data;
+package com.sensoria.typhosoft.sensapp.datamodel;
 
 /**
  * Created by santonocitom on 29/06/17.
  */
 
 public enum SensStereotypeEnum {
+    NONE("NONE"),
     WEATHER_DATA("WD"),
     RELAY_DATA("RS"),
     CONTROLLED_RELAY_DATA("CR"),

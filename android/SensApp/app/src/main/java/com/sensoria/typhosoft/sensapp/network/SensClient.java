@@ -2,10 +2,10 @@ package com.sensoria.typhosoft.sensapp.network;
 
 import com.sensoria.typhosoft.sensapp.SensActivity;
 import com.sensoria.typhosoft.sensapp.core.SensParser;
-import com.sensoria.typhosoft.sensapp.data.Transducer;
-import com.sensoria.typhosoft.sensapp.data.SensCommandEnum;
-import com.sensoria.typhosoft.sensapp.data.SensModel;
-import com.sensoria.typhosoft.sensapp.data.Sensor;
+import com.sensoria.typhosoft.sensapp.datamodel.Node;
+import com.sensoria.typhosoft.sensapp.datamodel.SensCommandEnum;
+import com.sensoria.typhosoft.sensapp.datamodel.SensModel;
+import com.sensoria.typhosoft.sensapp.datamodel.Transducer;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
@@ -15,6 +15,7 @@ import java.net.InterfaceAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
 
@@ -51,6 +52,7 @@ public class SensClient extends Thread {
 
     public void sendMessage(String message) {
         try {
+            message.concat("\r");
             byte[] buf = message.getBytes();
 
             DatagramPacket packet = new DatagramPacket(buf, 0, buf.length, broadcast, UdpPort);
@@ -112,23 +114,46 @@ public class SensClient extends Thread {
     }
 
     private synchronized void parse(String sentence) {
-
+        boolean mustUpdate = true;
         SensCommandEnum sensCmd = SensParser.parseCommand(sentence);
         if (sensCmd != null) {
+            ArrayList<Transducer> items = SensModel.getInstance().getItems();
             switch (sensCmd) {
+                case VER:
+                    break;
+                case HLO:
+                    //SensModel.getInstance().getItems().clear();
+                    Node node = SensParser.makeNode(sentence);
+                    if (!items.contains(node))
+                        items.add(node);
+                    for (Transducer item : node.getTransducers()) {
+                        if (!items.contains(item)) {
+                            items.add(item);
+                        }
+                    }
+                    requestREA(items);
+                    break;
+                case WRI:
+                    mustUpdate = false;
+                    break;
                 case QRY:
-                    SensModel.getInstance().getItems().clear();
-                    SensModel.getInstance().getItems().addAll(SensParser.makeSensors(sentence));
-                    requestREA(SensModel.getInstance().getItems());
+                    List<Transducer> transducers = SensParser.makeSensors(sentence);
+                    for (Transducer item : transducers) {
+                        if (!items.contains(item)) {
+                            items.add(item);
+                        }}
+                    requestREA(items);
                     break;
                 case REA:
                     SensParser.parseREA(sentence);
                     break;
+                case NRQ:
+                    break;
                 default:
-                    SensModel.getInstance().getItems().clear();
-                    SensModel.getInstance().getItems().add(new Sensor(sentence));
+                    mustUpdate = false;
             }
-            main.updateSens();
+            if (mustUpdate)
+                main.updateSens();
         }
     }
 

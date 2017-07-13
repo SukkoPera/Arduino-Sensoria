@@ -1,15 +1,17 @@
 package com.sensoria.typhosoft.sensapp.core;
 
-import com.sensoria.typhosoft.sensapp.data.Actuator;
-import com.sensoria.typhosoft.sensapp.data.Node;
-import com.sensoria.typhosoft.sensapp.data.SensCommandEnum;
-import com.sensoria.typhosoft.sensapp.data.SensModel;
-import com.sensoria.typhosoft.sensapp.data.Sensor;
-import com.sensoria.typhosoft.sensapp.data.SensorTypeEnum;
-import com.sensoria.typhosoft.sensapp.data.Transducer;
+import com.sensoria.typhosoft.sensapp.datamodel.Actuator;
+import com.sensoria.typhosoft.sensapp.datamodel.Node;
+import com.sensoria.typhosoft.sensapp.datamodel.SensCommandEnum;
+import com.sensoria.typhosoft.sensapp.datamodel.SensModel;
+import com.sensoria.typhosoft.sensapp.datamodel.Sensor;
+import com.sensoria.typhosoft.sensapp.datamodel.SensorTypeEnum;
+import com.sensoria.typhosoft.sensapp.datamodel.Transducer;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
+import java.util.regex.Pattern;
 
 /**
  * Created by santonocitom on 29/06/17.
@@ -18,7 +20,7 @@ import java.util.List;
 public class SensParser {
 
     public static SensCommandEnum parseCommand(String cmd) {
-
+        System.out.println(cmd);
         return SensCommandEnum.valueOf(cmd.substring(0, 3));
     }
 
@@ -105,5 +107,16 @@ public class SensParser {
             case MOTION_DATA:
                 break;
         }
+    }
+
+    public static Node makeNode(String sentence) {
+        // HLO TestServer BH A RS Bathroom Heater|TB S WD Bathroom Temperature|KF A CR Kitchen Fan
+        Node node = new Node();
+        int nameSize = sentence.substring(4).indexOf(" ");
+        node.setName(sentence.substring(4, 4 + nameSize));
+        String items = "QRY " + sentence.substring(5 + nameSize);
+        List<Transducer> transducers = makeSensors(items);
+        node.setTransducers(transducers);
+        return node;
     }
 }

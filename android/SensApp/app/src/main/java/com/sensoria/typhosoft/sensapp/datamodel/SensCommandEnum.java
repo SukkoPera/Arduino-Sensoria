@@ -1,4 +1,4 @@
-package com.sensoria.typhosoft.sensapp.data;
+package com.sensoria.typhosoft.sensapp.datamodel;
 
 /**
  * Created by santonocitom on 29/06/17.
@@ -10,7 +10,8 @@ public enum SensCommandEnum {
     REA("REA"),
     WRI("WRI"),
     QRY("QRY"),
-    NRQ("NRQ");
+    NRQ("NRQ"),
+    ERR("ERR");
 
     private final String cmd;
 

@@ -2,7 +2,7 @@
     <string name="app_name">SensApp</string>
     <string name="service_name">SensAppService</string>
     <string name="button">Update</string>
-    <string name="command">QRY</string>
+    <string name="command">HLO</string>
     <string name="drawer_open">Open navigation drawer</string>
     <string name="drawer_close">Close navigation drawer</string>
     <string name="action_settings">Settings</string>

@@ -10,11 +10,12 @@ import android.widget.Switch;
 import android.widget.TextView;
 
 import com.sensoria.typhosoft.sensapp.R;
-import com.sensoria.typhosoft.sensapp.data.Actuator;
-import com.sensoria.typhosoft.sensapp.data.SensCommandEnum;
-import com.sensoria.typhosoft.sensapp.data.SensStereotypeEnum;
-import com.sensoria.typhosoft.sensapp.data.Sensor;
-import com.sensoria.typhosoft.sensapp.data.Transducer;
+import com.sensoria.typhosoft.sensapp.SensActivity;
+import com.sensoria.typhosoft.sensapp.datamodel.Actuator;
+import com.sensoria.typhosoft.sensapp.datamodel.SensCommandEnum;
+import com.sensoria.typhosoft.sensapp.datamodel.SensStereotypeEnum;
+import com.sensoria.typhosoft.sensapp.datamodel.Sensor;
+import com.sensoria.typhosoft.sensapp.datamodel.Transducer;
 import com.sensoria.typhosoft.sensapp.network.SensClient;
 
 import java.util.List;
@@ -28,7 +29,7 @@ public class SensAdapter extends ArrayAdapter<Transducer> {
     public final LayoutInflater inflater;
     private final SensClient sensClient;
 
-    public SensAdapter(Context context, int resource, List<Transducer> items, SensClient sensClient) {
+    public SensAdapter(SensActivity context, int resource, List<Transducer> items, SensClient sensClient) {
         super(context, resource, items);
         this.sensClient = sensClient;
         setNotifyOnChange(true);
@@ -70,34 +71,56 @@ public class SensAdapter extends ArrayAdapter<Transducer> {
                 case SENSOR:
                     vi = inflater.inflate(R.layout.sensadapter_s_item_layout, parent, false);
                     break;
+                case NODE:
+                    vi = inflater.inflate(R.layout.sensadapter_node_item_layout, parent, false);
+                    break;
                 default:
+                    // TODO must be substitute with error item
                     vi = inflater.inflate(R.layout.sensadapter_s_item_layout, parent, false);
 
             }
 
 
-            ViewHolder holder = new ViewHolder();
-            holder.typeText = (TextView) vi.findViewById(R.id.textRow1);
-            holder.nameText = (TextView) vi.findViewById(R.id.textRow21);
-            holder.descriptionText = (TextView) vi.findViewById(R.id.textRow22);
-            holder.dataText = (TextView) vi.findViewById(R.id.textData);
-            holder.onOffSwitch = (Switch) vi.findViewById(R.id.switch1);
-            holder.autoManualSwitch = (Switch) vi.findViewById(R.id.switch2);
+            ViewHolder holder = new ViewHolder(currentRowItem);
+            holder.setTypeText((TextView) vi.findViewById(R.id.textRow1));
+            holder.setNameText((TextView) vi.findViewById(R.id.textRow21));
+            holder.setDescriptionText((TextView) vi.findViewById(R.id.textRow22));
+            holder.setDataText((TextView) vi.findViewById(R.id.textData));
+            holder.setOnOffSwitch((Switch) vi.findViewById(R.id.switch1));
+            holder.setAutoManualSwitch((Switch) vi.findViewById(R.id.switch2));
 
-            if(holder.onOffSwitch != null){
+            if (holder.onOffSwitch != null) {
                 holder.onOffSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
                     @Override
                     public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                        ViewHolder holder = (ViewHolder) ((View)buttonView.getParent()).getTag();
-                        String name = holder.nameText.getText().toString();
-                        sensClient.sendMessage(SensCommandEnum.WRI.getCmd() + " " + name + " " + (isChecked ? "ON":"OFF"));
+                        ViewHolder holder = (ViewHolder) buttonView.getTag();
+                        Actuator actuator = (Actuator) holder.getTransducer();
+                        String name = actuator.getName();
+                        if (isChecked != actuator.getOnOff()) {
+                            if (holder.getAutoManualSwitch() != null) {
+                                sensClient.sendMessage(SensCommandEnum.WRI.getCmd() + " " + name + " C:" + (isChecked ? "ON" : "OFF") + " S:" + (holder.getAutoManualSwitch().isChecked() ? "AUT" : "MAN"));
+                            } else {
+                                sensClient.sendMessage(SensCommandEnum.WRI.getCmd() + " " + name + " " + (isChecked ? "ON" : "OFF"));
+                            }
+                            actuator.setOnOff(isChecked);
+                        }
                     }
                 });
             }
 
-            if(holder.autoManualSwitch != null){
-
-
+            if (holder.autoManualSwitch != null) {
+                holder.autoManualSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+                    @Override
+                    public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                        ViewHolder holder = (ViewHolder) buttonView.getTag();
+                        Actuator actuator = (Actuator) holder.getTransducer();
+                        String name = actuator.getName();
+                        if (isChecked != actuator.getAutoManual()) {
+                            sensClient.sendMessage(SensCommandEnum.WRI.getCmd() + " " + name + " C:" + (holder.getOnOffSwitch().isChecked() ? "ON" : "OFF") + " S:" + (isChecked ? "AUT" : "MAN"));
+                            actuator.setAutoManual(isChecked);
+                        }
+                    }
+                });
             }
 
             vi.setTag(holder);
@@ -108,7 +131,7 @@ public class SensAdapter extends ArrayAdapter<Transducer> {
         switch (currentRowItem.getType()) {
             case ACTUATOR:
                 Actuator act = (Actuator) currentRowItem;
-                holder.onOffSwitch.setChecked(act.getOnOff());
+                ViewHolder.setSwitch(holder.onOffSwitch, act.getOnOff());
 
                 switch (currentRowItem.getStereoType()) {
                     case WEATHER_DATA:
@@ -116,7 +139,7 @@ public class SensAdapter extends ArrayAdapter<Transducer> {
                     case RELAY_DATA:
                         break;
                     case CONTROLLED_RELAY_DATA:
-                        holder.autoManualSwitch.setChecked(act.getAutoManual());
+                        ViewHolder.setSwitch(holder.autoManualSwitch, act.getAutoManual());
                         break;
                     case MOTION_DATA:
                         break;
@@ -124,7 +147,10 @@ public class SensAdapter extends ArrayAdapter<Transducer> {
                 break;
             case SENSOR:
                 Sensor sens = (Sensor) currentRowItem;
-                holder.dataText.setText(sens.getData());
+                ViewHolder.setText(holder.dataText, sens.getData());
+                break;
+            case NODE:
+
                 break;
             default:
 
@@ -134,19 +160,104 @@ public class SensAdapter extends ArrayAdapter<Transducer> {
         String type = currentRowItem.getType().getDescription();
         String name = currentRowItem.getName();
         String description = currentRowItem.getDescriptor();
-        holder.typeText.setText(type);
-        holder.nameText.setText(name);
-        holder.descriptionText.setText(description);
+        ViewHolder.setText(holder.typeText, type);
+        ViewHolder.setText(holder.nameText, name);
+        ViewHolder.setText(holder.descriptionText, description);
 
         return vi;
     }
 
     static class ViewHolder {
-        TextView typeText;
-        TextView nameText;
-        TextView descriptionText;
-        TextView dataText;
-        Switch onOffSwitch;
-        Switch autoManualSwitch;
+        private TextView typeText;
+        private TextView nameText;
+        private TextView descriptionText;
+        private TextView dataText;
+        private Switch onOffSwitch;
+        private Switch autoManualSwitch;
+        private Transducer transducer;
+
+        public ViewHolder(Transducer transducer) {
+            setTransducer(transducer);
+        }
+
+        public static void setText(TextView text, String value) {
+            if (text != null) {
+                text.setText(value);
+            }
+        }
+
+        public static void setSwitch(Switch lSwitch, boolean value) {
+            if (lSwitch != null) {
+                lSwitch.setChecked(value);
+            }
+        }
+
+        public static void setTag(View view, ViewHolder holder) {
+            if (view != null) {
+                view.setTag(holder);
+            }
+        }
+
+        public Transducer getTransducer() {
+            return transducer;
+        }
+
+        public void setTransducer(Transducer transducer) {
+            this.transducer = transducer;
+        }
+
+        public TextView getTypeText() {
+            return typeText;
+        }
+
+        public void setTypeText(TextView typeText) {
+            this.typeText = typeText;
+            setTag(typeText, this);
+        }
+
+        public TextView getNameText() {
+            return nameText;
+        }
+
+        public void setNameText(TextView nameText) {
+            this.nameText = nameText;
+            setTag(nameText, this);
+        }
+
+        public TextView getDescriptionText() {
+            return descriptionText;
+        }
+
+        public void setDescriptionText(TextView descriptionText) {
+            this.descriptionText = descriptionText;
+            setTag(descriptionText, this);
+        }
+
+        public TextView getDataText() {
+            return dataText;
+        }
+
+        public void setDataText(TextView dataText) {
+            this.dataText = dataText;
+            setTag(dataText, this);
+        }
+
+        public Switch getOnOffSwitch() {
+            return onOffSwitch;
+        }
+
+        public void setOnOffSwitch(Switch onOffSwitch) {
+            this.onOffSwitch = onOffSwitch;
+            setTag(onOffSwitch, this);
+        }
+
+        public Switch getAutoManualSwitch() {
+            return autoManualSwitch;
+        }
+
+        public void setAutoManualSwitch(Switch autoManualSwitch) {
+            this.autoManualSwitch = autoManualSwitch;
+            setTag(autoManualSwitch, this);
+        }
     }
 }

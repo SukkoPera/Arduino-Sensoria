@@ -16,7 +16,7 @@ import android.widget.EditText;
 import android.widget.ListView;
 
 import com.sensoria.typhosoft.sensapp.custom.adapter.SensAdapter;
-import com.sensoria.typhosoft.sensapp.data.SensModel;
+import com.sensoria.typhosoft.sensapp.datamodel.SensModel;
 import com.sensoria.typhosoft.sensapp.network.SensClient;
 import com.sensoria.typhosoft.sensapp.service.SensAppService;
 
@@ -49,8 +49,8 @@ public class SensActivity extends AppCompatActivity {
         listView = (ListView) findViewById(R.id.list);
         listView.setAdapter(adapter);
 
-        serviceIntent = new Intent(this, SensAppService.class);
-        serviceIntent.setData(Uri.parse("sens://sensapp"));
+        // serviceIntent = new Intent(this, SensAppService.class);
+        // serviceIntent.setData(Uri.parse("sens://sensapp"));
         // startService(serviceIntent);
 
         sensClient.start();
@@ -62,8 +62,7 @@ public class SensActivity extends AppCompatActivity {
         drawerLayout = (DrawerLayout) findViewById(R.id.drawer_layout);
         activityTitle = getTitle().toString();
 
-        drawerToggle = new ActionBarDrawerToggle(this, drawerLayout,
-                R.string.drawer_open, R.string.drawer_close) {
+        drawerToggle = new ActionBarDrawerToggle(this, drawerLayout, R.string.drawer_open, R.string.drawer_close) {
 
             /** Called when a drawer has settled in a completely open state. */
             public void onDrawerOpened(View drawerView) {
@@ -104,7 +103,7 @@ public class SensActivity extends AppCompatActivity {
         super.onPostCreate(savedInstanceState);
         drawerToggle.syncState();
 
-        sensClient.sendMessage("QRY");
+        sensClient.sendMessage(getResources().getString(R.string.command));
     }
 
 
