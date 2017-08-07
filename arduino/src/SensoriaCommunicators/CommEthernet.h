@@ -61,6 +61,10 @@ public:
 		return true;
 	}
 
+  boolean broadcast (const char *str, uint16_t port) {
+    // FIXME
+  }
+
 	boolean receiveGeneric (UDP& udp, char **str, IPAddress *senderAddr, uint16_t *senderPort) {
 		// Assume we'll receive nothing
 		boolean ret = false;

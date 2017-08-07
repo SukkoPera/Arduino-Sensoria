@@ -36,10 +36,17 @@ public:
 		return buf;
 	}
 
-  bool equalTo (const SensoriaAddress& otherBase) const override {
-    const UdpAddress& other = static_cast<const UdpAddress&> (otherBase);
-    return ip == other.ip && port == other.port;
-  }
+protected:
+	virtual bool equalTo (const SensoriaAddress& otherBase) const override {
+		const UdpAddress& other = static_cast<const UdpAddress&> (otherBase);
+		return ip == other.ip && port == other.port;
+	}
+
+	virtual void clone (const SensoriaAddress& otherBase) override {
+		const UdpAddress& other = static_cast<const UdpAddress&> (otherBase);
+		ip = other.ip;
+		port = other.port;
+	}
 
 	// Default copy/assignment operators should be fine
 };
@@ -55,9 +62,21 @@ private:
 	static const byte N_ADDRESSES = 6;
 	UdpAddress addressPool[N_ADDRESSES];
 
+	static const uint16_t DEFAULT_PORT = 9999;
+
+	static const uint16_t DEFAULT_BROADCAST_PORT = DEFAULT_PORT;
+
+	static const uint16_t DEFAULT_NOTIFICATION_PORT = 9998;
+
+	WiFiEspUDP udpMain;
+
+#ifdef ENABLE_NOTIFICATIONS
+	WiFiEspUDP udpNot;
+#endif
+
 	uint8_t buffer[IN_BUF_SIZE];
 
-  unsigned long lastBroadcastTime;
+	unsigned long lastBroadcastTime;
 
 	/* 255.255.255.255 does not seem to work, see:
 	 * https://github.com/bportaluri/WiFiEsp/issues/95
@@ -96,23 +115,28 @@ private:
 		return ret;
 	}
 
-public:
-	WiFiEspUDP udpMain;
-#ifdef ENABLE_NOTIFICATIONS
-	WiFiEspUDP udpNot;
-#endif
+	boolean sendGeneric (const char *str, IPAddress& dest, uint16_t port) {
+		int ret = udpMain.beginPacket (dest, port);
+		if (ret) {
+			udpMain.write (reinterpret_cast<const uint8_t *> (str), strlen (str));
+			ret = udpMain.endPacket ();
+		}
 
+		return ret;
+	}
+
+public:
 	SensoriaAddress* getAddress () override {
 		SensoriaAddress* ret = NULL;
 
 #if 0
-    byte cnt = 0;
+		byte cnt = 0;
 		for (byte i = 0; i < N_ADDRESSES && !ret; i++) {
-      if (!addressPool[i].inUse)
-        ++cnt;
-    }
-    DPRINT (F("Addresses not in use: "));
-    DPRINTLN (cnt);
+			if (!addressPool[i].inUse)
+				++cnt;
+		}
+		DPRINT (F("Addresses not in use: "));
+		DPRINTLN (cnt);
 #endif
 
 		for (byte i = 0; i < N_ADDRESSES && !ret; i++) {
@@ -125,15 +149,25 @@ public:
 		return ret;
 	}
 
-  UdpAddress* getAddress (byte ip1, byte ip2, byte ip3, byte ip4, uint16_t port) {
-    UdpAddress* addr = reinterpret_cast<UdpAddress*> (getAddress ());
-    if (addr) {
-      addr -> ip = IPAddress (ip1, ip2, ip3, ip4);
-      addr -> port = port;
-    }
+	UdpAddress* getAddress (byte ip1, byte ip2, byte ip3, byte ip4, uint16_t port) {
+		UdpAddress* addr = reinterpret_cast<UdpAddress*> (getAddress ());
+		if (addr) {
+			addr -> ip = IPAddress (ip1, ip2, ip3, ip4);
+			addr -> port = port;
+		}
 
-    return addr;
-  }
+		return addr;
+	}
+
+	UdpAddress* getAddress (const IPAddress& ip, uint16_t port = DEFAULT_PORT) {
+		UdpAddress* addr = reinterpret_cast<UdpAddress*> (getAddress ());
+		if (addr) {
+			addr -> ip = ip;
+			addr -> port = port;
+		}
+
+		return addr;
+	}
 
 	void releaseAddress (SensoriaAddress* addr) override {
 		for (byte i = 0; i < N_ADDRESSES; i++) {
@@ -142,6 +176,19 @@ public:
 			}
 		}
 	}
+
+	virtual SensoriaAddress* getNotificationAddress (const SensoriaAddress* client) override {
+		UdpAddress* addr = reinterpret_cast<UdpAddress*> (getAddress ());
+		if (addr) {
+			const UdpAddress& clientUdpAddr = *reinterpret_cast<const UdpAddress*> (client);
+			addr -> ip = clientUdpAddr.ip;
+			addr -> port = DEFAULT_NOTIFICATION_PORT;
+		}
+
+		return addr;
+	}
+
+	/*****/
 
 	boolean begin (Stream& _serial, const char *_ssid, const char *_password, int channels = CC_SERVER) {
 		for (byte i = 0; i < N_ADDRESSES; i++) {
@@ -203,77 +250,74 @@ public:
 	}
 
 	SendResult reply (const char* reply, const SensoriaAddress* client) override {
-		const UdpAddress& addr = *reinterpret_cast<const UdpAddress*> (client);
-
-		int ret = udpMain.beginPacket (addr.ip, addr.port);
-		if (ret) {
-			udpMain.write (reinterpret_cast<const uint8_t *> (reply), strlen (reply));
-			ret = udpMain.endPacket ();
-		}
-
-		return ret ? SEND_OK : SEND_ERR;
+		UdpAddress& addr = *const_cast<UdpAddress*> (reinterpret_cast<const UdpAddress*> (client));
+		return sendGeneric (reply, addr.ip, addr.port) ? SEND_OK : SEND_ERR;
 	}
 
 	boolean notify (const char* notification, const SensoriaAddress* client) override {
-		return false;
+		UdpAddress& addr = *const_cast<UdpAddress*> (reinterpret_cast<const UdpAddress*> (client));
+		return sendGeneric (notification, addr.ip, addr.port) ? SEND_OK : SEND_ERR;
 	}
 
 	SendResult sendCmd (const char* cmd, const SensoriaAddress* server, char*& reply) override {
-    SendResult res = this -> reply (cmd, server);
-    if (res > 0) {
-      unsigned long start = millis ();
+		UdpAddress& srvUdpAddr = *const_cast<UdpAddress*> (reinterpret_cast<const UdpAddress*> (server));
+		SendResult res = sendGeneric (cmd, srvUdpAddr.ip, srvUdpAddr.port) ? SEND_OK : SEND_ERR;
+		if (res > 0) {
+			unsigned long start = millis ();
 
-      while (millis () - start < CLIENT_TIMEOUT) {
-        UdpAddress addr;    // Dummy address
-        if (receiveGeneric (udpMain, reply, addr.ip, addr.port)) {
-          // Got something
-          break;
-        }
-      }
+			while (millis () - start < CLIENT_TIMEOUT) {
+				UdpAddress addr;    // Dummy address
+				if (receiveGeneric (udpMain, reply, addr.ip, addr.port)) {
+					// Got something
+					break;
+				}
+			}
 
-      if (millis () - start >= CLIENT_TIMEOUT)
-        res = SEND_TIMEOUT;
-    }
+			if (millis () - start >= CLIENT_TIMEOUT)
+				res = SEND_TIMEOUT;
+		}
 
 		return res;
 	}
 
 	SendResult broadcast (const char* cmd) override {
-    UdpAddress bcAddr;
-    bcAddr.ip = IPAddress (BROADCAST_ADDRESS);
-    bcAddr.port = DEFAULT_BROADCAST_PORT;
-    SendResult ret = this -> reply (cmd, &bcAddr);
-    if (ret == SEND_OK) {
-      lastBroadcastTime = millis ();
-    }
+		UdpAddress bcAddr;
+		bcAddr.ip = IPAddress (BROADCAST_ADDRESS);
+		bcAddr.port = DEFAULT_BROADCAST_PORT;
+		SendResult ret = this -> reply (cmd, &bcAddr);
+		if (ret == SEND_OK) {
+			lastBroadcastTime = millis ();
+		}
 
-    return ret;
-  }
+		return ret;
+	}
 
-  boolean receiveBroadcastReply (char*& reply, SensoriaAddress*& sender, unsigned int timeout) override {
-    boolean ret = false;
+	boolean receiveBroadcastReply (char*& reply, SensoriaAddress*& sender, unsigned int timeout) override {
+		boolean ret = false;
 
-    while (!ret && millis () - lastBroadcastTime < timeout) {
-      UdpAddress addr;
-      ret = receiveGeneric (udpMain, reply, addr.ip, addr.port);
-      if (ret) {
-        // Got something
-        UdpAddress* senderUdp = reinterpret_cast<UdpAddress*> (getAddress ());
-        if (senderUdp) {
-          *senderUdp = addr;
-          sender = senderUdp;
-        } else {
-          DPRINTLN (F("Cannot allocate address for broadcast reply"));
-          ret = false;
-        }
-      }
-    }
+		while (!ret && millis () - lastBroadcastTime < timeout) {
+			UdpAddress addr;
+			ret = receiveGeneric (udpMain, reply, addr.ip, addr.port);
+			if (ret) {
+				// Got something
+				UdpAddress* senderUdp = reinterpret_cast<UdpAddress*> (getAddress ());
+				if (senderUdp) {
+					*senderUdp = addr;
+					sender = senderUdp;
+				} else {
+					DPRINTLN (F("Cannot allocate address for broadcast reply"));
+					ret = false;
+				}
+			}
+		}
 
 		return ret;
 	}
 
 	boolean receiveNotification (char*& notification) override {
-		return false;
+		IPAddress ip;
+		uint16_t port;
+		return receiveGeneric (udpNot, notification, ip, port);
 	}
 
 
