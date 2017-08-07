@@ -95,7 +95,7 @@ void SensoriaClient::discover () {
 					}
 
 					if (add) {
-						if (nServers < MAX_SERVERS - 1) {
+						if (nServers < MAX_SERVERS) {
 							ServerProxy* srvpx = realizeServer (sender, serverName, transducerList, crc);
 							servers[nServers++] = srvpx;
 						} else {
