@@ -44,7 +44,7 @@ public:
 	}
 
 	bool begin (FlashString name, FlashString description, DHT& _dht) {
-		if (Sensor::begin (name, F("WD"), description, F("20160320"))) {
+		if (Sensor::begin (name, F("WD"), description, F("20171121"))) {
 			dht = &_dht;
 			return true;
 		} else {
@@ -53,13 +53,17 @@ public:
 	}
 
   boolean read (WeatherData& wd) override {
+		boolean ret = false;
+
     float h = dht -> readHumidity();
 		float t = dht -> readTemperature();
 		if (!isnan (h) && !isnan(t)) {
       wd.humidity = h;
       wd.temperature = t;
+
+      ret = true;
 		}
 
-		return true;
+		return ret;
 	}
 };
