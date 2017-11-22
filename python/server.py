@@ -149,12 +149,15 @@ class RelayActuator (Actuator):
 		    rd.state = RelayData.OFF
 		return rd
 
-	#~ def write (self, value):
-		#~ if value.upper () == "ON" or int (value) > 0:
-			#~ self.state = RelayActuator.State.ON
-		#~ else:
-			#~ self.state = RelayActuator.State.OFF
-		#~ return True, "Relay is now %s" % self.read ()[0]
+	def write (self, rawdata):		# FIXME: Get this unmarshaled earlier!
+		data = RelayData ()
+		data.unmarshal (rawdata)
+
+		if data.state == RelayData.ON:
+			self.state = RelayActuator.State.ON
+		elif data.state == RelayData.OFF:
+			self.state = RelayActuator.State.OFF
+		return True, "Relay is now %s" % self.state
 
 class ControlledRelayActuator (Actuator):
 	class State:
