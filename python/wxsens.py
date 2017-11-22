@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 import ConfigParser
+import os
 import sys
 
 import wx, wx.html
@@ -10,9 +11,38 @@ import Sensoria
 from ObjectListView import GroupListView, ColumnDefn
 
 class Config (object):
+	FILENAME = "wxsens.ini"
+
 	def __init__ (self):
 		self.winPos = None
 		self.winSize = None
+
+	def getFilename (self):
+		if "XDG_CONFIG_HOME" in os.environ and len (os.environ["XDG_CONFIG_HOME"]) > 0:
+			path = os.environ["XDG_CONFIG_HOME"]
+		else:
+			path = os.path.expanduser ("~/.config")
+		return os.path.join (path, Config.FILENAME)
+
+	def load (self):
+		cfgp = ConfigParser.RawConfigParser ()
+		cfgp.read (self.getFilename ())
+		try:
+			self.winPos = (cfgp.getint ('Window', 'x'), cfgp.getint ('Window', 'y'))
+			self.winSize = (cfgp.getint ('Window', 'width'), cfgp.getint ('Window', 'height'))
+		except ConfigParser.Error as ex:
+			# Never mind, we'll just use defaults
+			pass
+
+	def save (self):
+		cfgp = ConfigParser.RawConfigParser ()
+		cfgp.add_section ('Window')
+		cfgp.set ('Window', 'x', self.winPos[0])
+		cfgp.set ('Window', 'y', self.winPos[1])
+		cfgp.set ('Window', 'width', self.winSize[0])
+		cfgp.set ('Window', 'height', self.winSize[1])
+		with open (self.getFilename (), 'wb') as configfile:
+			cfgp.write (configfile)
 
 class TransducerWrapper (object):
 	def __init__ (self, t):
@@ -206,7 +236,7 @@ stereoTypeToMenu = {
 class Frame (wx.Frame):
 	def __init__(self):
 		self.config = Config ()
-		self._readConfig ()
+		self.config.load ()
 
 		super (Frame, self).__init__ (None, title = "Sensoria", pos = self.config.winPos, size = self.config.winSize)
 		self.Bind (wx.EVT_CLOSE, self.onQuit)
@@ -293,28 +323,8 @@ class Frame (wx.Frame):
 		self.config.winPos = self.GetPosition ()
 		self.config.winSize = self.GetSize ()
 		#~ print "Window is %ux%u at %u,%u" % (self.config.winPos[0], self.config.winPos[1], self.config.winSize[0], self.config.winSize[1])
-		self._saveConfig ()
+		self.config.save ()
 		self.Destroy ()
-
-	def _readConfig (self):
-		cfgp = ConfigParser.RawConfigParser ()
-		cfgp.read ('/tmp/cfg.ini')
-		try:
-			self.config.winPos = (cfgp.getint ('Window', 'x'), cfgp.getint ('Window', 'y'))
-			self.config.winSize = (cfgp.getint ('Window', 'width'), cfgp.getint ('Window', 'height'))
-		except ConfigParser.Error as ex:
-			# Never mind, we'll just use defaults
-			pass
-
-	def _saveConfig (self):
-		cfgp = ConfigParser.RawConfigParser ()
-		cfgp.add_section ('Window')
-		cfgp.set ('Window', 'x', self.config.winPos[0])
-		cfgp.set ('Window', 'y', self.config.winPos[1])
-		cfgp.set ('Window', 'width', self.config.winSize[0])
-		cfgp.set ('Window', 'height', self.config.winSize[1])
-		with open ('/tmp/cfg.ini', 'wb') as configfile:
-			cfgp.write (configfile)
 
 
 app = wx.App ()   # Error messages go to popup window
