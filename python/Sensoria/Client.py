@@ -28,7 +28,7 @@ class Client (object):
 				srvpx = self._queryServer ((srv, int (port)))
 			else:
 				srvpx = self._queryServer ((srv, ServerProxy.DEFAULT_PORT))
-			self._addServer (srvpx)
+			self._addServer (self._realizeServer (srvpx))
 		if autodiscover:
 			for model, srvpx in self._discoverQuick ().iteritems ():
 				self._servers[model] = self._realizeServer (srvpx)
