@@ -30,7 +30,7 @@ class TransducerProxy (object):
 		assert self.server is not None
 		assert typ in typeStrings
 
-		if callable not in self.notificationClients:
+		if callback not in self.notificationClients:
 			if args is not None:
 				reply = self.server.send ("NRQ %s %s %s" % (self.name, typeStrings[typ], args))
 			else:
