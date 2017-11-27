@@ -122,15 +122,6 @@ class TemperatureSensor (Sensor):
 		#~ ts = datetime.datetime.now ().strftime ("%Y-%m-%dT%H:%M:%S")    # ISO 8601
 		return wd
 
-class KitchenTemperatureSensor (TemperatureSensor):
-	def __init__ (self):
-		super (KitchenTemperatureSensor, self).__init__ ("TK", "Kitchen Temperature", "20150611 By SukkoPera <software@sukkology.net>")
-
-class BathroomTemperatureSensor (TemperatureSensor):
-	def __init__ (self):
-		super (BathroomTemperatureSensor, self).__init__ ("TB", "Bathroom Temperature")
-
-
 class RelayActuator (Actuator):
 	class State:
 		OFF = 0
@@ -207,17 +198,9 @@ class ControlledRelayActuator (Actuator):
 		return True, "Relay is now %s/%s" % (self.state, self.controller)
 
 
-class RelayHeater (RelayActuator):
-	def __init__ (self):
-		super (RelayHeater, self).__init__ ("BH", "Bathroom Heater", "20160228 By SukkoPera <software@sukkology.net>")
-
-class RelayFan (ControlledRelayActuator):
-	def __init__ (self):
-		super (RelayFan, self).__init__ ("KF", "Kitchen Fan", "20170126 By SukkoPera <software@sukkology.net>")
-
 class CommandListener (object):
-	def __init__ (self, port = LISTEN_PORT):
-		self.serverName = "TestServer"
+	def __init__ (self, name, port = LISTEN_PORT):
+		self.serverName = name
 		self.sensors = {}
 		self.notificationRequests = []
 		self._thread = None
@@ -409,22 +392,3 @@ class CommandListener (object):
 			os.write (self._quitPipe[1], "X")
 			self._thread.join ()
 			self._thread = None
-
-if __name__ == "__main__":
-	tk = KitchenTemperatureSensor ()
-	tb = BathroomTemperatureSensor ()
-	rh = RelayHeater ()
-	kf = RelayFan ()
-	listener = CommandListener ()
-	listener.register_sensor (tk)
-	listener.register_sensor (tb)
-	listener.register_sensor (rh)
-	listener.register_sensor (kf)
-
-	listener.start ()
-	time.sleep (10)
-	listener.unregister_sensor (tk)
-	del tk
-	#~ listener.stop ()
-	while True:
-		time.sleep (1)
