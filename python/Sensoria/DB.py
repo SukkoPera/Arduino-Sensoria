@@ -8,8 +8,8 @@ import stereotypes
 class DB (object):
 	TABLE = "sensoria"
 
-	def __init__ (self):
-		self._conn = sqlite3.connect ('sensoria.db', detect_types = sqlite3.PARSE_DECLTYPES)
+	def __init__ (self, dbfile = 'sensoria.db'):
+		self._conn = sqlite3.connect (dbfile, detect_types = sqlite3.PARSE_DECLTYPES)
 		self._conn.row_factory = sqlite3.Row
 		if not self.has_column ("date"):
 			print "Creating DB"
