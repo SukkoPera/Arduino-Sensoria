@@ -337,8 +337,9 @@ class InfoBox (wx.Dialog):
 		btn.Bind (wx.EVT_BUTTON, self.onClose)
 
 		# Making the dialog fixed-size is pretty tedious...
+		w = screenSize = wx.DisplaySize ()[0] / 2
 		self.SetSizerAndFit (sizer)
-		self.SetMinSize ((500, 200))
+		self.SetMinSize ((w, 200))
 		self.Fit ()
 		sz = self.GetSize ()
 		self.SetSizeHints (minW = sz.GetWidth (), minH = sz.GetHeight (), maxW = sz.GetWidth (), maxH = sz.GetHeight ())
@@ -777,10 +778,10 @@ class Frame (wx.Frame):
 		self._lc.SetEmptyListMsg ("No transducers found")
 		self._lc.SetColumns ([
 			ColumnDefn ("Description", "left", 220, "smartName"),
-			ColumnDefn ("Name", "center", 50, "name", maximumWidth = 0),
+			ColumnDefn ("Name", "center", 50, "name", maximumWidth = 0, stringConverter = lambda g: ""),
 			# This col is only used for grouping, use 0 width and make entries empty to hide it
 			ColumnDefn ("Genre", "center", 50, "genre", maximumWidth = 0, stringConverter = lambda g: "", groupKeyConverter = lambda g: "Sensors" if g == Sensoria.SENSOR else "Actuators"),
-			ColumnDefn ("Stereo", "center", 50, "stereotype", maximumWidth = 0),
+			ColumnDefn ("Stereo", "center", 50, "stereotype", maximumWidth = 0, stringConverter = lambda g: ""),
 			ColumnDefn ("Reading", "right", 100, "lastRead", isSpaceFilling = True),
 		])
 		self._lc.SetShowGroups = True
