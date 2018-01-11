@@ -9,7 +9,7 @@ class RelayData (StereoType):
 		self.state = RelayData.UNKNOWN
 
 	def __eq__ (self, other):
-		return other is not None and \
+		return isinstance (other, self.__class__) and \
 			self.state == other.state
 
 	def marshal (self):

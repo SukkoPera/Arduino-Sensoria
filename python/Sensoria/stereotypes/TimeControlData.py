@@ -44,10 +44,10 @@ class TimeControlData (StereoType):
 		self.schedule = [[[TimeControlData.OFF for i in range (TimeControlData.NSLOTS)] for i in range (TimeControlData.NHOURS)] for i in range (TimeControlData.NDAYS)]
 		self.levels = [TimeControlData.UNKNOWN for i in range (TimeControlData.NLEVELS + 1)]	# Level 0 is built-in
 
-	#~ def __eq__ (self, other):
-		#~ same = other is not None and \
-			#~ self.state == other.state and \
-			#~ self.controller == other.controller
+	def __eq__ (self, other):
+		return isinstance (other, self.__class__) and \
+			self.schedule == other.schedule and \
+			self.levels == other.levels
 
 	def unmarshal (self, string):
 		ret = True

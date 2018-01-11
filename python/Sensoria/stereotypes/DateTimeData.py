@@ -43,7 +43,8 @@ class DateTimeData (StereoType):
 			return datetime.datetime.combine (self.date, self.time)
 
 	def __eq__ (self, other):
-		return self.date == other.date and \
+		return isinstance (other, self.__class__) and \
+			self.date == other.date and \
 			self.time == other.time and \
 			self.unixtime == other.unixtime
 
