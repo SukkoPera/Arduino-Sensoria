@@ -35,27 +35,18 @@ class TransducerProxy (object):
 				reply = self.server.send ("NRQ %s %s %s" % (self.name, typeStrings[typ], args))
 			else:
 				reply = self.server.send ("NRQ %s %s" % (self.name, typeStrings[typ]))
-			parts = reply.split (" ", 4)
-			if len (parts) != 3:
-				raise Error, "Unexpected NRQ reply: '%s'" % reply
-			name, t, rep = parts
-			assert name == self.name
-			assert t == typeStrings[typ]
-			if rep.upper () == "OK":
+			if reply.upper () == "OK":
 				self.notificationClients.append (callback)
 				return True
 			else:
+				raise Error, "Unexpected NRQ reply: '%s'" % reply
 				return False
 		else:
 			# Already setup
 			return True
 
 	# This can only be called from Client
-	def _processNotification (self, marshaledData, raw = False):
-		if raw:
-			#~ return marshaledData
-			assert False
-		else:
+	def _processNotification (self, marshaledData):
 			data = self.stereoclass.unmarshalStatic (marshaledData)
 			for callback in self.notificationClients:
 				callback (data)
