@@ -13,6 +13,8 @@ import Sensoria
 from Sensoria.stereotypes.WeatherData import WeatherData
 from Sensoria.stereotypes.RelayData import RelayData
 from Sensoria.stereotypes.ControlledRelayData import ControlledRelayData
+from Sensoria.stereotypes.DateTimeData import DateTimeData
+from Sensoria.stereotypes.TimeControlData import TimeControlData
 
 LISTEN_PORT = 9999
 NOTIFICATION_PORT = 9998
@@ -111,6 +113,14 @@ class Actuator (Transducer):
 	def read (self):
 		raise NotImplementedError
 
+class Clock (Sensor):
+	def __init__ (self, name, description = "", version = ""):
+		super (Clock, self).__init__ (name, DateTimeData.getIdString (), description, version)
+
+	def read (self):
+		dt = DateTimeData.fromNow ()
+		return dt
+
 class TemperatureSensor (Sensor):
 	def __init__ (self, name, description = "", version = ""):
 		super (TemperatureSensor, self).__init__ (name, "WD", description, version)
@@ -121,6 +131,32 @@ class TemperatureSensor (Sensor):
 		wd.humidity = random.randrange (-1000, 3500) / 100.0
 		#~ ts = datetime.datetime.now ().strftime ("%Y-%m-%dT%H:%M:%S")    # ISO 8601
 		return wd
+
+class Heater (Actuator):
+	def __init__ (self, name, description = "", version = ""):
+		super (Heater, self).__init__ (name, TimeControlData.getIdString (), description, version)
+		# Quick hack to initialize control data
+		tmp = TimeControlData ()
+		self.schedule = tmp.schedule
+		self.levels = tmp.levels
+
+		self.schedule[1][8][0] = 3
+
+	def write (self, rawdata):		# FIXME: Get this unmarshaled earlier!
+		data = TimeControlData ()
+		if data.unmarshal (rawdata):
+			self.schedule = data.schedule
+			self.levels = data.levels
+			ret = True, "Schedule updated"
+		else:
+			ret = False, "Unmarshal failed"
+		return ret
+
+	def read (self):
+		data = TimeControlData ()
+		data.schedule = self.schedule
+		data.level = self.levels
+		return data
 
 class RelayActuator (Actuator):
 	class State:
@@ -247,7 +283,7 @@ class CommandListener (object):
 		self._reply (addr, "VER %s" % self.serverName)
 
 	def _hlo (self, addr, args):
-		self._reply (addr, "HLO %s %s" % (self.serverName, "|".join ("%s %s %s %s" % (sensor.name, sensor.get_type_string (), sensor.stereotype, sensor.description) for sensor in self.sensors.itervalues ())))
+		self._reply (addr, "HLO %s %s" % (self.serverName, "|".join (("%s %s %s %s" % (sensor.name, sensor.get_type_string (), sensor.stereotype, sensor.description)).rstrip () for sensor in self.sensors.itervalues ())))
 
 
 	def _rea (self, addr, args):
@@ -341,7 +377,7 @@ class CommandListener (object):
 		print  >> sys.stderr, 'Waiting for commands...'
 		while not self._shallStop:
 			rlist = [self._sock, self._quitPipe[0]]
-			r, w, x = select.select (rlist, [], [], 5)
+			r, w, x = select.select (rlist, [], [], 1)
 
 			if self._quitPipe[0] in r:
 				# Thread shall exit
