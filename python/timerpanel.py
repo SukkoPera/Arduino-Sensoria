@@ -118,7 +118,7 @@ class TimerPanel (wx.grid.Grid):
 
 class TimerEditDialog (wx.Dialog):
 	def __init__(self, t):
-		super (TimerEditDialog, self).__init__(None, -1, "Edit Timer %s" % t.name, style = wx.DEFAULT_DIALOG_STYLE | wx.THICK_FRAME | wx.TAB_TRAVERSAL)
+		super (TimerEditDialog, self).__init__ (None, -1, "Edit Timer %s" % t.name, style = wx.DEFAULT_DIALOG_STYLE | wx.THICK_FRAME | wx.TAB_TRAVERSAL)
 
 		self.transducer = t
 
@@ -132,7 +132,7 @@ class TimerEditDialog (wx.Dialog):
 		btnCancel = wx.Button (self, wx.ID_CANCEL, '&Cancel')
 		btnBox.Add (btnCancel, 0)
 		btnCancel.Bind (wx.EVT_BUTTON, self.onCancel)
-		btnOk = wx.Button (self, wx.ID_APPLY, '&OK')
+		btnOk = wx.Button (self, wx.ID_OK, '&OK')
 		btnBox.Add (btnOk, 0)
 		btnOk.SetDefault ()
 		btnOk.Bind (wx.EVT_BUTTON, self.onOk)
@@ -157,6 +157,8 @@ class TimerEditDialog (wx.Dialog):
 		except Sensoria.Error as ex:
 			wx.MessageBox ("Unable to set timer schedule: %s" % str (ex), "Error")
 		self.Close ()
+		event.Skip ()
 
 	def onCancel (self, event):
 		self.Close ()
+		event.Skip ()
