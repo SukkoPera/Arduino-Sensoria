@@ -335,8 +335,8 @@ class InfoBox (wx.Dialog):
 
 		btn = wx.Button (self, wx.ID_CLOSE, 'Close')
 		btn.SetDefault ()
+		self.SetEscapeId (wx.ID_CLOSE)
 		sizer.Add (btn, 0, wx.ALIGN_RIGHT | wx.RIGHT | wx.BOTTOM, 10)
-		btn.Bind (wx.EVT_BUTTON, self.onClose)
 
 		# Making the dialog fixed-size is pretty tedious...
 		w = screenSize = wx.DisplaySize ()[0] / 2
@@ -348,9 +348,6 @@ class InfoBox (wx.Dialog):
 
 		self.CentreOnParent (wx.BOTH)
 		self.SetFocus ()
-
-	def onClose (self, event):
-		self.Close ()
 
 class ServersBox (wx.Dialog):
 	def __init__(self, frame):
