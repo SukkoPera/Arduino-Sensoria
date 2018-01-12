@@ -436,7 +436,7 @@ class PopupMenuTransducer (wx.Menu):
 		self.AppendItem (item)
 		self.Bind (wx.EVT_MENU, self.onUpdate, item)
 
-		item = wx.MenuItem (self, wx.ID_EDIT, "&Set Format...")
+		item = wx.MenuItem (self, wx.ID_EDIT, "&Set Format...\tCtrl+F")
 		self.AppendItem (item)
 		self.Bind (wx.EVT_MENU, self.onSetFormat, item)
 
@@ -689,12 +689,6 @@ class MenuBar (wx.MenuBar):
 		self._frame.Bind (wx.EVT_MENU, self.onAbout, m_about)
 		self.Append (menu, "&Help")
 
-		#~ accTable = [
-			#~ (wx.ACCEL_CTRL, ord ('N'), MenuBar.MENUITEM_FORCE_UPD),
-			#~ (wx.ACCEL_NORMAL, wx.WXK_F5, MenuBar.MENUITEM_FORCE_UPD)
-		#~ ]
-		#~ self._frame.SetAcceleratorTable (wx.AcceleratorTable (accTable))
-
 	def onServers (self, event):
 		dlg = ServersBox (self._frame)
 		dlg.ShowModal ()
@@ -753,6 +747,9 @@ class AutoStatusBar (wx.StatusBar):
 			self.SetStatusText ("")
 
 class Frame (wx.Frame):
+	EVT_SET_FORMAT = wx.NewId ()
+	EVT_COPY = wx.NewId ()
+
 	def __init__(self):
 		self.config = Config ()
 		self.config.load ()
@@ -762,6 +759,15 @@ class Frame (wx.Frame):
 
 		menuBar = MenuBar (self)
 		self.SetMenuBar (menuBar)
+
+		# Set up accelerator table, used for popup menu shortcuts
+		accTable = [
+			(wx.ACCEL_CTRL, ord ('C'), Frame.EVT_COPY),
+			(wx.ACCEL_CTRL, ord ('F'), Frame.EVT_SET_FORMAT),
+		]
+		self.Bind (wx.EVT_MENU, self.onCopy, id = Frame.EVT_COPY)
+		self.Bind (wx.EVT_MENU, self.onSetFormat, id = Frame.EVT_SET_FORMAT)
+		self.SetAcceleratorTable (wx.AcceleratorTable (accTable))
 
 		self._statusBar = AutoStatusBar (self)
 		self.SetStatusBar (self._statusBar)
@@ -808,6 +814,30 @@ class Frame (wx.Frame):
 		self.Bind (wx.EVT_TIMER, self.update, self.timer)
 		self.timer.Start (1000)
 
+	# These handle accelerator presses that trigger context menu actions
+	# I don't really like the code duplication here...
+	def onSetFormat (self, event):
+		t = self._lc.GetSelectedObject ()
+		if t is not None:
+			print "Shall set format for %s" % t.name
+			dlg = DialogSetFormat (t)
+			dlg.ShowModal ()
+			dlg.Destroy ()
+
+	def onCopy (self, event):
+		t = self._lc.GetSelectedObject ()
+		if t is not None:
+			if wx.TheClipboard.Open ():
+				s = str (t.lastRead)
+				print "Copying to clipboard: '%s'" % s
+				dataObj = wx.TextDataObject ()
+				dataObj.SetText (s)
+				wx.TheClipboard.SetData (dataObj)
+				#~ wx.TheClipboard.Flush ()
+				wx.TheClipboard.Close ()
+			else:
+				wx.MessageBox ("Unable to open the clipboard", "Error")
+
 	@staticmethod
 	def rowFormatter (listItem, t):
 		if type (t.lastRead) is str and t.lastRead.startswith ("ERROR"):
@@ -850,6 +880,7 @@ class Frame (wx.Frame):
 		else:
 			# Use default interval
 			self._statusBar.push (msg)
+
 
 	def onQuit (self, event):
 		self.config.winPos = self.GetPosition ()
