@@ -25,12 +25,10 @@ PFR:000000000000000021100000000000000003322222221111
 PSA:000000000000000000033222222222222222222222221111
 PSU:000000000000000000033222222222222222222222221110
 
-TL1:10 TL2:18 TL3:21 PMO:000000000000000021100000000000000003322222111110 PTU:000000000000000021100000000000000003322222111110 PWE:000000000000000021100000000000000003322222111110 PTH:000000000000000021100000000000000003322222111110 PFR:000000000000000021100000000000000003322222221111 PSA:000000000000000000033222222222222222222222221111 PSU:000000000000000000033222222222222222222222221110
+PMO:000000000000000021100000000000000003322222111110 PTU:000000000000000021100000000000000003322222111110 PWE:000000000000000021100000000000000003322222111110 PTH:000000000000000021100000000000000003322222111110 PFR:000000000000000021100000000000000003322222221111 PSA:000000000000000000033222222222222222222222221111 PSU:000000000000000000033222222222222222222222221110
 """
 class TimeControlData (StereoType):
 	OFF = 0
-	UNKNOWN = -1
-	NLEVELS = 3
 	NDAYS = 7
 	NHOURS = 24
 	NSLOTS = 1		# 2 slots -> Half-hour granularity
@@ -40,26 +38,18 @@ class TimeControlData (StereoType):
 	_IDSTR = "TC"
 
 	def __init__ (self):
-		#~ self.schedule = [[[TimeControlData.OFF] * TimeControlData.NSLOTS] * TimeControlData.NHOURS] * TimeControlData.NDAYS
 		self.schedule = [[[TimeControlData.OFF for i in range (TimeControlData.NSLOTS)] for i in range (TimeControlData.NHOURS)] for i in range (TimeControlData.NDAYS)]
-		self.levels = [TimeControlData.UNKNOWN for i in range (TimeControlData.NLEVELS + 1)]	# Level 0 is built-in
 
 	def __eq__ (self, other):
 		return isinstance (other, self.__class__) and \
-			self.schedule == other.schedule and \
-			self.levels == other.levels
+			self.schedule == other.schedule
 
 	def unmarshal (self, string):
 		ret = True
-		string = string.upper ()
 		d = dict ([p.split (":") for p in string.split (" ")])
 
 		for k, v in d.iteritems ():
-			if k.startswith ("TL") and len (k) == 3:
-				lev = int (k[2])
-				if lev >= 1 and lev <= TimeControlData.NLEVELS:
-					self.levels[lev] = float (v)
-			elif k.startswith ("P") and len (k) == 3:
+			if k[0].upper () == "P" and len (k) == 3:
 				day = k[1:]
 				if day in TimeControlData.DAY_ABBR:
 					n = TimeControlData.DAY_ABBR.index (day)
@@ -72,18 +62,12 @@ class TimeControlData (StereoType):
 				else:
 					print "Bad Day: '%s'" % day
 					ret = False
-
+			else:
+				print "Bad key: %s" % k
 		return ret
 
 	def marshal (self):
 		val = ""
-
-		for i in xrange (1, TimeControlData.NLEVELS + 1):
-			if int (self.levels[i]) == self.levels[i]:
-				# Avoid decimals if possible
-				val += "TL%u:%u " % (i, self.levels[i])
-			else:
-				val += "TL%u:%f " % (i, self.levels[i])
 
 		for i in xrange (0, TimeControlData.NDAYS):
 			p = "".join (["".join (str (y) for y in x) for x in self.schedule[i]])
@@ -96,14 +80,21 @@ class TimeControlData (StereoType):
 		return self.marshal ()
 
 if __name__ == "__main__":
-	s = "TL1:10 TL2:18 TL3:21 PMO:000000000000000021100000000000000003322222111110 PTU:000000000000000021100000000000000003322222111110 PWE:000000000000000021100000000000000003322222111110 PTH:000000000000000021100000000000000003322222111110 PFR:000000000000000021100000000000000003322222221111 PSA:000000000000000000033222222222222222222222221111 PSU:000000000000000000033222222222222222222222221110"
+	s = """
+PMO:000000001000000003222110
+PTU:000000001000000003222110
+PWE:000000001000000003222110
+PTH:000000001000000003222110
+PFR:000000001000000003222111
+PSA:000000000322222222222211
+PSU:000000000322222222222210
+""".replace ('\n', ' ').strip ()
+
 
 	tc = TimeControlData ()
 	tc.unmarshal (s)
 	#~ for day in xrange (0, TimeControlData.NDAYS):
 		#~ print tc.schedule[day]
-	#~ for i in xrange (1, TimeControlData.NLEVELS + 1):
-		#~ print "- Level %u: %u" % (i, tc.levels[i])
 	#~ print str (tc)
 	s2 = tc.marshal ()
-	assert s == s2, "Marshal/Unmarshal mismatch"
+	assert s == s2, "Marshal/Unmarshal mismatch:\n%s\n%s" % (s, s2)

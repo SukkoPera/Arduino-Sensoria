@@ -17,10 +17,11 @@ class HeaterController (server.ControlledRelayActuator):
 	def __init__ (self):
 		super (HeaterController, self).__init__ ("HC", "Bathroom Heater (Controller)", "20171213 By SukkoPera <software@sukkology.net>")
 
-class HeaterTimer (server.Heater):
+#TL1:10 TL2:18 TL3:21
+class HeaterTimer (server.TimedActuator):
 	def __init__ (self):
 		super (HeaterTimer, self).__init__ ("HT", "Bathroom Heater (Timer)", "20171213 By SukkoPera <software@sukkology.net>")
-		ok, msg = self.write ("TL1:10 TL2:18 TL3:21 PMO:000000001000000003222110 PTU:000000001000000003222110 PWE:000000001000000003222110 PTH:000000001000000003222110 PFR:000000001000000003222111 PSA:000000000322222222222211 PSU:000000000322222222222210")
+		ok, msg = self.write ("PMO:000000001000000003222110 PTU:000000001000000003222110 PWE:000000001000000003222110 PTH:000000001000000003222110 PFR:000000001000000003222111 PSA:000000000322222222222211 PSU:000000000322222222222210")
 		print msg
 		assert ok
 

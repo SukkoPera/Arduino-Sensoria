@@ -133,21 +133,17 @@ class TemperatureSensor (Sensor):
 		#~ ts = datetime.datetime.now ().strftime ("%Y-%m-%dT%H:%M:%S")    # ISO 8601
 		return wd
 
-class Heater (Actuator):
+class TimedActuator (Actuator):
 	def __init__ (self, name, description = "", version = ""):
-		super (Heater, self).__init__ (name, TimeControlData.getIdString (), description, version)
+		super (TimedActuator, self).__init__ (name, TimeControlData.getIdString (), description, version)
 		# Quick hack to initialize control data
 		tmp = TimeControlData ()
 		self.schedule = copy.deepcopy (tmp.schedule)
-		self.levels = tmp.levels
-
-		self.schedule[1][8][0] = 3
 
 	def write (self, rawdata):		# FIXME: Get this unmarshaled earlier!
 		data = TimeControlData ()
 		if data.unmarshal (rawdata):
-			self.schedule = data.schedule
-			self.levels = data.levels
+			self.schedule = copy.deepcopy (data.schedule)
 			ret = True, "Schedule updated"
 		else:
 			ret = False, "Unmarshal failed"
@@ -155,8 +151,7 @@ class Heater (Actuator):
 
 	def read (self):
 		data = TimeControlData ()
-		data.schedule = self.schedule
-		data.level = self.levels
+		data.schedule = copy.deepcopy (self.schedule)
 		return data
 
 class RelayActuator (Actuator):

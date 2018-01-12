@@ -3,5 +3,6 @@ __all__ = [
 	"RelayData",
 	"ControlledRelayData",
 	"DateTimeData",
-	"TimeControlData"
+	"TimeControlData",
+	"ValueSetData"
 ]
