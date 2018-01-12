@@ -472,7 +472,7 @@ class PopupMenuTransducer (wx.Menu):
 			#~ wx.TheClipboard.Flush ()
 			wx.TheClipboard.Close ()
 		else:
-			wx.MessageBox ("Unable to open the clipboard", "Error")
+			wx.MessageBox ("Unable to open the clipboard", "Error", wx.ICON_ERROR)
 
 	def onNotifyChange (self, event):
 		print "Shall get notifications on change of %s" % self.transducer.name
@@ -852,7 +852,7 @@ class Frame (wx.Frame):
 				#~ wx.TheClipboard.Flush ()
 				wx.TheClipboard.Close ()
 			else:
-				wx.MessageBox ("Unable to open the clipboard", "Error")
+				wx.MessageBox ("Unable to open the clipboard", "Error", wx.ICON_ERROR)
 
 	@staticmethod
 	def rowFormatter (listItem, t):

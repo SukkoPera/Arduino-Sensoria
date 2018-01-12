@@ -157,6 +157,6 @@ class TimerEditDialog (wx.Dialog):
 		try:
 			self.transducer.write (tc)
 		except Sensoria.Error as ex:
-			wx.MessageBox ("Unable to set timer schedule: %s" % str (ex), "Error")
+			wx.MessageBox ("Unable to set timer schedule.\n\n%s" % str (ex), "Error", wx.ICON_ERROR)
 		self.Close ()
 		event.Skip ()
