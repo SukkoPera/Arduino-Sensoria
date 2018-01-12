@@ -309,7 +309,7 @@ class InfoBox (wx.Dialog):
 		super (InfoBox, self).__init__ (None, -1, "%s %s" % ("Sensor" if t.genre == Sensoria.SENSOR else "Actuator", t.name), style = wx.DEFAULT_DIALOG_STYLE | wx.THICK_FRAME | wx.TAB_TRAVERSAL)
 		sizer = wx.BoxSizer (wx.VERTICAL)
 
-		gs = wx.FlexGridSizer (8, 2, 10, 5)
+		gs = wx.FlexGridSizer (9, 2, 10, 5)
 		gs.AddMany ([
 			(wx.StaticText (self, -1, 'Name:'), 0, wx.ALIGN_CENTER_VERTICAL),
 			(ReadOnlyTextCtrl (self, -1, t.name, style = wx.TE_CENTER), 1, wx.EXPAND),
@@ -325,6 +325,8 @@ class InfoBox (wx.Dialog):
 			(ReadOnlyTextCtrl (self, -1, "%s:%u" % (t.server.address, t.server.port), style = wx.TE_CENTER), 1, wx.EXPAND),
 			(wx.StaticText (self, -1, 'Last Reading:'), 0, wx.ALIGN_CENTER_VERTICAL),
 			(ReadOnlyTextCtrl (self, -1, "%s" % t.lastRead, style = wx.TE_CENTER), 1, wx.EXPAND),
+			(wx.StaticText (self, -1, 'Last Reading (Raw):'), 0, wx.ALIGN_CENTER_VERTICAL),
+			(ReadOnlyTextCtrl (self, -1, "%s" % t.lastReadRaw, style = wx.TE_CENTER), 1, wx.EXPAND),
 			(wx.StaticText (self, -1, 'Last Update:'), 0, wx.ALIGN_CENTER_VERTICAL),
 			(ReadOnlyTextCtrl (self, -1, "%s" % t.updateTime.strftime ("%c") if t.updateTime else "N/A", style = wx.TE_CENTER), 1, wx.EXPAND)
 		])
