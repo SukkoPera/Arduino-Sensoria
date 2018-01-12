@@ -916,14 +916,6 @@ class Frame (wx.Frame):
 
 logging.basicConfig (level = logging.DEBUG)
 app = wx.App ()   # Error messages go to popup window
-#~ class T (object):
-	#~ def __init__ (self):
-		#~ self.name = "IT"
-		#~ self.description = "Outdoor Temperature"
-		#~ self.genre = "S"
-		#~ self.stereotype = "WD"
-#~
-#~ tw = TransducerWrapper (None, T ())
 top = Frame ()
 top.Show ()
 app.MainLoop ()
