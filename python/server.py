@@ -16,6 +16,7 @@ from Sensoria.stereotypes.RelayData import RelayData
 from Sensoria.stereotypes.ControlledRelayData import ControlledRelayData
 from Sensoria.stereotypes.DateTimeData import DateTimeData
 from Sensoria.stereotypes.TimeControlData import TimeControlData
+from Sensoria.stereotypes.ValueSetData import ValueSetData
 
 LISTEN_PORT = 9999
 NOTIFICATION_PORT = 9998
@@ -152,6 +153,25 @@ class TimedActuator (Actuator):
 	def read (self):
 		data = TimeControlData ()
 		data.schedule = copy.deepcopy (self.schedule)
+		return data
+
+class ValueSetActuator (Actuator):
+	def __init__ (self, name, description = "", version = ""):
+		super (ValueSetActuator, self).__init__ (name, ValueSetData.getIdString (), description, version)
+		self.values = [None] * ValueSetData.NVALUES
+
+	def write (self, rawdata):		# FIXME: Get this unmarshaled earlier!
+		data = ValueSetData ()
+		if data.unmarshal (rawdata):
+			self.values = copy.deepcopy (data.values)
+			ret = True, "Values updated"
+		else:
+			ret = False, "Unmarshal failed"
+		return ret
+
+	def read (self):
+		data = ValueSetData ()
+		data.values = copy.deepcopy (self.values)
 		return data
 
 class RelayActuator (Actuator):

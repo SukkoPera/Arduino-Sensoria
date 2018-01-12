@@ -25,6 +25,19 @@ class HeaterTimer (server.TimedActuator):
 		print msg
 		assert ok
 
+class HeaterSettings (server.ValueSetActuator):
+	def __init__ (self):
+		super (HeaterSettings, self).__init__ ("HS", "Bathroom Heater (Settings)", "20180112 By SukkoPera <software@sukkology.net>")
+		self.levels = [10, 18, 21]
+
+	@property
+	def values (self):
+		return self.levels
+
+	@values.setter
+	def values (self, v):
+		self.levels = v[0:3]
+
 class RelayFan (server.RelayActuator):
 	def __init__ (self):
 		super (RelayFan, self).__init__ ("KF", "Kitchen Fan", "20170126 By SukkoPera <software@sukkology.net>")
@@ -33,6 +46,7 @@ tk = KitchenTemperatureSensor ()
 tb = BathroomTemperatureSensor ()
 hc = HeaterController ()
 ht = HeaterTimer ()
+hs = HeaterSettings ()
 kf = RelayFan ()
 ck = server.Clock ("$T", "Clock")
 listener = server.CommandListener ("Server1")
@@ -40,6 +54,7 @@ listener.register_sensor (tk)
 listener.register_sensor (tb)
 listener.register_sensor (hc)
 listener.register_sensor (ht)
+listener.register_sensor (hs)
 listener.register_sensor (kf)
 listener.register_sensor (ck)
 

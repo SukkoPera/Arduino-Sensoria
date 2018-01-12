@@ -34,8 +34,8 @@ class ValueSetData (StereoType):
 	def marshal (self):
 		val = ""
 
-		for i in xrange (0, ValueSetData.NVALUES):
-			if self.values[i] is not None:
+		for i, v in enumerate (self.values):
+			if v is not None:
 				val += "V%u:%s " % (i, str (self.values[i]))
 
 		return val.rstrip ()
