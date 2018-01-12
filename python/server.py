@@ -8,6 +8,7 @@ import select
 import os
 import threading
 import time
+import copy
 
 import Sensoria
 from Sensoria.stereotypes.WeatherData import WeatherData
@@ -137,7 +138,7 @@ class Heater (Actuator):
 		super (Heater, self).__init__ (name, TimeControlData.getIdString (), description, version)
 		# Quick hack to initialize control data
 		tmp = TimeControlData ()
-		self.schedule = tmp.schedule
+		self.schedule = copy.deepcopy (tmp.schedule)
 		self.levels = tmp.levels
 
 		self.schedule[1][8][0] = 3

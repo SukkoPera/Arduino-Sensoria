@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import datetime
+import copy
 
 import wx
 import wx.grid
@@ -45,7 +46,7 @@ class TimerPanel (wx.grid.Grid):
 
 	@schedule.setter
 	def schedule (self, s):
-		self._schedule = s
+		self._schedule = copy.deepcopy (s)		# Copy, don't modify original
 
 		# Update view
 		for i in xrange (0, TimerPanel.NDAYS):
@@ -92,14 +93,15 @@ class TimerPanel (wx.grid.Grid):
 		c = evt.GetCol ()
 		#~ print "OnCellLeftClick: (%d,%d) %s" % (r, c, evt.GetPosition())
 
-		old = self.schedule[r][c][0]
+		old = self._schedule[r][c][0]
 		new = (old + 1) % len (TimerPanel.COLORS)
-		self.schedule[r][c][0] = new
+		self._schedule[r][c][0] = new
 
 		self.SetCellBackgroundColour (r, c, self.COLORS[new])
 		self.Refresh ()
 		self.ClearSelection ()
 		#~ evt.Veto ()
+
 
 	def onCellRightClick (self, evt):
 		r = evt.GetRow ()
@@ -118,7 +120,7 @@ class TimerPanel (wx.grid.Grid):
 
 class TimerEditDialog (wx.Dialog):
 	def __init__(self, t):
-		super (TimerEditDialog, self).__init__ (None, -1, "Edit Timer %s" % t.name, style = wx.DEFAULT_DIALOG_STYLE | wx.THICK_FRAME | wx.TAB_TRAVERSAL)
+		super (TimerEditDialog, self).__init__ (None, title = "Edit Timer %s" % t.name, style = wx.DEFAULT_DIALOG_STYLE | wx.THICK_FRAME | wx.TAB_TRAVERSAL)
 
 		self.transducer = t
 
@@ -129,9 +131,8 @@ class TimerEditDialog (wx.Dialog):
 		sizer.Add (self._tPanel, 0, wx.EXPAND | wx.ALL, 30)
 
 		btnBox = wx.BoxSizer (wx.HORIZONTAL)
-		btnCancel = wx.Button (self, wx.ID_CANCEL, '&Cancel')
+		btnCancel = wx.Button (self, wx.ID_CANCEL, '&Cancel')		# Using ID_CANCEL automatically closes dialog
 		btnBox.Add (btnCancel, 0)
-		btnCancel.Bind (wx.EVT_BUTTON, self.onCancel)
 		btnOk = wx.Button (self, wx.ID_OK, '&OK')
 		btnBox.Add (btnOk, 0)
 		btnOk.SetDefault ()
@@ -150,15 +151,12 @@ class TimerEditDialog (wx.Dialog):
 		self.SetFocus ()
 
 	def onOk (self, event):
+		print "Saving Timer Data"
 		tc = TimeControlData ()
 		tc.schedule = self._tPanel.schedule
 		try:
 			self.transducer.write (tc)
 		except Sensoria.Error as ex:
 			wx.MessageBox ("Unable to set timer schedule: %s" % str (ex), "Error")
-		self.Close ()
-		event.Skip ()
-
-	def onCancel (self, event):
 		self.Close ()
 		event.Skip ()
