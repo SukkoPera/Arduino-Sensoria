@@ -9,6 +9,7 @@ import threading
 
 import wx
 from timerpanel import TimerEditDialog
+from settingspanel import SettingsEditDialog
 
 import Sensoria
 
@@ -580,13 +581,27 @@ class PopupMenuActuatorTC (PopupMenuTransducer):
 	def __init__ (self, transducer):
 		super (PopupMenuActuatorTC, self).__init__ (transducer, True)
 
-		item = wx.MenuItem (self, wx.ID_EDIT, "&Edit Schedule...")
+		item = wx.MenuItem (self, wx.ID_PREFERENCES, "&Edit Schedule...")
 		self.AppendItem (item)
 		self.Bind (wx.EVT_MENU, self.onEdit, item)
 
 	def onEdit (self, event):
-		print "Shall edit %s" % self.transducer.name
+		print "Shall edit schedule for %s" % self.transducer.name
 		dlg = TimerEditDialog (self.transducer)
+		dlg.ShowModal ()
+		dlg.Destroy ()
+
+class PopupMenuActuatorVS (PopupMenuTransducer):
+	def __init__ (self, transducer):
+		super (PopupMenuActuatorVS, self).__init__ (transducer, True)
+
+		item = wx.MenuItem (self, wx.ID_PREFERENCES, "&Edit Settings...")
+		self.AppendItem (item)
+		self.Bind (wx.EVT_MENU, self.onEdit, item)
+
+	def onEdit (self, event):
+		print "Shall edit settings for %s" % self.transducer.name
+		dlg = SettingsEditDialog (self.transducer)
 		dlg.ShowModal ()
 		dlg.Destroy ()
 
@@ -594,7 +609,8 @@ class PopupMenuActuatorTC (PopupMenuTransducer):
 stereoTypeToMenu = {
 	"RS": PopupMenuActuatorRS,
 	"CR": PopupMenuActuatorCR,
-	"TC": PopupMenuActuatorTC
+	"TC": PopupMenuActuatorTC,
+	"VS": PopupMenuActuatorVS
 }
 
 class MyAutodiscoveryHandler (Sensoria.AutodiscoveryHandler):
