@@ -445,7 +445,7 @@ class PopupMenuTransducer (wx.Menu):
 		self.AppendItem (item)
 		self.Bind (wx.EVT_MENU, self.onCopy, item)
 
-		item = wx.MenuItem (self, wx.NewId (), "&Notify on Change")
+		item = wx.MenuItem (self, wx.ID_REDO, "&Notify on Change")
 		self.AppendItem (item)
 		self.Bind (wx.EVT_MENU, self.onNotifyChange, item)
 
