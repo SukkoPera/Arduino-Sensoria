@@ -11,26 +11,23 @@ import android.widget.TextView;
 
 import com.sensoria.typhosoft.sensapp.R;
 import com.sensoria.typhosoft.sensapp.SensActivity;
-import com.sensoria.typhosoft.sensapp.datamodel.Actuator;
-import com.sensoria.typhosoft.sensapp.datamodel.SensCommandEnum;
-import com.sensoria.typhosoft.sensapp.datamodel.SensStereotypeEnum;
-import com.sensoria.typhosoft.sensapp.datamodel.Sensor;
-import com.sensoria.typhosoft.sensapp.datamodel.Transducer;
+import com.sensoria.typhosoft.sensapp.datamodel.actuator.Actuator;
+import com.sensoria.typhosoft.sensapp.datamodel.ESensCommand;
+import com.sensoria.typhosoft.sensapp.datamodel.ESensStereotype;
+import com.sensoria.typhosoft.sensapp.datamodel.sensor.Sensor;
 import com.sensoria.typhosoft.sensapp.network.SensClient;
-
-import java.util.List;
 
 /**
  * Created by santonocitom on 27/06/17.
  */
 
-public class SensAdapter extends ArrayAdapter<Transducer> {
+public class SensAdapter extends ArrayAdapter<ISensAdapterItems> {
 
     public final LayoutInflater inflater;
     private final SensClient sensClient;
 
-    public SensAdapter(SensActivity context, int resource, List<Transducer> items, SensClient sensClient) {
-        super(context, resource, items);
+    public SensAdapter(SensActivity context, int resource, SensClient sensClient) {
+        super(context, resource);
         this.sensClient = sensClient;
         setNotifyOnChange(true);
         inflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
@@ -44,13 +41,13 @@ public class SensAdapter extends ArrayAdapter<Transducer> {
 
     @Override
     public int getViewTypeCount() {
-        return SensStereotypeEnum.values().length;
+        return ESensStereotype.values().length;
     }
 
 
     @Override
     public View getView(int position, View convertView, ViewGroup parent) {
-        Transducer currentRowItem = getItem(position);
+        ISensAdapterItems currentRowItem = getItem(position);
         View vi = convertView;
         if (convertView == null) {
             switch (currentRowItem.getType()) {
@@ -98,9 +95,9 @@ public class SensAdapter extends ArrayAdapter<Transducer> {
                         String name = actuator.getName();
                         if (isChecked != actuator.getOnOff()) {
                             if (holder.getAutoManualSwitch() != null) {
-                                sensClient.sendMessage(SensCommandEnum.WRI.getCmd() + " " + name + " C:" + (isChecked ? "ON" : "OFF") + " S:" + (holder.getAutoManualSwitch().isChecked() ? "AUT" : "MAN"));
+                                sensClient.sendMessage(ESensCommand.WRI.getCmd() + " " + name + " C:" + (isChecked ? "ON" : "OFF") + " S:" + (holder.getAutoManualSwitch().isChecked() ? "AUT" : "MAN"));
                             } else {
-                                sensClient.sendMessage(SensCommandEnum.WRI.getCmd() + " " + name + " " + (isChecked ? "ON" : "OFF"));
+                                sensClient.sendMessage(ESensCommand.WRI.getCmd() + " " + name + " " + (isChecked ? "ON" : "OFF"));
                             }
                             actuator.setOnOff(isChecked);
                         }
@@ -116,7 +113,7 @@ public class SensAdapter extends ArrayAdapter<Transducer> {
                         Actuator actuator = (Actuator) holder.getTransducer();
                         String name = actuator.getName();
                         if (isChecked != actuator.getAutoManual()) {
-                            sensClient.sendMessage(SensCommandEnum.WRI.getCmd() + " " + name + " C:" + (holder.getOnOffSwitch().isChecked() ? "ON" : "OFF") + " S:" + (isChecked ? "AUT" : "MAN"));
+                            sensClient.sendMessage(ESensCommand.WRI.getCmd() + " " + name + " C:" + (holder.getOnOffSwitch().isChecked() ? "ON" : "OFF") + " S:" + (isChecked ? "AUT" : "MAN"));
                             actuator.setAutoManual(isChecked);
                         }
                     }
@@ -174,9 +171,9 @@ public class SensAdapter extends ArrayAdapter<Transducer> {
         private TextView dataText;
         private Switch onOffSwitch;
         private Switch autoManualSwitch;
-        private Transducer transducer;
+        private ISensAdapterItems transducer;
 
-        public ViewHolder(Transducer transducer) {
+        public ViewHolder(ISensAdapterItems transducer) {
             setTransducer(transducer);
         }
 
@@ -198,11 +195,11 @@ public class SensAdapter extends ArrayAdapter<Transducer> {
             }
         }
 
-        public Transducer getTransducer() {
+        public ISensAdapterItems getTransducer() {
             return transducer;
         }
 
-        public void setTransducer(Transducer transducer) {
+        public void setTransducer(ISensAdapterItems transducer) {
             this.transducer = transducer;
         }
 

@@ -4,11 +4,11 @@ package com.sensoria.typhosoft.sensapp.datamodel;
  * Created by santonocitom on 27/06/17.
  */
 
-public class Sensor extends Transducer {
+public class Sensor extends ATransducer {
     private String data;
 
     public Sensor(String command) {
-        super(SensorTypeEnum.SENSOR);
+        super(ESensorType.SENSOR);
         parse(command);
     }
 

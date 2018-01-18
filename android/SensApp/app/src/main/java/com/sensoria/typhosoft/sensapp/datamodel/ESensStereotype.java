@@ -9,7 +9,8 @@ public enum SensStereotypeEnum {
     WEATHER_DATA("WD"),
     RELAY_DATA("RS"),
     CONTROLLED_RELAY_DATA("CR"),
-    MOTION_DATA("MD");
+    MOTION_DATA("MD"),
+    TIME_CONTROL_DATA("TC");
 
     private String stringType;
 

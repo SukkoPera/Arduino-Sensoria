@@ -4,7 +4,7 @@ package com.sensoria.typhosoft.sensapp.datamodel;
  * Created by santonocitom on 29/06/17.
  */
 
-public enum SensorTypeEnum {
+public enum ESensorType {
     ACTUATOR("A", "Actuator"),
     SENSOR("S", "Sensor"),
     NODE("N", "Node");
@@ -12,13 +12,13 @@ public enum SensorTypeEnum {
     private String stringType;
     private String description;
 
-    SensorTypeEnum(String type, String description) {
+    ESensorType(String type, String description) {
         this.stringType = type;
         this.description = description;
     }
 
-    public static SensorTypeEnum convert(String type){
-        for (SensorTypeEnum t:SensorTypeEnum.values()) {
+    public static ESensorType convert(String type){
+        for (ESensorType t: ESensorType.values()) {
             if(t.stringType.equalsIgnoreCase(type))
                 return t;
         }

@@ -35,9 +35,16 @@ public abstract class Transducer implements Serializable, Comparable<Transducer>
     }
 
     protected void parse(String command) {
-        name = command.substring(0, 2);
-        stereoType = SensStereotypeEnum.convert(command.substring(5, 7));
-        descriptor = command.substring(8);
+        if (command.length() >= 2) {
+            name = command.substring(0, 2);
+        }
+
+        if (command.length() >= 7) {
+            stereoType = SensStereotypeEnum.convert(command.substring(5, 7));
+        }
+        if (command.length() >= 8) {
+            descriptor = command.substring(8);
+        }
     }
 
     public SensStereotypeEnum getStereoType() {

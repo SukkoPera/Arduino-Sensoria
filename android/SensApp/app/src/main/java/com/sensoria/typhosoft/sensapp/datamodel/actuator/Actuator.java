@@ -4,13 +4,13 @@ package com.sensoria.typhosoft.sensapp.datamodel;
  * Created by santonocitom on 29/06/17.
  */
 
-public class Actuator extends Transducer {
+public class Actuator extends ATransducer {
 
     private Boolean onOff;
     private Boolean autoManual;
 
     public Actuator(String string) {
-        super(SensorTypeEnum.ACTUATOR);
+        super(ESensorType.ACTUATOR);
         parse(string);
     }
 
