@@ -205,7 +205,7 @@ class Client (object):
 									h.onTransducersAdded (srvpx.transducers.values ())
 						else:
 							logger.info ("Server %s is new", model)
-							if len (srvpx.transducers) > 0:
+							if srvpx.transducerList is not None:
 								self._addServer (self._realizeServer (srvpx))
 							else:
 								logger.warning ("Server %s has no transducers, ignoring" % model)
