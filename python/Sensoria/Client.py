@@ -59,6 +59,7 @@ class Client (object):
 			self._startAutodiscoverTimer (Client.INITIAL_AUTODISCOVER_DELAY)	# First time
 		else:
 			self._autodiscoverTimer = None
+
 	def enableNotifications (self):
 		self.notificationRequests = []
 		self._notificationSocket = socket.socket (socket.AF_INET, socket.SOCK_DGRAM)
@@ -204,7 +205,10 @@ class Client (object):
 									h.onTransducersAdded (srvpx.transducers.values ())
 						else:
 							logger.info ("Server %s is new", model)
-							self._addServer (self._realizeServer (srvpx))
+							if len (srvpx.transducers) > 0:
+								self._addServer (self._realizeServer (srvpx))
+							else:
+								logger.warning ("Server %s has no transducers, ignoring" % model)
 
 							# Inform handlers
 							for h in self._handlers:
@@ -247,32 +251,37 @@ class Client (object):
 
 	def _realizeServer (self, srvpx):
 		srvpx._transducers = {}
-		for sensorData in srvpx.transducerList.split ("|"):
-			sensparts = sensorData.split (" ", 3)
-			name, typ, stereotype = sensparts[0:3]
-			if len (sensparts) > 3:
-				desc = sensparts[3]
-			else:
-				desc = ""
-			# FIXME: Check for dup transducerss
-			if typ == "S":
-				self._logger.info ("- Found Sensor %s (%s) using stereotype %s", name, desc, stereotype)
-				if stereotype in self.stereotypes:
-					#~ newsens = SensorProxy (name, self.stereotypes[stereotype], srv)
-					newsens = SensorProxy (name, typ, stereotype, desc, self.stereotypes[stereotype], srvpx)
-					srvpx._transducers[name] = newsens		# Also add to server
+		if srvpx.transducerList is not None:
+			for sensorData in srvpx.transducerList.split ("|"):
+				sensparts = sensorData.split (" ", 3)
+				name, typ, stereotype = sensparts[0:3]
+				if len (sensparts) > 3:
+					desc = sensparts[3]
 				else:
-					self._logger.error ("Sensor uses unknown stereotype %s", stereotype)
-			elif typ == "A":
-				self._logger.info ("- Found Actuator %s (%s) using stereotype %s", name, desc, stereotype)
-				if stereotype in self.stereotypes:
-					newact = ActuatorProxy (name, self.stereotypes[stereotype], srvpx)
-					srvpx._transducers[name] = newact
+					desc = ""
+				# FIXME: Check for dup transducerss
+				if typ == "S":
+					self._logger.info ("- Found Sensor %s (%s) using stereotype %s", name, desc, stereotype)
+					if stereotype in self.stereotypes:
+						#~ newsens = SensorProxy (name, self.stereotypes[stereotype], srv)
+						newsens = SensorProxy (name, typ, stereotype, desc, self.stereotypes[stereotype], srvpx)
+						srvpx._transducers[name] = newsens		# Also add to server
+					else:
+						self._logger.error ("Sensor uses unknown stereotype %s", stereotype)
+				elif typ == "A":
+					self._logger.info ("- Found Actuator %s (%s) using stereotype %s", name, desc, stereotype)
+					if stereotype in self.stereotypes:
+						newact = ActuatorProxy (name, self.stereotypes[stereotype], srvpx)
+						srvpx._transducers[name] = newact
+					else:
+						self._logger.error ("Actuator uses unknown stereotype %s", stereotype)
 				else:
-					self._logger.error ("Actuator uses unknown stereotype %s", stereotype)
-			else:
-				self._logger.error ("- Found Unknown Transducer %s: %s (Ignored)", name, desc)
-		return srvpx
+					self._logger.error ("- Found Unknown Transducer %s: %s (Ignored)", name, desc)
+			ret = srvpx
+		else:
+			# No transducers
+			ret = None
+		return ret
 
 	def _parseHloReply (self, reply, addr):
 		model = None
@@ -286,11 +295,14 @@ class Client (object):
 				self._logger.warning ("Node at %s does not support HLO: %s", addr[0], reply)
 			else:
 				self._logger.error ("Unexpected HLO reply: %s", reply)
-		else:
+		elif len (parts) > 2:
 			model = parts[1]
 			transducerList = parts[2]
 			#~ print reply, addr
 			self._logger.info ("Found \"%s\" at %s:%d", model, addr[0], addr[1])
+		else:
+			# No transducers
+			model = parts[1]
 		return model, transducerList
 
 	def _queryServer (self, addr):
