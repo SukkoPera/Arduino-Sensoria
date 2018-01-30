@@ -252,6 +252,8 @@ void SensoriaServer::cmd_hlo (const SensoriaAddress* clientAddr, char *args) {
 		outBuf.print (t.type == Transducer::SENSOR ? ("S") : ("A"));
 		outBuf.print (' ');
 		outBuf.print (t.stereotype);
+		outBuf.print (' ');
+		outBuf.print (t.description);
 
 		if (i < nTransducers - 1)
 			outBuf.print ('|');
