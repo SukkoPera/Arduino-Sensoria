@@ -2,6 +2,7 @@
 #include <SensoriaCore/Communicator.h>
 #include <SensoriaCore/common.h>
 #include <SensoriaCore/utils.h>
+#include <SensoriaCore/debug.h>
 
 class ByteAddress: public SensoriaAddress {
 public:
