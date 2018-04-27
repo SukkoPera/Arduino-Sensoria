@@ -12,6 +12,13 @@ public:
 	IPAddress ip;
 	uint16_t port;
 	boolean inUse;
+	
+	UdpAddress (): ip (0,0,0,0), port (0), inUse (false) {
+	}
+	
+	UdpAddress (const IPAddress& _ip, const uint16_t _port):
+		ip (_ip), port (_port), inUse (false) {
+	}
 
 	char* toString (char* buf, byte size) const override {
 		char tmp[6];    // Max length of a 16-bit integer + 1
@@ -46,6 +53,7 @@ protected:
 		const UdpAddress& other = static_cast<const UdpAddress&> (otherBase);
 		ip = other.ip;
 		port = other.port;
+		inUse = other.inUse;
 	}
 
 	// Default copy/assignment operators should be fine
