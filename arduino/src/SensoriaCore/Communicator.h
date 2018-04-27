@@ -16,23 +16,23 @@ class SensoriaAddress {
 public:
 	virtual char* toString (char* buf, byte size) const = 0;
 
-  SensoriaAddress& operator=(const SensoriaAddress& other) {
-    clone (other);
-    return *this;
-  }
+	SensoriaAddress& operator=(const SensoriaAddress& other) {
+		clone (other);
+		return *this;
+	}
 
-  bool operator== (const SensoriaAddress& other) const {
-      return equalTo (other);
-  }
+	bool operator== (const SensoriaAddress& other) const {
+			return equalTo (other);
+	}
 
-  bool operator!= (const SensoriaAddress& other) const {
-    return !(*this == other);
-  }
+	bool operator!= (const SensoriaAddress& other) const {
+		return !(*this == other);
+	}
 
 protected:
-  virtual bool equalTo (const SensoriaAddress& other) const = 0;
+	virtual bool equalTo (const SensoriaAddress& other) const = 0;
 
-  virtual void clone (const SensoriaAddress& otherBase) = 0;
+	virtual void clone (const SensoriaAddress& otherBase) = 0;
 };
 
 class SensoriaCommunicator {
@@ -48,7 +48,7 @@ public:
 
 	virtual void releaseAddress (SensoriaAddress* addr) = 0;
 
-  virtual SensoriaAddress* getNotificationAddress (const SensoriaAddress* client) = 0;
+	virtual SensoriaAddress* getNotificationAddress (const SensoriaAddress* client) = 0;
 
 	// Functions for servers
 	virtual boolean receiveCmd (char*& cmd, SensoriaAddress* client) = 0;
@@ -57,13 +57,12 @@ public:
 
 	virtual boolean notify (const char* notification, const SensoriaAddress* client) = 0;
 
-
 	// Function for clients
 	virtual SendResult sendCmd (const char* cmd, const SensoriaAddress* server, char*& reply) = 0;
 
 	virtual SendResult broadcast (const char* cmd) = 0;
 
-  virtual boolean receiveBroadcastReply (char*& reply, SensoriaAddress*& sender, unsigned int timeout) = 0;
+	virtual boolean receiveBroadcastReply (char*& reply, SensoriaAddress*& sender, unsigned int timeout) = 0;
 
 	virtual boolean receiveNotification (char*& notification) = 0;
 
