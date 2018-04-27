@@ -56,7 +56,6 @@ protected:
 
 /******************************************************************************/
 
-#define BROADCAST_ADDRESS 192,168,1,255
 
 class ESPCommunicator: public SensoriaCommunicator {
 private:
@@ -94,7 +93,7 @@ private:
 				buffer[len] = '\0';  // Ensure command is a valid string
 				str = reinterpret_cast<char *> (buffer);
 			}
-#if 0
+#ifdef DEBUG_COMMUNICATOR
 			DPRINT (F("Received packet of size "));
 			DPRINT (packetSize);
 			DPRINT (F(" from "));
@@ -128,7 +127,7 @@ public:
 	SensoriaAddress* getAddress () override {
 		SensoriaAddress* ret = NULL;
 
-#if 0
+#ifdef DEBUG_COMMUNICATOR
 		byte cnt = 0;
 		for (byte i = 0; i < N_ADDRESSES && !ret; i++) {
 			if (!addressPool[i].inUse)
@@ -259,8 +258,16 @@ public:
 
 	SendResult broadcast (const char* cmd) override {
 		UdpAddress bcAddr;
-		bcAddr.ip = IPAddress (BROADCAST_ADDRESS);
+		bcAddr.ip = IPAddress (((uint32_t) WiFi.localIP ()) | (~(uint32_t) WiFi.subnetMask ()));
 		bcAddr.port = DEFAULT_BROADCAST_PORT;
+
+#ifdef DEBUG_COMMUNICATOR
+		char buf[32];
+		bcAddr.toString (buf, sizeof (buf));
+		DPRINT (F("Broadcast address is: "));
+		DPRINTLN (buf);
+#endif
+
 		SendResult ret = this -> reply (cmd, &bcAddr);
 		if (ret == SEND_OK) {
 			lastBroadcastTime = millis ();
