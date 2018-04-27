@@ -4,22 +4,183 @@
 #include <SensoriaCore/Communicator.h>
 #include <Ethernet.h>
 #include <EthernetUdp.h>
+//~ #include <UIPEthernet.h>
 #include <SensoriaCore/debug.h>
 
 #define IN_BUF_SIZE 192
 
+class UdpAddress: public SensoriaAddress {
+public:
+	IPAddress ip;
+	uint16_t port;
+	boolean inUse;
+
+	char* toString (char* buf, byte size) const override {
+		char tmp[6];    // Max length of a 16-bit integer + 1
+
+		// Clear output string
+		buf[0] = '\0';
+
+		// Stringize IP
+		for (int i = 0; i < 4; i++) {
+			 	utoa (ip[i], tmp, 10);
+				strncat (buf, tmp, size);
+				strncat (buf, ".", size);
+		}
+
+		// Replace last dot with a colon
+		buf[strlen (buf) - 1] = ':';
+
+		// Append port
+		utoa (port, tmp, 10);
+		strncat (buf, tmp, size);
+
+		return buf;
+	}
+
+protected:
+	virtual bool equalTo (const SensoriaAddress& otherBase) const override {
+		const UdpAddress& other = static_cast<const UdpAddress&> (otherBase);
+		return ip == other.ip && port == other.port;
+	}
+
+	virtual void clone (const SensoriaAddress& otherBase) override {
+		const UdpAddress& other = static_cast<const UdpAddress&> (otherBase);
+		ip = other.ip;
+		port = other.port;
+	}
+
+	// Default copy/assignment operators should be fine
+};
+
+/******************************************************************************/
+
+
 class SensoriaEthernetCommunicator: public SensoriaCommunicator {
 private:
+	static const byte N_ADDRESSES = 16;
+	UdpAddress addressPool[N_ADDRESSES];
+
+	static const uint16_t DEFAULT_PORT = 9999;
+
+	static const uint16_t DEFAULT_BROADCAST_PORT = DEFAULT_PORT;
+
+	static const uint16_t DEFAULT_NOTIFICATION_PORT = 9998;
+
+	EthernetUDP udpMain;
+
+#ifdef ENABLE_NOTIFICATIONS
+	EthernetUDP udpNot;
+#endif
+
 	uint8_t buffer[IN_BUF_SIZE];
 
+	unsigned long lastBroadcastTime;
+
+	boolean receiveGeneric (EthernetUDP& udp, char*& str, IPAddress& senderAddr, uint16_t& senderPort) {
+		// Assume we'll receive nothing
+		boolean ret = false;
+
+		int packetSize = udp.parsePacket ();
+		if (packetSize) {
+			senderAddr = udp.remoteIP ();
+			senderPort = udp.remotePort ();
+
+			// Read the packet into packetBufffer
+			int len = udp.read (buffer, IN_BUF_SIZE - 1);
+			if (len > 0) {
+				buffer[len] = '\0';  // Ensure command is a valid string
+				str = reinterpret_cast<char *> (buffer);
+			}
+
+#ifdef DEBUG_COMMUNICATOR
+			DPRINT (F("Received packet of size "));
+			DPRINT (packetSize);
+			DPRINT (F(" from "));
+			DPRINT (senderAddr);
+			DPRINT (F(", port "));
+			DPRINT (senderPort);
+			DPRINT (F(": \""));
+			DPRINT (str);
+			DPRINTLN (F("\""));
+#endif
+			ret = true;
+		}
+
+		return ret;
+	}
+
+	boolean sendGeneric (const char *str, IPAddress& dest, uint16_t port) {
+		int ret = udpMain.beginPacket (dest, port);
+		if (ret) {
+			udpMain.write (reinterpret_cast<const uint8_t *> (str), strlen (str));
+			ret = udpMain.endPacket ();
+		}
+
+		return ret;
+	}
+
 public:
-	EthernetUDP udpMain;
-	EthernetUDP udpNot;
+	//~ SensoriaEthernetCommunicator () {
+	//~ }
+
+	SensoriaAddress* getAddress () override {
+		SensoriaAddress* ret = NULL;
+
+#ifdef DEBUG_COMMUNICATOR
+		byte cnt = 0;
+		for (byte i = 0; i < N_ADDRESSES && !ret; i++) {
+			if (!addressPool[i].inUse)
+				++cnt;
+		}
+		DPRINT (F("Addresses not in use: "));
+		DPRINTLN (cnt);
+#endif
+
+		for (byte i = 0; i < N_ADDRESSES && !ret; i++) {
+			if (!addressPool[i].inUse) {
+				addressPool[i].inUse = true;
+				ret = &(addressPool[i]);
+			}
+		}
+
+		return ret;
+	}
+
+	UdpAddress* getAddress (byte ip1, byte ip2, byte ip3, byte ip4, uint16_t port) {
+		UdpAddress* addr = reinterpret_cast<UdpAddress*> (getAddress ());
+		if (addr) {
+			addr -> ip = IPAddress (ip1, ip2, ip3, ip4);
+			addr -> port = port;
+		}
+
+		return addr;
+	}
+
+	void releaseAddress (SensoriaAddress* addr) override {
+		for (byte i = 0; i < N_ADDRESSES; i++) {
+			if (&(addressPool[i]) == addr) {
+				addressPool[i].inUse = false;
+			}
+		}
+	}
+
+	virtual SensoriaAddress* getNotificationAddress (const SensoriaAddress* client) override {
+		UdpAddress* addr = reinterpret_cast<UdpAddress*> (getAddress ());
+		if (addr) {
+			const UdpAddress& clientUdpAddr = *reinterpret_cast<const UdpAddress*> (client);
+			addr -> ip = clientUdpAddr.ip;
+			addr -> port = DEFAULT_NOTIFICATION_PORT;
+		}
+
+		return addr;
+	}
+
+	/*****/
 
 	boolean begin (byte mac[], int channels = CC_SERVER) {
-		// Check for the presence of ESP
 		if (!Ethernet.begin (mac)) {
-			DPRINTLN (F("Ethernet Shield not found"));
+			DPRINTLN (F("ENC28J60 Ethernet Shield not found"));
 			return false;
 		}
 
@@ -39,6 +200,7 @@ public:
 		/* This can be enabled at will if you want to be able to RECEIVE
 		 * notifications
 		 */
+#ifdef ENABLE_NOTIFICATIONS
 		if (channels & CC_NOTIFICATIONS) {
 			if (!udpNot.begin (DEFAULT_NOTIFICATION_PORT)) {
 				DPRINTLN (F("Cannot setup notification listening socket"));
@@ -48,69 +210,94 @@ public:
 				DPRINTLN (DEFAULT_NOTIFICATION_PORT);
 			}
 		}
-
-		return true;
-	}
-
-	boolean send (const char *str, IPAddress& dest, uint16_t port) override {
-		udpMain.beginPacket (dest, port);
-		udpMain.write ((const uint8_t *) str, strlen (str));
-		udpMain.endPacket ();
-
-		// FIXME
-		return true;
-	}
-
-  boolean broadcast (const char *str, uint16_t port) {
-    // FIXME
-  }
-
-	boolean receiveGeneric (UDP& udp, char **str, IPAddress *senderAddr, uint16_t *senderPort) {
-		// Assume we'll receive nothing
-		boolean ret = false;
-
-		int packetSize = udp.parsePacket ();
-		if (packetSize) {
-			*senderAddr = udp.remoteIP ();
-			*senderPort = udp.remotePort ();
-
-			// read the packet into packetBufffer
-			int len = udp.read (buffer, IN_BUF_SIZE - 1);
-			if (len > 0) {
-				buffer[len] = '\0';  // Ensure command is a valid string
-				*str = reinterpret_cast<char *> (buffer);
-			}
-#if 0
-			DPRINT (F("Received packet of size "));
-			DPRINT (packetSize);
-			DPRINT (F(" from "));
-			DPRINT (*senderAddr);
-			DPRINT (F(", port "));
-			DPRINT (*senderPort);
-			DPRINT (F(": \""));
-			DPRINT (*str);
-			DPRINTLN (F("\""));
 #endif
-			ret = true;
+
+		return true;
+	}
+
+	boolean receiveCmd (char*& cmd, SensoriaAddress* client) override {
+		UdpAddress& addr = *reinterpret_cast<UdpAddress*> (client);
+		return receiveGeneric (udpMain, cmd, addr.ip, addr.port);
+	}
+
+	SendResult reply (const char* reply, const SensoriaAddress* client) override {
+		UdpAddress& addr = *const_cast<UdpAddress*> (reinterpret_cast<const UdpAddress*> (client));
+		return sendGeneric (reply, addr.ip, addr.port) ? SEND_OK : SEND_ERR;
+	}
+
+	boolean notify (const char* notification, const SensoriaAddress* client) override {
+		UdpAddress& addr = *const_cast<UdpAddress*> (reinterpret_cast<const UdpAddress*> (client));
+		return sendGeneric (notification, addr.ip, addr.port) ? SEND_OK : SEND_ERR;
+	}
+
+	SendResult sendCmd (const char* cmd, const SensoriaAddress* server, char*& reply) override {
+		UdpAddress& srvUdpAddr = *const_cast<UdpAddress*> (reinterpret_cast<const UdpAddress*> (server));
+		SendResult res = sendGeneric (cmd, srvUdpAddr.ip, srvUdpAddr.port) ? SEND_OK : SEND_ERR;
+		if (res > 0) {
+			unsigned long start = millis ();
+
+			while (millis () - start < CLIENT_TIMEOUT) {
+				UdpAddress addr;    // Dummy address
+				if (receiveGeneric (udpMain, reply, addr.ip, addr.port)) {
+					// Got something
+					break;
+				}
+			}
+
+			if (millis () - start >= CLIENT_TIMEOUT)
+				res = SEND_TIMEOUT;
+		}
+
+		return res;
+	}
+
+	SendResult broadcast (const char* cmd) override {
+		UdpAddress bcAddr;
+		//~ bcAddr.ip = IPAddress (BROADCAST_ADDRESS);
+		bcAddr.ip = IPAddress (((uint32_t) Ethernet.localIP ()) | (~(uint32_t) Ethernet.subnetMask ()));
+		bcAddr.port = DEFAULT_BROADCAST_PORT;
+
+#ifdef DEBUG_COMMUNICATOR
+		char buf[32];
+		bcAddr.toString (buf, sizeof (buf));
+		DPRINT (F("Broadcast address is: "));
+		DPRINTLN (buf);
+#endif
+
+		SendResult ret = this -> reply (cmd, &bcAddr);
+		if (ret == SEND_OK) {
+			lastBroadcastTime = millis ();
 		}
 
 		return ret;
 	}
 
-	boolean receiveString (char **str, IPAddress *senderAddr, uint16_t *senderPort, SensoriaChannel channel) override {
+	boolean receiveBroadcastReply (char*& reply, SensoriaAddress*& sender, unsigned int timeout) override {
 		boolean ret = false;
-		switch (channel) {
-			case CC_SERVER:
-				ret = receiveGeneric (udpMain, str, senderAddr, senderPort);
-				break;
-			case CC_NOTIFICATIONS:
-				ret = receiveGeneric (udpNot, str, senderAddr, senderPort);
-				break;
-			default:
-				break;
+
+		while (!ret && millis () - lastBroadcastTime < timeout) {
+			UdpAddress addr;
+			ret = receiveGeneric (udpMain, reply, addr.ip, addr.port);
+			if (ret) {
+				// Got something
+				UdpAddress* senderUdp = reinterpret_cast<UdpAddress*> (getAddress ());
+				if (senderUdp) {
+					*senderUdp = addr;
+					sender = senderUdp;
+				} else {
+					DPRINTLN (F("Cannot allocate address for broadcast reply"));
+					ret = false;
+				}
+			}
 		}
 
 		return ret;
+	}
+
+	boolean receiveNotification (char*& notification) override {
+		IPAddress ip;
+		uint16_t port;
+		return receiveGeneric (udpNot, notification, ip, port);
 	}
 };
 
