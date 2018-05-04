@@ -8,7 +8,8 @@ TemperatureSensor328 secretSensor;
 SensoriaSerialCommunicator comm;
 
 #include <SensoriaCore/Server.h>
-SensoriaServer srv;;
+SensoriaServer srv;
+const byte MY_ADDR = 0x42;
 
 void mypanic (int interval) {
 	pinMode (LED_BUILTIN, OUTPUT);
@@ -22,7 +23,7 @@ void mypanic (int interval) {
 
 void setup (void) {
 	Serial.begin (9600);
-	comm.begin (Serial);
+	comm.begin (Serial, MY_ADDR);
 	if (!srv.begin (F("Indoor-1"), comm)) {
 		mypanic (500);
 	}
