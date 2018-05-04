@@ -81,10 +81,14 @@ class SensorProxy (TransducerProxy):
 			raise
 
 class ActuatorProxy (TransducerProxy):
-	def __init__ (self, name, stereoclass, srv):
-		sdata = srv.send ("QRY %s" % name)
-		name, typ, stereotype, description, version = sdata.split ("|")
-		super (ActuatorProxy, self).__init__ (srv, ACTUATOR, name, stereotype, stereoclass, description, version)
+	# ~ def __init__ (self, name, stereoclass, srv):
+		# ~ sdata = srv.send ("QRY %s" % name)
+		# ~ name, typ, stereotype, description, version = sdata.split ("|")
+		# ~ super (ActuatorProxy, self).__init__ (srv, ACTUATOR, name, stereotype, stereoclass, description, version)
+
+	# This c'tor does not query sensor data, but since we'll only be missing the version, we are fine with it
+	def __init__ (self, name, typ, stereotype, description, stereoclass, srv):
+		super (ActuatorProxy, self).__init__ (srv, ACTUATOR, name, stereotype, stereoclass, description, "N/A")
 
 	def write (self, what):
 		assert self.server is not None

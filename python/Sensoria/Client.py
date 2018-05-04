@@ -39,6 +39,7 @@ class Client (object):
 
 	def __init__ (self, servers = [], autodiscover = True, autodiscInterval = DEFAULT_AUTODISCOVER_INTERVAL):
 		self._logger = logging.getLogger ('client')
+		self._logger.addHandler (logging.StreamHandler ())
 		self._load_stereotypes ()
 		self._servers = {}
 		self._setupSocket ()
@@ -52,7 +53,8 @@ class Client (object):
 				srvpx = self._queryServer ((srv, int (port)))
 			else:
 				srvpx = self._queryServer ((srv, ServerProxy.DEFAULT_PORT))
-			self._addServer (self._realizeServer (srvpx))
+			if srvpx is not None:
+				self._addServer (self._realizeServer (srvpx))
 		if autodiscover and autodiscInterval is not None:
 			self._logger.debug ("Running autodiscovery every %d seconds", autodiscInterval)
 			self._autodiscInterval = autodiscInterval
@@ -271,7 +273,8 @@ class Client (object):
 				elif typ == "A":
 					self._logger.info ("- Found Actuator %s (%s) using stereotype %s", name, desc, stereotype)
 					if stereotype in self.stereotypes:
-						newact = ActuatorProxy (name, self.stereotypes[stereotype], srvpx)
+						# ~ newact = ActuatorProxy (name, self.stereotypes[stereotype], srvpx)
+						newact = ActuatorProxy (name, typ, stereotype, desc, self.stereotypes[stereotype], srvpx)
 						srvpx._transducers[name] = newact
 					else:
 						self._logger.error ("Actuator uses unknown stereotype %s", stereotype)
