@@ -10,7 +10,8 @@ TransducerProxy::TransducerProxy (ServerProxy* _srvpx, const char *_name,
 
 	strlcpy (name, _name, MAX_TRANSDUCER_NAME);
 #ifndef SAVE_RAM
-	strlcpy (description, _description, MAX_TRANSDUCER_DESC);
+	if (_description != NULL)
+		strlcpy (description, _description, MAX_TRANSDUCER_DESC);
 	if (_version != NULL)
 		strlcpy (version, _version, MAX_TRANSDUCER_VER);
 #else
@@ -52,10 +53,10 @@ boolean TransducerProxy::requestNotification (NotificationType type, word period
 		}
 		strncat (buf, "\n", SZ_NRQ);
 
-		ServerProxy::CommandResult res = srvpx -> sendcmd (buf, r);
+		SensoriaCommunicator::SendResult res = srvpx -> sendcmd (buf, r);
 		if ((res > 0)) {
 			ret = strcmp_P (r, PSTR ("OK")) == 0;
-		} else if (res == ServerProxy::SEND_TIMEOUT) {
+		} else if (res == SensoriaCommunicator::SEND_TIMEOUT) {
 			srvpx -> nFailures++;
 		}
 	}

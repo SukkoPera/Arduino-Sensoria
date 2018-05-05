@@ -12,7 +12,7 @@ class ControlledRelayData (StereoType):
 		self.controller = ControlledRelayData.AUTO
 
 	def __eq__ (self, other):
-		return other is not None and \
+		return isinstance (other, self.__class__) and \
 			self.state == other.state and \
 			self.controller == other.controller
 

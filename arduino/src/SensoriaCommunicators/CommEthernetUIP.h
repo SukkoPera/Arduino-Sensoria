@@ -2,14 +2,16 @@
 
 #include <Sensoria.h>
 #include <SensoriaCore/Communicator.h>
-#include <Ethernet.h>
-#include <EthernetUdp.h>
+#include <UIPEthernet.h>
 #include <SensoriaCommunicators/UdpAddress.h>
+#include <SensoriaCore/utils.h>
 #include <SensoriaCore/debug.h>
 
 #define IN_BUF_SIZE 192
 
-class SensoriaEthernetCommunicator: public SensoriaCommunicator {
+
+
+class SensoriaEthernetUIPCommunicator: public SensoriaCommunicator {
 private:
 	static const byte N_ADDRESSES = 16;
 	UdpAddress addressPool[N_ADDRESSES];
@@ -48,6 +50,11 @@ private:
 			buffer[len] = '\0';  // Ensure command is a valid string
 			str = reinterpret_cast<char *> (buffer);
 
+			// Finish reading this packet:
+			while (udp.available () > 0)
+				;
+			udp.flush ();
+
 #ifdef DEBUG_COMMUNICATOR
 			DPRINT (F("Received packet of size "));
 			DPRINT (packetSize);
@@ -85,11 +92,20 @@ private:
 			ret = udpMain.endPacket ();
 		}
 
+		/* beginPacket() configures the current connection to ignore packets from
+		 * other clients, so restart connection to receive packets from other
+		 * clients.
+		 *
+		 * Is this specific to arduino_uip?
+		 */
+		udpMain.stop ();
+		udpMain.begin (DEFAULT_PORT);
+
 		return ret;
 	}
 
 public:
-	//~ SensoriaEthernetCommunicator () {
+	//~ SensoriaEthernetUIPCommunicator () {
 	//~ }
 
 	SensoriaAddress* getAddress () override {

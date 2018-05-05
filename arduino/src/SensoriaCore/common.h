@@ -7,7 +7,7 @@
 // Uses ~1600b flash, ~120b RAM
 #define ENABLE_NOTIFICATIONS
 
-#ifndef ARDUINO_ARCH_ESP8266
+#if !defined(ARDUINO_ARCH_ESP8266) && !defined(ARDUINO_ARCH_STM32F1)
   // Flash strings don't seem to work very well on ESP8266
   #define ENABLE_FLASH_STRINGS
 #endif
@@ -15,7 +15,9 @@
 
 #ifdef ENABLE_FLASH_STRINGS
 
+#ifdef ARDUINO_ARCH_AVR
 #include <avr/pgmspace.h>
+#endif
 
 #define PSTR_TO_F(s) reinterpret_cast<const __FlashStringHelper *> (s)
 #define F_TO_PSTR(s) reinterpret_cast<PGM_P> (s)
@@ -42,6 +44,8 @@
 #define strcmp_P strcmp
 #undef strcat_P
 #define strcat_P strcat
+#undef strncat_P
+#define strncat_P strncat
 
 #endif
 

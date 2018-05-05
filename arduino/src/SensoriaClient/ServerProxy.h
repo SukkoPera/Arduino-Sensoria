@@ -13,20 +13,13 @@ class Stereotype;
 
 class ServerProxy {
 public:
-	enum CommandResult {
-		SEND_OK = 1,          // All good, reply is valid
-		SEND_ERR = -1,        // Command sent but got an error reply
-		SEND_UNEXP_ERR = -1,  // Command sent but got an unexpected reply
-		SEND_TIMEOUT = -99    // Send timed out
-	};
-
 	char name[MAX_SERVER_NAME];
 
 	byte nFailures;
 
-	ServerProxy (SensoriaCommunicator* _comm, IPAddress& address, uint16_t port = DEFAULT_PORT);
+	ServerProxy (SensoriaCommunicator* _comm, SensoriaAddress* address);
 
-	CommandResult sendcmd (const char *cmd, char*& reply);
+	SensoriaCommunicator::SendResult sendcmd (const char *cmd, char*& reply);
 
 	boolean addTransducer (TransducerProxy *tpx);
 
@@ -40,8 +33,7 @@ public:
 
 private:
 	SensoriaCommunicator *comm;
-	IPAddress address;
-	uint16_t port;
+	SensoriaAddress *address;
 
 	byte nTransducers;
 

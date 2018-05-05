@@ -65,6 +65,8 @@ ylux = []
 ylux2 = []
 yscale = []	#yldr
 yldr2 = []
+yrt = []
+yrh = []
 
 if args.from_ is not None or args.to is not None:
 	if args.from_ is not None and args.to is not None:
@@ -107,6 +109,8 @@ for dt, row in data:
 		yldr2.append (float ('nan'))
 		ypx.append (float ('nan'))
 		y35.append (float ('nan'))
+		yrt.append (float ('nan'))
+		yrh.append (float ('nan'))
 	prev = dt
 
 	x.append (dt)
@@ -134,6 +138,14 @@ for dt, row in data:
 		#~ print "No reading for sensor IH in data from %s" % (dt)
 		yth3.append (float ('nan'))
 		yh3.append (float ('nan'))
+
+	if "RH" in row:
+		yrt.append (row["RH"].temperature)
+		yrh.append (row["RH"].humidity)
+	else:
+		#~ print "No reading for sensor RH in data from %s" % (dt)
+		yrt.append (float ('nan'))
+		yrh.append (float ('nan'))
 
 	if "OT" in row:
 		ydallas.append (row["OT"].temperature)
@@ -212,7 +224,8 @@ fig.suptitle ("Weather Data %s" % timeDesc)
 # We'll need humidity for a few calculations, so choose the one with the most
 # samples
 notnans = lambda v: len (v) - len (filter (math.isnan, v))
-hs = tuple ((h, notnans (h)) for h in (yh, yh2, yh3))
+# ~ hs = tuple ((h, notnans (h)) for h in (yh, yh2, yh3))
+hs = tuple ((h, notnans (h)) for h in (yh,))		# Only yh is measured outdoors!
 hs = sorted (hs, key = lambda t: t[1], reverse = True)
 #~ print [h[1] for h in hs]
 goodH = hs[0][0]
@@ -254,75 +267,78 @@ def fahrenheit2celsius (t):
 
 # Perceived temperature (AKA Heat Index)
 # https://en.wikipedia.org/wiki/Heat_index
-pt1 = []
-pt2 = []
-pt3 = []
-for tc, h in zip (ydallas, goodH):
-	if not math.isnan (tc) and not math.isnan (h):
-		t = celsius2fahrenheit (tc)		# American formulas... :(
+def perceivedTemp (tempList, humList):
+	pt1 = []
+	pt2 = []
+	pt3 = []
+	for tc, h in zip (tempList, humList):
+		if not math.isnan (tc) and not math.isnan (h):
+			t = celsius2fahrenheit (tc)		# American formulas... :(
 
-		if t >= 80 and h >= 40:
-			# Within +-1.3 degF.
-			c1 = -42.379
-			c2 = 2.04901523
-			c3 = 10.14333127
-			c4 = -0.22475541
-			c5 = -6.83783e-3
-			c6 = -5.481717e-2
-			c7 = 1.22874e-3
-			c8 = 8.5282e-4
-			c9 = -1.99e-6
-			hi1 = c1 + c2 * t + c3 * h + c4 * t * h + c5 * t * t + c6 * h * h + c7 * t * t * h + c8 * t * h * h + c9 * t * t * h * h
-			hi1 = fahrenheit2celsius (hi1)
-			pt1.append (hi1)
+			if t >= 80 and h >= 40:
+				# Within +-1.3 degF.
+				c1 = -42.379
+				c2 = 2.04901523
+				c3 = 10.14333127
+				c4 = -0.22475541
+				c5 = -6.83783e-3
+				c6 = -5.481717e-2
+				c7 = 1.22874e-3
+				c8 = 8.5282e-4
+				c9 = -1.99e-6
+				hi1 = c1 + c2 * t + c3 * h + c4 * t * h + c5 * t * t + c6 * h * h + c7 * t * t * h + c8 * t * h * h + c9 * t * t * h * h
+				hi1 = fahrenheit2celsius (hi1)
+				pt1.append (hi1)
 
-			# Within 3 degrees of the NWS (US National Weather Service???)
-			# master table for all humidities from 0 to 80% and all temperatures
-			# between 70 and 115 degF and all heat indexes < 150 degF
-			# (Whatever that means)
-			c1 = 0.363445176
-			c2 = 0.988622465
-			c3 = 4.777114035
-			c4 = -0.114037667
-			c5 = -0.000850208
-			c6 = -0.020716198
-			c7 = 0.000687678
-			c8 = 0.000274954
-			c9 = 0
-			hi2 = c1 + c2 * t + c3 * h + c4 * t * h + c5 * t * t + c6 * h * h + c7 * t * t * h + c8 * t * h * h + c9 * t * t * h * h
-			hi2 = fahrenheit2celsius (hi2)
-			pt2.append (hi2)
+				# Within 3 degrees of the NWS (US National Weather Service???)
+				# master table for all humidities from 0 to 80% and all temperatures
+				# between 70 and 115 degF and all heat indexes < 150 degF
+				# (Whatever that means)
+				c1 = 0.363445176
+				c2 = 0.988622465
+				c3 = 4.777114035
+				c4 = -0.114037667
+				c5 = -0.000850208
+				c6 = -0.020716198
+				c7 = 0.000687678
+				c8 = 0.000274954
+				c9 = 0
+				hi2 = c1 + c2 * t + c3 * h + c4 * t * h + c5 * t * t + c6 * h * h + c7 * t * t * h + c8 * t * h * h + c9 * t * t * h * h
+				hi2 = fahrenheit2celsius (hi2)
+				pt2.append (hi2)
 
-			# Who knows???
-			c1 = 16.923
-			c2 = 0.185212
-			c3 = 5.37941
-			c4 = -0.100254
-			c5 = 9.41695e-3
-			c6 = 7.28898e-3
-			c7 = 3.45372e-4
-			c8 = -8.14971e-4
-			c9 = 1.02102e-5
-			c10 = -3.8646e-5
-			c11 = 2.91583e-5
-			c12 = 1.42721e-6
-			c13 = 1.97483e-7
-			c14 = -2.18429e-8
-			c15 = 8.43296e-10
-			c16 = -4.81975e-11
-			hi3 = c1 + c2 * t + c3 * h + c4 * t * h + c5 * t * t + c6 * h * h + c7 * t * t * h + c8 * t * h * h + \
-				  c9 * t * t * h * h + c10 * t * t * t + c11 * h * h * h + c12 * t * t * t * h + c13 * t * h * h * h + \
-				  c14 * t * t * t * h * h + c15 * t * t * h * h * h + c16 * t * t * t * h * h * h
-			hi3 = fahrenheit2celsius (hi3)
-			pt3.append (hi3)
+				# Who knows???
+				c1 = 16.923
+				c2 = 0.185212
+				c3 = 5.37941
+				c4 = -0.100254
+				c5 = 9.41695e-3
+				c6 = 7.28898e-3
+				c7 = 3.45372e-4
+				c8 = -8.14971e-4
+				c9 = 1.02102e-5
+				c10 = -3.8646e-5
+				c11 = 2.91583e-5
+				c12 = 1.42721e-6
+				c13 = 1.97483e-7
+				c14 = -2.18429e-8
+				c15 = 8.43296e-10
+				c16 = -4.81975e-11
+				hi3 = c1 + c2 * t + c3 * h + c4 * t * h + c5 * t * t + c6 * h * h + c7 * t * t * h + c8 * t * h * h + \
+						c9 * t * t * h * h + c10 * t * t * t + c11 * h * h * h + c12 * t * t * t * h + c13 * t * h * h * h + \
+						c14 * t * t * t * h * h + c15 * t * t * h * h * h + c16 * t * t * t * h * h * h
+				hi3 = fahrenheit2celsius (hi3)
+				pt3.append (hi3)
+			else:
+				pt1.append (tc)
+				pt2.append (tc)
+				pt3.append (tc)
 		else:
-			pt1.append (tc)
-			pt2.append (tc)
-			pt3.append (tc)
-	else:
-		pt1.append (float ("nan"))
-		pt2.append (float ("nan"))
-		pt3.append (float ("nan"))
+			pt1.append (float ("nan"))
+			pt2.append (float ("nan"))
+			pt3.append (float ("nan"))
+
+	return pt1, pt2, pt3
 
 dpfast = []
 for celsius, humidity in zip (ydallas, goodH):
@@ -334,6 +350,10 @@ for celsius, humidity in zip (ydallas, goodH):
     Td = (b * temp) / (a - temp)
     dpfast.append (Td);
 
+pt1, pt2, pt3 = perceivedTemp (ydallas, goodH)
+pti1, pti2, pti3 = perceivedTemp (yth3, yh3)
+ptr1, ptr2, ptr3 = perceivedTemp (yrt, yrh)
+
 plt.subplot (2, 2, 1)
 plt.title ("Temperature")
 #plt.plot (x, ydht, "y--", label = "DHT22")
@@ -342,9 +362,14 @@ plt.title ("Temperature")
 plt.plot (x, ydallas, "b", label = "Outdoor")
 #plt.plot (x, y35, "c", label = "LM35")
 plt.plot (x, yth3, "r", label = "Indoor")
+plt.plot (x, pti1, "r")
+plt.fill_between (x, yth3, pti1, facecolor = 'r', alpha = 0.5)
+plt.plot (x, yrt, "c", label = "Sleeping Room")
+plt.plot (x, ptr1, "c")
+plt.fill_between (x, yrt, ptr1, facecolor = 'c', alpha = 0.5)
 #plt.plot (x, yti, "b--", label = "Indoor")
 plt.plot (x, dp, "g--", label = "Dew Point")
-plt.plot (x, pt1, "b--")
+plt.plot (x, pt1, "b")
 #plt.plot (x, pt2, "g--", label = "Heat Index 2")
 #plt.plot (x, pt3, "b--", label = "Heat Index 3")
 plt.fill_between (x, ydallas, pt1, facecolor = 'b', alpha = 0.5)
@@ -384,6 +409,7 @@ plt.title ("Relative Humidity")
 plt.plot (x, yh, "b", label = "Outdoor")
 #plt.plot (x, yh2, "g-", label = "Outdoor")
 plt.plot (x, yh3, "r", label = "Indoor")
+plt.plot (x, yrh, "c", label = "Sleeping Room")
 #~ plt.xlabel ('Time')
 plt.ylabel ('Percentage')
 plt.grid (True)

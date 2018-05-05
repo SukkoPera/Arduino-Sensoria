@@ -21,7 +21,7 @@ WU_UPLOAD_URL = "https://weatherstation.wunderground.com/weatherstation/updatewe
 
 print "Logging data every %d minutes" % DEFAULT_INTERVAL
 
-sensoria = Sensoria.Client (autodiscTimer = 5 * 60)
+sensoria = Sensoria.Client (autodiscInterval = 5 * 60)
 
 def celsius2fahrenheit (t):
 	return float (t) *  9 / 5 + 32

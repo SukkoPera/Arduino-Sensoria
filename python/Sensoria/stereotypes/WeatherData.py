@@ -26,7 +26,8 @@ class WeatherData (StereoType):
 		self.light10bit = None
 
 	def __eq__ (self, other):
-		return self.temperature == other.temperature and \
+		return isinstance (other, self.__class__) and \
+			self.temperature == other.temperature and \
 			self.humidity == other.humidity and \
 			self.localPressure == other.localPressure and \
 			self.altitude == other.altitude and \

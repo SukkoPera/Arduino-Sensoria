@@ -8,11 +8,15 @@ import select
 import os
 import threading
 import time
+import copy
 
 import Sensoria
 from Sensoria.stereotypes.WeatherData import WeatherData
 from Sensoria.stereotypes.RelayData import RelayData
 from Sensoria.stereotypes.ControlledRelayData import ControlledRelayData
+from Sensoria.stereotypes.DateTimeData import DateTimeData
+from Sensoria.stereotypes.TimeControlData import TimeControlData
+from Sensoria.stereotypes.ValueSetData import ValueSetData
 
 LISTEN_PORT = 9999
 NOTIFICATION_PORT = 9998
@@ -111,6 +115,14 @@ class Actuator (Transducer):
 	def read (self):
 		raise NotImplementedError
 
+class Clock (Sensor):
+	def __init__ (self, name, description = "", version = ""):
+		super (Clock, self).__init__ (name, DateTimeData.getIdString (), description, version)
+
+	def read (self):
+		dt = DateTimeData.fromNow ()
+		return dt
+
 class TemperatureSensor (Sensor):
 	def __init__ (self, name, description = "", version = ""):
 		super (TemperatureSensor, self).__init__ (name, "WD", description, version)
@@ -122,14 +134,45 @@ class TemperatureSensor (Sensor):
 		#~ ts = datetime.datetime.now ().strftime ("%Y-%m-%dT%H:%M:%S")    # ISO 8601
 		return wd
 
-class KitchenTemperatureSensor (TemperatureSensor):
-	def __init__ (self):
-		super (KitchenTemperatureSensor, self).__init__ ("TK", "Kitchen Temperature", "20150611 By SukkoPera <software@sukkology.net>")
+class TimedActuator (Actuator):
+	def __init__ (self, name, description = "", version = ""):
+		super (TimedActuator, self).__init__ (name, TimeControlData.getIdString (), description, version)
+		# Quick hack to initialize control data
+		tmp = TimeControlData ()
+		self.schedule = copy.deepcopy (tmp.schedule)
 
-class BathroomTemperatureSensor (TemperatureSensor):
-	def __init__ (self):
-		super (BathroomTemperatureSensor, self).__init__ ("TB", "Bathroom Temperature")
+	def write (self, rawdata):		# FIXME: Get this unmarshaled earlier!
+		data = TimeControlData ()
+		if data.unmarshal (rawdata):
+			self.schedule = copy.deepcopy (data.schedule)
+			ret = True, "Schedule updated"
+		else:
+			ret = False, "Unmarshal failed"
+		return ret
 
+	def read (self):
+		data = TimeControlData ()
+		data.schedule = copy.deepcopy (self.schedule)
+		return data
+
+class ValueSetActuator (Actuator):
+	def __init__ (self, name, description = "", version = ""):
+		super (ValueSetActuator, self).__init__ (name, ValueSetData.getIdString (), description, version)
+		self.values = [None] * ValueSetData.NVALUES
+
+	def write (self, rawdata):		# FIXME: Get this unmarshaled earlier!
+		data = ValueSetData ()
+		if data.unmarshal (rawdata):
+			self.values = copy.deepcopy (data.values)
+			ret = True, "Values updated"
+		else:
+			ret = False, "Unmarshal failed"
+		return ret
+
+	def read (self):
+		data = ValueSetData ()
+		data.values = copy.deepcopy (self.values)
+		return data
 
 class RelayActuator (Actuator):
 	class State:
@@ -149,12 +192,15 @@ class RelayActuator (Actuator):
 		    rd.state = RelayData.OFF
 		return rd
 
-	#~ def write (self, value):
-		#~ if value.upper () == "ON" or int (value) > 0:
-			#~ self.state = RelayActuator.State.ON
-		#~ else:
-			#~ self.state = RelayActuator.State.OFF
-		#~ return True, "Relay is now %s" % self.read ()[0]
+	def write (self, rawdata):		# FIXME: Get this unmarshaled earlier!
+		data = RelayData ()
+		data.unmarshal (rawdata)
+
+		if data.state == RelayData.ON:
+			self.state = RelayActuator.State.ON
+		elif data.state == RelayData.OFF:
+			self.state = RelayActuator.State.OFF
+		return True, "Relay is now %s" % self.state
 
 class ControlledRelayActuator (Actuator):
 	class State:
@@ -204,17 +250,9 @@ class ControlledRelayActuator (Actuator):
 		return True, "Relay is now %s/%s" % (self.state, self.controller)
 
 
-class RelayHeater (RelayActuator):
-	def __init__ (self):
-		super (RelayHeater, self).__init__ ("BH", "Bathroom Heater", "20160228 By SukkoPera <software@sukkology.net>")
-
-class RelayFan (ControlledRelayActuator):
-	def __init__ (self):
-		super (RelayFan, self).__init__ ("KF", "Kitchen Fan", "20170126 By SukkoPera <software@sukkology.net>")
-
 class CommandListener (object):
-	def __init__ (self, port = LISTEN_PORT):
-		self.serverName = "TestServer"
+	def __init__ (self, name, port = LISTEN_PORT):
+		self.serverName = name
 		self.sensors = {}
 		self.notificationRequests = []
 		self._thread = None
@@ -261,7 +299,7 @@ class CommandListener (object):
 		self._reply (addr, "VER %s" % self.serverName)
 
 	def _hlo (self, addr, args):
-		self._reply (addr, "HLO %s %s" % (self.serverName, "|".join ("%s %s %s %s" % (sensor.name, sensor.get_type_string (), sensor.stereotype, sensor.description) for sensor in self.sensors.itervalues ())))
+		self._reply (addr, "HLO %s %s" % (self.serverName, "|".join (("%s %s %s %s" % (sensor.name, sensor.get_type_string (), sensor.stereotype, sensor.description)).rstrip () for sensor in self.sensors.itervalues ())))
 
 
 	def _rea (self, addr, args):
@@ -355,7 +393,7 @@ class CommandListener (object):
 		print  >> sys.stderr, 'Waiting for commands...'
 		while not self._shallStop:
 			rlist = [self._sock, self._quitPipe[0]]
-			r, w, x = select.select (rlist, [], [], 5)
+			r, w, x = select.select (rlist, [], [], 1)
 
 			if self._quitPipe[0] in r:
 				# Thread shall exit
@@ -406,22 +444,3 @@ class CommandListener (object):
 			os.write (self._quitPipe[1], "X")
 			self._thread.join ()
 			self._thread = None
-
-if __name__ == "__main__":
-	tk = KitchenTemperatureSensor ()
-	tb = BathroomTemperatureSensor ()
-	rh = RelayHeater ()
-	kf = RelayFan ()
-	listener = CommandListener ()
-	listener.register_sensor (tk)
-	listener.register_sensor (tb)
-	listener.register_sensor (rh)
-	listener.register_sensor (kf)
-
-	listener.start ()
-	time.sleep (10)
-	listener.unregister_sensor (tk)
-	del tk
-	#~ listener.stop ()
-	while True:
-		time.sleep (1)

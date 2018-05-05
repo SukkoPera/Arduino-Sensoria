@@ -4,11 +4,11 @@
 #include <SensoriaStereotypes/WeatherData.h>
 #include <SensoriaCommunicators/ESPWifi.h>
 
-IPAddress outdoor1 (192, 168, 1, 152);
+//~ IPAddress outdoor1 (192, 168, 1, 152);
 
 // Wi-Fi parameters
-#define WIFI_SSID        "ssid"
-#define WIFI_PASSWORD    "password"
+#define WIFI_SSID        "SukkoNet-TO"
+#define WIFI_PASSWORD    "everythingyouknowiswrong"
 
 SoftwareSerial swSerial (6, 7);
 SensoriaEsp8266Communicator comm;
@@ -35,8 +35,9 @@ void setup () {
     mypanic (100);
   }
 
-  client.begin (comm);
+  client.begin (comm, true);
 
+	UdpAddress* outdoor1 = comm.getAddress (192, 168, 1, 152, 9999);
 	while (!client.registerNode (outdoor1)) {
 		Serial.println (F("Cannot register outdoor1 node"));
       delay (1000);
@@ -76,6 +77,8 @@ void loop () {
       }
     }
   }
+
+  client.loop ();
 
   delay (5000);
 }

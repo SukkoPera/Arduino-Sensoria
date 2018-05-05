@@ -12,9 +12,65 @@ enum SensoriaChannel {
 	CC_CLIENT        = CC_SERVER
 };
 
+class SensoriaAddress {
+public:
+	virtual char* toString (char* buf, byte size) const = 0;
+
+	SensoriaAddress& operator=(const SensoriaAddress& other) {
+		clone (other);
+		return *this;
+	}
+
+	bool operator== (const SensoriaAddress& other) const {
+			return equalTo (other);
+	}
+
+	bool operator!= (const SensoriaAddress& other) const {
+		return !(*this == other);
+	}
+
+protected:
+	virtual bool equalTo (const SensoriaAddress& other) const = 0;
+
+	virtual void clone (const SensoriaAddress& otherBase) = 0;
+};
+
 class SensoriaCommunicator {
 public:
+	enum SendResult {
+		SEND_OK = 1,          // All good, reply is valid
+		SEND_ERR = -1,        // Command sent but got an error reply
+		SEND_UNEXP_ERR = -1,  // Command sent but got an unexpected reply
+		SEND_TIMEOUT = -99    // Send timed out
+	};
 
+	virtual SensoriaAddress* getAddress () = 0;
+
+	virtual void releaseAddress (SensoriaAddress* addr) = 0;
+
+	virtual SensoriaAddress* getNotificationAddress (const SensoriaAddress* client) = 0;
+
+	// Functions for servers
+	virtual boolean receiveCmd (char*& cmd, SensoriaAddress* client) = 0;
+
+	virtual SendResult reply (const char* reply, const SensoriaAddress* client) = 0;
+
+	virtual boolean notify (const char* notification, const SensoriaAddress* client) = 0;
+
+	// Function for clients
+	virtual SendResult sendCmd (const char* cmd, const SensoriaAddress* server, char*& reply) = 0;
+
+	virtual SendResult broadcast (const char* cmd) = 0;
+
+	virtual boolean receiveBroadcastReply (char*& reply, SensoriaAddress*& sender, unsigned int timeout) = 0;
+
+	virtual boolean receiveNotification (char*& notification) = 0;
+
+
+
+
+
+#if 0
 	// Override if needed, but always call super
 	//~ virtual boolean begin () = 0;
 
@@ -44,6 +100,7 @@ public:
 
 		return ret;
 	}
+#endif
 };
 
 #endif

@@ -76,6 +76,22 @@ if n > 0:
 		subplot (k[0], 1, x, ys[k[0]])
 		plt.subplot (1, 2, 2)
 		subplot (k[1], 2, x, ys[k[1]])
+	elif n == 3:
+		plt.subplot (3, 1, 1)
+		subplot (k[0], 1, x, ys[k[0]])
+		plt.subplot (3, 1, 2)
+		subplot (k[1], 2, x, ys[k[1]])
+		plt.subplot (3, 1, 3)
+		subplot (k[2], 3, x, ys[k[2]])
+	elif n == 4:
+		plt.subplot (2, 2, 1)
+		subplot (k[0], 1, x, ys[k[0]])
+		plt.subplot (2, 2, 2)
+		subplot (k[1], 2, x, ys[k[1]])
+		plt.subplot (2, 2, 3)
+		subplot (k[2], 3, x, ys[k[2]])
+		plt.subplot (2, 2, 4)
+		subplot (k[3], 4, x, ys[k[2]])
 
 
 	# Squeeze a bit

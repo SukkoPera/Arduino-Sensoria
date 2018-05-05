@@ -8,6 +8,10 @@ class RelayData (StereoType):
 	def __init__ (self):
 		self.state = RelayData.UNKNOWN
 
+	def __eq__ (self, other):
+		return isinstance (other, self.__class__) and \
+			self.state == other.state
+
 	def marshal (self):
 		if self.state == RelayData.ON:
 			val = "ON"

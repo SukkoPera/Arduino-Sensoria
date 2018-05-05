@@ -1,65 +1,60 @@
 #if 1
 
-#include "Sensoria.h"
-#include "SensoriaCore/common.h"
-#include "SensoriaCore/debug.h"
-#include "SensoriaCore/utils.h"
-#include "ServerProxy.h"
-#include "TransducerProxy.h"
+#include <Arduino.h>
+#include <Sensoria.h>
+#include <SensoriaCore/common.h>
+#include <SensoriaCore/debug.h>
+#include <SensoriaCore/utils.h>
 #include <SensoriaStereotypes/AllStereotypes.h>
+#include "TransducerProxy.h"
+#include "ServerProxy.h"
 
 //~ #define DEBUG_COMMS
 #define CMD_LEN 3
 
 
-ServerProxy::ServerProxy (SensoriaCommunicator* _comm, IPAddress& _address, uint16_t _port):
-		nFailures (0), comm (_comm), address (_address), port (_port), nTransducers (0) {
+ServerProxy::ServerProxy (SensoriaCommunicator* _comm, SensoriaAddress* _address):
+		nFailures (0), comm (_comm), address (_address), nTransducers (0) {
 
 	name[0] = '\0';
 }
 
 // args is input, reply is output
-ServerProxy::CommandResult ServerProxy::sendcmd (const char *args, char*& reply) {
+SensoriaCommunicator::SendResult ServerProxy::sendcmd (const char *args, char*& reply) {
 #ifdef DEBUG_COMMS
 	DPRINT (F("<-- "));
 	DPRINT (args);   // Trailing CR is embedded in string, so no need for DPRINTLN
 #endif
 
-	CommandResult ret = SEND_OK;
 	reply = NULL;
-
-	if (!comm -> send (args, address, port)) {
-		DPRINTLN (F("Cannot send command"));
-		ret = SEND_TIMEOUT;     // Assume network issue
-	} else {
-		IPAddress addr;
-		uint16_t port;
-		if ((comm -> receiveStringWithTimeout (&reply, &addr, &port, CC_SERVER, CLIENT_TIMEOUT))) {
+	SensoriaCommunicator::SendResult ret = comm -> sendCmd (args, address, reply);
+	if (ret > 0) {
 #ifdef DEBUG_COMMS
-			DPRINT (F("--> "));
-			DPRINTLN (reply);
+		DPRINT (F("--> "));
+		DPRINTLN (reply);
 #endif
 
-			// Remove trailing whitespace
-			strstrip (reply);
+		// Remove trailing whitespace
+		strstrip (reply);
 
-			char *rc[2];
-			if (splitString (reply, rc, 2) == 2)
-				reply = rc[1];
-			if (strcmp_P (rc[0], PSTR ("ERR")) == 0) {
-				DPRINT (F("Command failed: "));
-				DPRINTLN (rc[1]);
-				ret = SEND_ERR;
-			} else if (strncmp (rc[0], args, CMD_LEN) != 0) {
-				// Reply doesn't start with the command we sent
-				DPRINT (F("Unexpected reply: "));
-				DPRINTLN (reply);
-				ret = SEND_UNEXP_ERR;
-			}   // else command succeeded!
+		char *rc[2];
+		if (splitString (reply, rc, 2) == 2)
+			reply = rc[1];
+		if (strcmp_P (rc[0], PSTR ("ERR")) == 0) {
+			DPRINT (F("Command failed: "));
+			DPRINTLN (rc[1]);
+			ret = SensoriaCommunicator::SEND_ERR;
+		} else if (strncmp (rc[0], args, CMD_LEN) != 0) {
+			// Reply doesn't start with the command we sent
+			DPRINT (F("Unexpected reply: "));
+			DPRINTLN (reply);
+			ret = SensoriaCommunicator::SEND_UNEXP_ERR;
 		} else {
-			DPRINTLN (F("No reply received"));
-			ret = SEND_TIMEOUT;
+			// Command succeeded!
+			ret = SensoriaCommunicator::SEND_OK;
 		}
+	} else {
+		DPRINTLN (F("Cannot send command or no reply received"));
 	}
 
 	return ret;
@@ -111,7 +106,7 @@ boolean ServerProxy::read (TransducerProxy& t) {
 	strcat (buf, t.name);
 	strcat (buf, "\n");
 
-	CommandResult res = sendcmd (buf, r);
+	SensoriaCommunicator::SendResult res = sendcmd (buf, r);
 	if (res > 0) {
 		char *p[2];
 		if (splitString (r, p, 2) != 2) {
@@ -125,7 +120,7 @@ boolean ServerProxy::read (TransducerProxy& t) {
 			t.stereotype -> clear ();
 			ret = t.stereotype -> unmarshal (reply);
 		}
-	} else if (res == SEND_TIMEOUT) {
+	} else if (res == SensoriaCommunicator::SEND_TIMEOUT) {
 		nFailures++;
 	}
 
@@ -145,10 +140,10 @@ boolean ServerProxy::write (ActuatorProxy& a, Stereotype& st) {
 	strncat_P (buf, PSTR ("\n"), SZ);
 
 	if (tmp) {
-		CommandResult res = sendcmd (buf, tmp);
+		SensoriaCommunicator::SendResult res = sendcmd (buf, tmp);
 		if (res > 0) {
 			ret = true;
-		} else if (res == SEND_TIMEOUT) {
+		} else if (res == SensoriaCommunicator::SEND_TIMEOUT) {
 			nFailures++;
 		}
 	}

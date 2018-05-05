@@ -30,32 +30,23 @@ class TransducerProxy (object):
 		assert self.server is not None
 		assert typ in typeStrings
 
-		if callable not in self.notificationClients:
+		if callback not in self.notificationClients:
 			if args is not None:
 				reply = self.server.send ("NRQ %s %s %s" % (self.name, typeStrings[typ], args))
 			else:
 				reply = self.server.send ("NRQ %s %s" % (self.name, typeStrings[typ]))
-			parts = reply.split (" ", 4)
-			if len (parts) != 3:
-				raise Error, "Unexpected NRQ reply: '%s'" % reply
-			name, t, rep = parts
-			assert name == self.name
-			assert t == typeStrings[typ]
-			if rep.upper () == "OK":
+			if reply.upper () == "OK":
 				self.notificationClients.append (callback)
 				return True
 			else:
+				raise Error, "Unexpected NRQ reply: '%s'" % reply
 				return False
 		else:
 			# Already setup
 			return True
 
 	# This can only be called from Client
-	def _processNotification (self, marshaledData, raw = False):
-		if raw:
-			#~ return marshaledData
-			assert False
-		else:
+	def _processNotification (self, marshaledData):
 			data = self.stereoclass.unmarshalStatic (marshaledData)
 			for callback in self.notificationClients:
 				callback (data)
@@ -90,14 +81,26 @@ class SensorProxy (TransducerProxy):
 			raise
 
 class ActuatorProxy (TransducerProxy):
-	def __init__ (self, name, stereoclass, srv):
-		sdata = srv.send ("QRY %s" % name)
-		name, typ, stereotype, description, version = sdata.split ("|")
-		super (ActuatorProxy, self).__init__ (srv, ACTUATOR, name, stereotype, stereoclass, description, version)
+	# ~ def __init__ (self, name, stereoclass, srv):
+		# ~ sdata = srv.send ("QRY %s" % name)
+		# ~ name, typ, stereotype, description, version = sdata.split ("|")
+		# ~ super (ActuatorProxy, self).__init__ (srv, ACTUATOR, name, stereotype, stereoclass, description, version)
+
+	# This c'tor does not query sensor data, but since we'll only be missing the version, we are fine with it
+	def __init__ (self, name, typ, stereotype, description, stereoclass, srv):
+		super (ActuatorProxy, self).__init__ (srv, ACTUATOR, name, stereotype, stereoclass, description, "N/A")
 
 	def write (self, what):
 		assert self.server is not None
-		return self.server.send ("WRI %s %s" % (self.name, what))
+		marshalled = what.marshal ()
+		rep = self.server.send ("WRI %s %s" % (self.name, marshalled))
+		parts = rep.split (" ", 1)
+		rep0 = parts[0].upper ()
+		if rep0 != "OK":
+			if len (parts) > 1:
+				raise Error, "Write failed: %s" % parts[1]
+			else:
+				raise Error, "Write failed"
 
 	def read (self, raw = False):
 		assert self.server is not None

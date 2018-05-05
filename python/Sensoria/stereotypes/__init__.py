@@ -1,5 +1,8 @@
 __all__ = [
 	"WeatherData",
 	"RelayData",
-	"ControlledRelayData"
+	"ControlledRelayData",
+	"DateTimeData",
+	"TimeControlData",
+	"ValueSetData"
 ]

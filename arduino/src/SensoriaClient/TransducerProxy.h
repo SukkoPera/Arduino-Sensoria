@@ -32,17 +32,17 @@ public:
   // Period is in seconds and is mandatory if type is periodic
   boolean requestNotification (NotificationType type, word period = 0);
 
-  TransducerProxy (ServerProxy* _srvpx, const char *name, TransducerType _type, Stereotype *stereotype, const char *description, const char *version);
+  TransducerProxy (ServerProxy* _srvpx, const char *name, TransducerType _type, Stereotype *stereotype, const char *description = NULL, const char *version = NULL);
 };
 
 class SensorProxy: public TransducerProxy {
 public:
-  SensorProxy (ServerProxy* _srvpx, const char *name, Stereotype *stereotype, const char *description, const char *version = NULL);
+  SensorProxy (ServerProxy* _srvpx, const char *name, Stereotype *stereotype, const char *description = NULL, const char *version = NULL);
 };
 
 class ActuatorProxy: public TransducerProxy {
 public:
-  ActuatorProxy (ServerProxy* _srvpx, const char *name, Stereotype *stereotype, const char *description, const char *version = NULL);
+  ActuatorProxy (ServerProxy* _srvpx, const char *name, Stereotype *stereotype, const char *description = NULL, const char *version = NULL);
 
   boolean write (Stereotype& st);
 };

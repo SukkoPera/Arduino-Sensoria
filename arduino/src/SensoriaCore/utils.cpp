@@ -42,6 +42,73 @@ char *floatToString (double val, char *outstr) {
 	return outstr;
 }
 
+#ifdef ARDUINO_ARCH_STM32F1
+
+// Yet, another good itoa implementation
+// https://stackoverflow.com/questions/3440726/what-is-the-proper-way-of-implementing-a-good-itoa-function#12386915
+// Modifed by SukkoPera to reflect the avrlibc function behavior, i.e.:
+// The utoa() function returns the pointer passed as s.
+char *itoa(int value, char *ssp, int radix) {
+    char tmp[16];// be careful with the length of the buffer
+    char *tp = tmp;
+    char *sp = ssp;
+    int i;
+    unsigned v;
+
+    int sign = (radix == 10 && value < 0);
+    if (sign)
+        v = -value;
+    else
+        v = (unsigned) value;
+
+    while (v || tp == tmp)
+    {
+        i = v % radix;
+        v /= radix;
+        if (i < 10)
+          *tp++ = i + '0';
+        else
+          *tp++ = i + 'a' - 10;
+    }
+
+    if (sign)
+        *sp++ = '-';
+
+    while (tp > tmp)
+        *sp++ = *--tp;
+
+    *sp = '\0';
+
+    return ssp;
+}
+
+// Modified version of the above that handles unsigned int's
+// By SukkoPera
+char *utoa(unsigned int v, char *ssp, int radix) {
+    char tmp[16];// be careful with the length of the buffer
+    char *tp = tmp;
+    char *sp = ssp;
+    int i;
+
+    while (v || tp == tmp) {
+			i = v % radix;
+			v /= radix;
+			if (i < 10)
+				*tp++ = i + '0';
+			else
+				*tp++ = i + 'a' - 10;
+    }
+
+    while (tp > tmp)
+			*sp++ = *--tp;
+
+    *sp = '\0';
+
+    return ssp;
+}
+
+#endif	// ARDUINO_ARCH_STM32F1
+
 int splitString (char *str, char **parts, size_t n, const char sep) {
 	size_t i;
 	char *c;
@@ -69,7 +136,7 @@ int splitString (char *str, char **parts, size_t n, const char sep) {
 	return i + 1;
 }
 
-#ifdef ARDUINO_ARCH_ESP8266
+#ifndef ARDUINO_ARCH_AVR
 
 char *strupr(char *s) {
   char *t = s;
@@ -88,7 +155,7 @@ char *strupr(char *s) {
   return s;
 }
 
-uint16_t _crc_xmodem_update (uint16_t crc, uint8_t data)
+uint16_t _crc_xmodem_update (uint16_t crc, uint8_t data) {
   int i;
 
   crc = crc ^ ((uint16_t) data << 8);
@@ -102,11 +169,13 @@ uint16_t _crc_xmodem_update (uint16_t crc, uint8_t data)
   return crc;
 }
 
-#else  // ARDUINO_ARCH_ESP8266
+#else  // !ARDUINO_ARCH_AVR
+
+// avrlib already has a CRC function we can use
 
 #include <util/crc16.h>
 
-#endif  // ARDUINO_ARCH_ESP8266
+#endif  // !ARDUINO_ARCH_AVR
 
 uint16_t crc16_update_str (uint16_t crc, const char* s) {
   char c;
