@@ -2,66 +2,85 @@
 
 import argparse
 import time
+import datetime
+import logging
+import signal
 
 import Sensoria
 
-# ./query.py OH OT
-# ./query -s
+KEEP_GOING = True
+
+def sigHandler (signum, frame):
+	global KEEP_GOING
+
+	print 'Received signal', signum
+	KEEP_GOING = False
+
+signal.signal (signal.SIGHUP, sigHandler)
+signal.signal (signal.SIGTERM, sigHandler)
+
+
 parser = argparse.ArgumentParser (description = 'Query Sensoria devices')
-parser.add_argument ('--read', "-r", metavar = "TRANSDUCER_NAME", nargs = '*', default = [],
-										 help = "Read a transducer")
 parser.add_argument ('--address', metavar = "ADDRESS", nargs = '*', default = [], dest = "addresses",
-										 help = "Address of node to query (Can be used multiple times)")
+										 help = "Address of node to query")
 parser.add_argument ('--read-actuators', "-a", action = 'store_true', default = False,
 										 help = "Read Actuators too")
 parser.add_argument ('--interval', "-i", action = 'store', type = int, default = 0,
-										 help = "Keep polling sensors periodically", metavar = "SECONDS")
+										 help = "Keep reading transducers periodically", metavar = "SECONDS")
 parser.add_argument ('--autodiscover', "-A", action = 'store', type = int, default = None,
 										 help = "Autodiscover interval (0 to disable)", metavar = "SECONDS")
-
+parser.add_argument ('--verbose', "-v", action = 'store_true', default = False,
+										 help = "Enable debugging messages")
 
 args = parser.parse_args ()
+if args.verbose:
+	# ~ logging.basicConfig (filename='example.log',level=logging.DEBUG)
+	logging.basicConfig (level = logging.DEBUG)
+else:
+	logging.basicConfig (level = logging.INFO)
+
 if args.autodiscover is None:
 	sensoria = Sensoria.Client (servers = args.addresses)
 elif args.autodiscover > 0:
 	sensoria = Sensoria.Client (servers = args.addresses, autodiscInterval = args.autodiscover)
 else:
 	sensoria = Sensoria.Client (servers = args.addresses, autodiscover = False)
-while True:
-	if len (args.read) > 0:
-		for tname in args.read:
-			tname = tname.upper ()
-			if tname in sensoria.transducers:
-				try:
-					t = sensoria.transducers[tname]
-					parsed = t.read ()
-					print "%s: %s" % (tname, parsed)
-				except Sensoria.Error as ex:
-					print "%s: %s" % (tname, ex)
-			else:
-				print "%s: Not found" % tname
+
+db = Sensoria.DB ()
+
+print "Logging data every %d seconds" % args.interval
+
+while KEEP_GOING:
+	now = datetime.datetime.now ()
+	print "--- %s ---" % now
+
+	if len (sensoria.servers) == 0:
+		print "No servers available"
 	else:
-		if len (sensoria.servers) == 0:
-			print "No servers available"
-		else:
-			for sname, server in sensoria.servers.iteritems ():
-				print "- Server: %s (%s:%d)" % (sname, server.address, server.port)
-				for tname, t in sorted (server.transducers.iteritems ()):
-					try:
-						if t.genre == Sensoria.SENSOR:
-							print "  - Sensor %s: %s" % (t.name, t.description)
-							parsed = t.read ()
-							print "    - Read: %s" % parsed
-						elif t.genre == Sensoria.ACTUATOR:
-							print "  - Actuator %s: %s" % (t.name, t.description)
-							if args.read_actuators:
-								parsed = t.read ()
-								print "    - Read: %s" % parsed
-						else:
-							print "  - Found unknown transducer %s: %s" % (t.name, t.description)
-					except Sensoria.Error as ex:
-						print ex
-						pass
+		data = {}
+
+		for sname, server in sensoria.servers.iteritems ():
+			print "- Server: %s (%s:%d)" % (sname, server.address, server.port)
+			for tname, t in sorted (server.transducers.iteritems ()):
+				try:
+					if t.genre == Sensoria.SENSOR:
+						print "  - Sensor %s: %s" % (t.name, t.description)
+						data[t] = t.read (raw = True)
+						print "    - %s" % data[t]
+					elif t.genre == Sensoria.ACTUATOR:
+						print "  - Actuator %s: %s" % (t.name, t.description)
+						if args.read_actuators:
+							data[t] = t.read (raw = True)
+							print "    - %s" % data[t]
+					else:
+						print "  - Found unknown transducer %s: %s" % (t.name, t.description)
+				except Sensoria.Error as ex:
+					print ex
+
+		# All readings done, save to DB
+		db.insert (now, data, commit = True)
+
+	print "--- READ COMPLETE ---"
 
 	if args.interval > 0:
 		time.sleep (args.interval)
