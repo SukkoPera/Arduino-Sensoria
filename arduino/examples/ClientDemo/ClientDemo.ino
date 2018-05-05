@@ -7,8 +7,8 @@
 //~ IPAddress outdoor1 (192, 168, 1, 152);
 
 // Wi-Fi parameters
-#define WIFI_SSID        "SukkoNet-TO"
-#define WIFI_PASSWORD    "everythingyouknowiswrong"
+#define WIFI_SSID        "ssid"
+#define WIFI_PASSWORD    "password"
 
 SoftwareSerial swSerial (6, 7);
 SensoriaEsp8266Communicator comm;
