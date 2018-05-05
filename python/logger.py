@@ -24,7 +24,7 @@ args = parser.parse_args ()
 if args.autodiscover is None:
 	sensoria = Sensoria.Client (servers = args.addresses)
 elif args.autodiscover > 0:
-	sensoria = Sensoria.Client (servers = args.addresses, autodiscTimer = args.autodiscover)
+	sensoria = Sensoria.Client (servers = args.addresses, autodiscInterval = args.autodiscover)
 else:
 	sensoria = Sensoria.Client (servers = args.addresses, autodiscover = False)
 while True:
