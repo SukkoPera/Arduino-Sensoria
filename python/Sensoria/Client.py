@@ -39,7 +39,8 @@ class Client (object):
 
 	def __init__ (self, servers = [], autodiscover = True, autodiscInterval = DEFAULT_AUTODISCOVER_INTERVAL):
 		self._logger = logging.getLogger ('client')
-		self._logger.addHandler (logging.StreamHandler ())
+		# ~ self._logger.setLevel (logging.DEBUG)
+		# ~ self._logger.addHandler (logging.StreamHandler ())
 		self._load_stereotypes ()
 		self._servers = {}
 		self._setupSocket ()
@@ -86,7 +87,7 @@ class Client (object):
 			print "Notification listener thread stopped"
 
 	def _notificationThread (self):
-		print  >> sys.stderr, 'Waiting for notifications...'
+		print >> sys.stderr, 'Waiting for notifications...'
 		while not self._shallStop:
 			rlist = [self._notificationSocket, self._quitPipe[0]]
 			r, w, x = select.select (rlist, [], [], 5)
