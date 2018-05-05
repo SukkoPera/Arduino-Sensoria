@@ -225,7 +225,7 @@ fig.suptitle ("Weather Data %s" % timeDesc)
 # samples
 notnans = lambda v: len (v) - len (filter (math.isnan, v))
 # ~ hs = tuple ((h, notnans (h)) for h in (yh, yh2, yh3))
-hs = tuple ((h, notnans (h)) for h in (yh,))		# Only IH is measured outdoors!
+hs = tuple ((h, notnans (h)) for h in (yh,))		# Only yh is measured outdoors!
 hs = sorted (hs, key = lambda t: t[1], reverse = True)
 #~ print [h[1] for h in hs]
 goodH = hs[0][0]
