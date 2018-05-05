@@ -7,7 +7,7 @@
 // Uses ~1600b flash, ~120b RAM
 #define ENABLE_NOTIFICATIONS
 
-#ifndef ARDUINO_ARCH_ESP8266
+#if !defined(ARDUINO_ARCH_ESP8266) && !defined(ARDUINO_ARCH_STM32F1)
   // Flash strings don't seem to work very well on ESP8266
   #define ENABLE_FLASH_STRINGS
 #endif
@@ -44,6 +44,8 @@
 #define strcmp_P strcmp
 #undef strcat_P
 #define strcat_P strcat
+#undef strncat_P
+#define strncat_P strncat
 
 #endif
 
