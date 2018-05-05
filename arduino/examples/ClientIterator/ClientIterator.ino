@@ -1,15 +1,14 @@
-#include <SoftwareSerial.h>
 #include <Sensoria.h>
+
 #include <SensoriaClient/SensoriaClient.h>
-#include <SensoriaCommunicators/ESPWifi.h>
+SensoriaClient client;
+
+#include <SensoriaCommunicators/ESPStandAlone.h>
+ESPCommunicator comm;
 
 // Wi-Fi parameters
 #define WIFI_SSID        "ssid"
 #define WIFI_PASSWORD    "password"
-
-SoftwareSerial swSerial (6, 7);
-SensoriaEsp8266Communicator comm;
-SensoriaClient client;
 
 
 #define LED_PIN LED_BUILTIN
@@ -27,13 +26,11 @@ void mypanic (int interval) {
 void setup() {
   Serial.begin (9600);
 
-  swSerial.begin (9600);
-  if (!comm.begin (swSerial, WIFI_SSID, WIFI_PASSWORD)) {
+  if (!comm.begin (WIFI_SSID, WIFI_PASSWORD)) {
     mypanic (100);
   }
 
   client.begin (comm);
-
 }
 
 void loop() {
