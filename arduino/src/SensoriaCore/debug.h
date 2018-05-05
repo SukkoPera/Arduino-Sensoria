@@ -1,7 +1,10 @@
 #define NDEBUG
 
+// These are only active if NDEBUG is NOT defined
+//~ #define DEBUG_COMMUNICATOR
+
 #ifndef NDEBUG
-  #define DSTART(spd) Serial.begin (spd);
+  #define DSTART(spd) Serial.begin (spd); while (!Serial);
   #define DPRINT(...) Serial.print (__VA_ARGS__)
   #define DPRINTLN(...) Serial.println (__VA_ARGS__)
 #else
