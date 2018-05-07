@@ -326,7 +326,7 @@ class InfoBox (wx.Dialog):
 			(ReadOnlyTextCtrl (self, -1, "%s:%u" % (t.server.address, t.server.port), style = wx.TE_CENTER), 1, wx.EXPAND),
 			(wx.StaticText (self, -1, 'Last Reading:'), 0, wx.ALIGN_CENTER_VERTICAL),
 			(ReadOnlyTextCtrl (self, -1, "%s" % t.lastRead, style = wx.TE_CENTER), 1, wx.EXPAND),
-			(wx.StaticText (self, -1, 'Last Reading (Raw):'), 0, wx.ALIGN_CENTER_VERTICAL),
+			(wx.StaticText (self, -1, 'Last Reading (Unformatted):'), 0, wx.ALIGN_CENTER_VERTICAL),
 			(ReadOnlyTextCtrl (self, -1, "%s" % t.lastReadRaw, style = wx.TE_CENTER), 1, wx.EXPAND),
 			(wx.StaticText (self, -1, 'Last Update:'), 0, wx.ALIGN_CENTER_VERTICAL),
 			(ReadOnlyTextCtrl (self, -1, "%s" % t.updateTime.strftime ("%c") if t.updateTime else "N/A", style = wx.TE_CENTER), 1, wx.EXPAND)
@@ -815,7 +815,7 @@ class Frame (wx.Frame):
 		panel.Layout ()
 
 		#~ self._sensoria = Sensoria.Client (servers = ["localhost"], autodiscover = False)
-		self._sensoria = Sensoria.Client (autodiscInterval = 20)
+		self._sensoria = Sensoria.Client (autodiscInterval = 60 * 3)
 		self._sensoria.enableNotifications ()
 		self.transducerList = TransducerList (self._sensoria, self.config)
 		self._lc.SetObjects (self.transducerList.transducers)
