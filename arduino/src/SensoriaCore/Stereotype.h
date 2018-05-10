@@ -12,9 +12,9 @@ protected:
 public:
 	const char* const tag;
 
-  virtual bool operator== (Stereotype const& other) = 0;
+	virtual bool operator== (Stereotype const& other) = 0;
 
-  virtual void clear () = 0;
+	virtual void clear () = 0;
 
 	virtual boolean unmarshal (char *s) = 0;
 

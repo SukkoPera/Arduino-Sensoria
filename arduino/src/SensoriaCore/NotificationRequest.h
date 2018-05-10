@@ -19,15 +19,15 @@ public:
 	 */
 	unsigned long timeLastSent;
 
-  NotificationRequest& operator= (const NotificationRequest& other) {
-    destAddr = other.destAddr;
-    type = other.type;
+	NotificationRequest& operator= (const NotificationRequest& other) {
+		destAddr = other.destAddr;
+		type = other.type;
 		transducer = other.transducer;
-    period = other.period;
+		period = other.period;
 		timeLastSent = other.timeLastSent;
 
-    return *this;
-  }
+		return *this;
+	}
 };
 
 #endif

@@ -49,62 +49,62 @@ char *floatToString (double val, char *outstr) {
 // Modifed by SukkoPera to reflect the avrlibc function behavior, i.e.:
 // The utoa() function returns the pointer passed as s.
 char *itoa(int value, char *ssp, int radix) {
-    char tmp[16];// be careful with the length of the buffer
-    char *tp = tmp;
-    char *sp = ssp;
-    int i;
-    unsigned v;
+		char tmp[16];// be careful with the length of the buffer
+		char *tp = tmp;
+		char *sp = ssp;
+		int i;
+		unsigned v;
 
-    int sign = (radix == 10 && value < 0);
-    if (sign)
-        v = -value;
-    else
-        v = (unsigned) value;
+		int sign = (radix == 10 && value < 0);
+		if (sign)
+				v = -value;
+		else
+				v = (unsigned) value;
 
-    while (v || tp == tmp)
-    {
-        i = v % radix;
-        v /= radix;
-        if (i < 10)
-          *tp++ = i + '0';
-        else
-          *tp++ = i + 'a' - 10;
-    }
+		while (v || tp == tmp)
+		{
+				i = v % radix;
+				v /= radix;
+				if (i < 10)
+					*tp++ = i + '0';
+				else
+					*tp++ = i + 'a' - 10;
+		}
 
-    if (sign)
-        *sp++ = '-';
+		if (sign)
+				*sp++ = '-';
 
-    while (tp > tmp)
-        *sp++ = *--tp;
+		while (tp > tmp)
+				*sp++ = *--tp;
 
-    *sp = '\0';
+		*sp = '\0';
 
-    return ssp;
+		return ssp;
 }
 
 // Modified version of the above that handles unsigned int's
 // By SukkoPera
 char *utoa(unsigned int v, char *ssp, int radix) {
-    char tmp[16];// be careful with the length of the buffer
-    char *tp = tmp;
-    char *sp = ssp;
-    int i;
+		char tmp[16];// be careful with the length of the buffer
+		char *tp = tmp;
+		char *sp = ssp;
+		int i;
 
-    while (v || tp == tmp) {
+		while (v || tp == tmp) {
 			i = v % radix;
 			v /= radix;
 			if (i < 10)
 				*tp++ = i + '0';
 			else
 				*tp++ = i + 'a' - 10;
-    }
+		}
 
-    while (tp > tmp)
+		while (tp > tmp)
 			*sp++ = *--tp;
 
-    *sp = '\0';
+		*sp = '\0';
 
-    return ssp;
+		return ssp;
 }
 
 #endif	// ARDUINO_ARCH_STM32F1
@@ -139,34 +139,34 @@ int splitString (char *str, char **parts, size_t n, const char sep) {
 #ifndef ARDUINO_ARCH_AVR
 
 char *strupr(char *s) {
-  char *t = s;
+	char *t = s;
 
-  if (!s) {
-    return 0;
-  }
+	if (!s) {
+		return 0;
+	}
 
-  while (*t != '\0') {
-    if (*t >= 'a' && *t <= 'z') {
-      *t = *t - ('a' - 'A');
-    }
-    t++;
-  }
+	while (*t != '\0') {
+		if (*t >= 'a' && *t <= 'z') {
+			*t = *t - ('a' - 'A');
+		}
+		t++;
+	}
 
-  return s;
+	return s;
 }
 
 uint16_t _crc_xmodem_update (uint16_t crc, uint8_t data) {
-  int i;
+	int i;
 
-  crc = crc ^ ((uint16_t) data << 8);
-  for (i = 0; i < 8; i++) {
-    if (crc & 0x8000)
-      crc = (crc << 1) ^ 0x1021;
-    else
-      crc <<= 1;
-  }
+	crc = crc ^ ((uint16_t) data << 8);
+	for (i = 0; i < 8; i++) {
+		if (crc & 0x8000)
+			crc = (crc << 1) ^ 0x1021;
+		else
+			crc <<= 1;
+	}
 
-  return crc;
+	return crc;
 }
 
 #else  // !ARDUINO_ARCH_AVR
@@ -178,10 +178,10 @@ uint16_t _crc_xmodem_update (uint16_t crc, uint8_t data) {
 #endif  // !ARDUINO_ARCH_AVR
 
 uint16_t crc16_update_str (uint16_t crc, const char* s) {
-  char c;
-  while ((c = *s++)) {
-    crc = _crc_xmodem_update (crc, c);
-  }
+	char c;
+	while ((c = *s++)) {
+		crc = _crc_xmodem_update (crc, c);
+	}
 
-  return crc;
+	return crc;
 }

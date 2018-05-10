@@ -45,19 +45,19 @@ public:
 	}
 
 #ifdef ENABLE_NOTIFICATIONS
-  virtual Stereotype& getLastReading () = 0;
+	virtual Stereotype& getLastReading () = 0;
 
-  virtual void setLastReading (Stereotype& reading) = 0;
+	virtual void setLastReading (Stereotype& reading) = 0;
 #endif
 
-  /* Override to implement the actual sensor reading and reporting.
+	/* Override to implement the actual sensor reading and reporting.
 	 *
 	 * An actuator might also have a state or some parameters to read, so you can
 	 * override this method for that.
 	 */
 	virtual boolean readGeneric (Stereotype* st) = 0;
 
-  /* Override to implement the actual Actuator writing.
+	/* Override to implement the actual Actuator writing.
 	 */
 	virtual boolean writeGeneric (Stereotype* st) = 0;
 };
@@ -66,26 +66,26 @@ template <typename ST>
 class TransducerT: public Transducer {
 private:
 #ifdef ENABLE_NOTIFICATIONS
-  ST lastReading;
+	ST lastReading;
 
-  Stereotype& getLastReading () {
-    return lastReading;
-  }
+	Stereotype& getLastReading () {
+		return lastReading;
+	}
 
-  void setLastReading (Stereotype& st) {
-    ST& tst = static_cast<ST&> (st);
-    lastReading = tst;
-  }
+	void setLastReading (Stereotype& st) {
+		ST& tst = static_cast<ST&> (st);
+		lastReading = tst;
+	}
 #endif
 
-  virtual boolean readGeneric (Stereotype* st) override {
-    ST* tst = static_cast<ST*> (st);
-    return read (*tst);
-  }
+	virtual boolean readGeneric (Stereotype* st) override {
+		ST* tst = static_cast<ST*> (st);
+		return read (*tst);
+	}
 
 protected:
-  TransducerT (Type _type): Transducer (_type) {
-  }
+	TransducerT (Type _type): Transducer (_type) {
+	}
 
 	/* Override to implement the actual sensor reading and reporting.
 	 *
