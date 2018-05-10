@@ -97,15 +97,15 @@ public:
 		return ret;
 	}
 
-  boolean begin (FlashString name, FlashString description) {
-    if (Actuator::begin (name, F("TC"), description, F("20180507"))) {
-      return true;
-    } else {
-      return false;
-    }
-  }
+	boolean begin (FlashString name, FlashString description) {
+		if (Actuator::begin (name, F("TC"), description, F("20180507"))) {
+			return true;
+		} else {
+			return false;
+		}
+	}
 
-  boolean write (TimeControlData& tc) override {
+	boolean write (TimeControlData& tc) override {
 		boolean ret = true;
 
 		for (byte d = 0; d < DAYS_PER_WEEK; ++d) {
@@ -114,10 +114,10 @@ public:
 			}
 		}
 
-    return ret;
-  }
+		return ret;
+	}
 
-  boolean read (TimeControlData& rd) override {
-    return false;	// FIXME
-  }
+	boolean read (TimeControlData& rd) override {
+		return false;	// FIXME
+	}
 };
