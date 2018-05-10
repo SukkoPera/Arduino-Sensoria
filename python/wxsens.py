@@ -13,7 +13,7 @@ from settingspanel import SettingsEditDialog
 
 import Sensoria
 
-from ObjectListView import GroupListView, ColumnDefn
+from ObjectListView import ObjectListView, GroupListView, ColumnDefn
 
 # For Python 2.6
 def timedelta_total_seconds (timedelta):
@@ -30,6 +30,8 @@ class Config (object):
 		self.transducerUpdateInterval = 5	# s
 		self.servers = []
 		self.formatStrings = {}
+		self.viewDetails = False
+		self.groupByGenre = True
 
 	def getFilename (self):
 		if "XDG_CONFIG_HOME" in os.environ and len (os.environ["XDG_CONFIG_HOME"]) > 0:
@@ -49,6 +51,8 @@ class Config (object):
 			for tname, fmt in cfgp.items ('Format'):
 				tname = tname.upper ()		# ConfigParser lowercases everything
 				self.formatStrings[tname] = fmt
+			self.viewDetails = cfgp.getboolean ('View', 'Details')
+			self.groupByGenre = cfgp.getboolean ('View', 'Group')
 		except ConfigParser.Error as ex:
 			# Never mind, we'll just use defaults
 			pass
@@ -70,6 +74,10 @@ class Config (object):
 		cfgp.add_section ('Format')
 		for tname, fmt in self.formatStrings.iteritems ():
 			cfgp.set ('Format', tname, fmt)
+
+		cfgp.add_section ('View')
+		cfgp.set ('View', 'Details', self.viewDetails)
+		cfgp.set ('View', 'Group', self.groupByGenre)
 
 		# Note that ConfigParser does not support Unicode strings, at least not in 2.6
 		with open (self.getFilename (), 'wb') as configfile:
@@ -700,6 +708,17 @@ class MenuBar (wx.MenuBar):
 		self._frame.Bind (wx.EVT_MENU, self.onForceUpdate, m27)
 		self.Append (m2, "&Update")
 
+		m3 = wx.Menu ()
+		m31 = m3.Append (wx.NewId (), "Transducer &Details\tCtrl+D", kind = wx.ITEM_CHECK)
+		if self._frame.config.viewDetails:
+			m31.Check ()
+		self._frame.Bind (wx.EVT_MENU, self.onViewDetailsToggle, m31)
+		m32 = m3.Append (wx.NewId (), "&Group by Genre\tCtrl+G", kind = wx.ITEM_CHECK)
+		if self._frame.config.groupByGenre:
+			m32.Check ()
+		self._frame.Bind (wx.EVT_MENU, self.onGroupToggle, m32)
+		self.Append (m3, "&View")
+
 		menu = wx.Menu ()
 		m_about = menu.Append (wx.ID_ABOUT, "&About", "Information about this program")
 		self._frame.Bind (wx.EVT_MENU, self.onAbout, m_about)
@@ -724,6 +743,14 @@ class MenuBar (wx.MenuBar):
 
 	def onForceUpdate (self, event):
 		self._frame.update (force = True)
+
+	def onViewDetailsToggle (self, event):
+		self._frame.config.viewDetails = not self._frame.config.viewDetails
+		self._frame.forceRedraw ()
+
+	def onGroupToggle (self, event):
+		self._frame.config.groupByGenre = not self._frame.config.groupByGenre
+		self._frame.forceRedraw ()
 
 class AutoStatusBar (wx.StatusBar):
 	DEFAULT_DURATION = 3
@@ -788,31 +815,13 @@ class Frame (wx.Frame):
 		self._statusBar = AutoStatusBar (self)
 		self.SetStatusBar (self._statusBar)
 
-		panel = wx.Panel (self)
-		box = wx.BoxSizer (wx.VERTICAL)
-		self._lc = GroupListView (panel, wx.ID_ANY, style = wx.LC_REPORT | wx.SUNKEN_BORDER, useAlternateBackColors = False)
-		self._lc.showItemCounts = False
+		self._panel = wx.Panel (self)
+		self._box = wx.BoxSizer (wx.VERTICAL)
+		self._lc = self._makeListView (self._panel)
+		self._box.Add (self._lc, 1, wx.ALL | wx.EXPAND)
 
-		self._lc.SetEmptyListMsg ("No transducers found")
-		self._lc.SetColumns ([
-			ColumnDefn ("Description", "left", 220, "smartName"),
-			ColumnDefn ("Name", "center", 50, "name", maximumWidth = 0, stringConverter = lambda g: ""),
-			# This col is only used for grouping, use 0 width and make entries empty to hide it
-			ColumnDefn ("Genre", "center", 50, "genre", maximumWidth = 0, stringConverter = lambda g: "", groupKeyConverter = lambda g: "Sensors" if g == Sensoria.SENSOR else "Actuators"),
-			ColumnDefn ("Stereo", "center", 50, "stereotype", maximumWidth = 0, stringConverter = lambda g: ""),
-			ColumnDefn ("Reading", "right", 100, "lastRead", isSpaceFilling = True),
-		])
-		self._lc.SetShowGroups = True
-		self._lc.alwaysGroupByColumnIndex = 3			# col 0 is expansion icon
-		self._lc.SetSortColumn (self._lc.columns[1])
-		self._lc.rowFormatter = self.rowFormatter
-
-		self._lc.Bind (wx.EVT_LIST_ITEM_ACTIVATED, self.onItemDoubleClicked)
-		self._lc.Bind (wx.EVT_LIST_ITEM_RIGHT_CLICK, self.onItemRightClicked)
-		box.Add (self._lc, 1, wx.ALL | wx.EXPAND)
-
-		panel.SetSizer (box)
-		panel.Layout ()
+		self._panel.SetSizer (self._box)
+		self._panel.Layout ()
 
 		#~ self._sensoria = Sensoria.Client (servers = ["localhost"], autodiscover = False)
 		self._sensoria = Sensoria.Client (autodiscInterval = 60 * 3)
@@ -824,6 +833,7 @@ class Frame (wx.Frame):
 
 		self._lastTransducerUpdate = None
 
+		self.currentListViewType = (self.config.viewDetails, self.config.groupByGenre)
 		self._redrawLock = threading.RLock ()
 		self._updateLock = threading.RLock ()
 		self.timer = wx.Timer (self)
@@ -854,6 +864,52 @@ class Frame (wx.Frame):
 			else:
 				wx.MessageBox ("Unable to open the clipboard", "Error", wx.ICON_ERROR)
 
+	def _makeListView (self, parent):
+		if self.config.groupByGenre:
+			listView = GroupListView (parent, wx.ID_ANY, style = wx.LC_REPORT | wx.SUNKEN_BORDER, useAlternateBackColors = False)
+		else:
+			listView = ObjectListView (parent, wx.ID_ANY, style = wx.LC_REPORT | wx.SUNKEN_BORDER, useAlternateBackColors = False)
+
+		listView.rowFormatter = self.rowFormatter
+		listView.SetEmptyListMsg ("No transducers found")
+
+		# COLUMNS:
+		# Normal: DR
+		# Grp: D(G)R
+		# Det: DNGSR
+		# Det+Grp: DN(G)SR
+		cols = ([
+			ColumnDefn ("Description", "left", 220, "smartName"),
+			ColumnDefn ("Reading", "right", 100, "lastRead", isSpaceFilling = True),
+		])
+
+		if self.config.viewDetails:
+			cols.insert (1, ColumnDefn ("Name", "center", 50, "name"))
+			if self.config.groupByGenre:
+				# This col is only used for grouping, use 0 width and make entries empty to hide it
+				cols.insert (2, ColumnDefn ("Genre", "center", 0, "genre", maximumWidth = 0, stringConverter = lambda g: "", groupKeyConverter = lambda g: "Sensors" if g == Sensoria.SENSOR else "Actuators"))
+			else:
+				cols.insert (2, ColumnDefn ("Genre", "center", 100, "genre", stringConverter = lambda g: "Sensor" if g == Sensoria.SENSOR else "Actuator"))
+			cols.insert (3, ColumnDefn ("Stereo", "center", 50, "stereotype"))
+		elif self.config.groupByGenre:
+				# This col is only used for grouping, use 0 width and make entries empty to hide it
+				cols.insert (2, ColumnDefn ("Genre", "center", 50, "genre", maximumWidth = 0, stringConverter = lambda g: "", groupKeyConverter = lambda g: "Sensors" if g == Sensoria.SENSOR else "Actuators"))
+
+		listView.SetColumns (cols)
+
+		if self.config.groupByGenre:
+			listView.showItemCounts = False
+			listView.SetShowGroups = True
+			listView.alwaysGroupByColumnIndex = 3			# col 0 is expansion icon
+			listView.SetSortColumn (listView.columns[1])
+		else:
+			listView.SetSortColumn (listView.columns[0])
+
+		listView.Bind (wx.EVT_LIST_ITEM_ACTIVATED, self.onItemDoubleClicked)
+		listView.Bind (wx.EVT_LIST_ITEM_RIGHT_CLICK, self.onItemRightClicked)
+
+		return listView
+
 	@staticmethod
 	def rowFormatter (listItem, t):
 		if type (t.lastRead) is str and t.lastRead.startswith ("ERROR"):
@@ -880,10 +936,19 @@ class Frame (wx.Frame):
 		self._redrawLock.acquire ()
 		print "Redrawing"
 
-		if self.transducerList.changed:
+		if self.currentListViewType != (self.config.viewDetails, self.config.groupByGenre):
+			print "Changing ListView"
+			self._lc = self._makeListView (self._panel)
+			self.currentListViewType = (self.config.viewDetails, self.config.groupByGenre)
+			self._lc.SetObjects (self.transducerList.transducers)
+			self._box.Remove (0)
+			self._box.Add (self._lc, 1, wx.ALL | wx.EXPAND)
+			self._panel.Layout ()
+		elif self.transducerList.changed or self.currentListViewType != (self.config.viewDetails, self.config.groupByGenre):
 			print "Transducer list changed"
 			self._lc.SetObjects (self.transducerList.transducers)
 			#~ self.transducerList.changed = False		# This is done transparently by the above call
+			self.currentListViewType = (self.config.viewDetails, self.config.groupByGenre)
 		else:
 			self._lc.RefreshObjects (self.transducerList.transducers)
 
