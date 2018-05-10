@@ -5,6 +5,7 @@
 #include <SensoriaClient/NotificationManager.h>
 #include <SensoriaStereotypes/AllStereotypes.h>
 
+
 template <typename T>
 class RelayController: public NotificationReceiver<T> {
 protected:
@@ -19,24 +20,24 @@ protected:
 
 	void enableRelay (boolean enabled) {
 		ControlledRelayData rdata;
-    if (r) {
-      if (this -> r -> read (rdata)) {
-        if (rdata.controller == ControlledRelayData::CTRL_AUTO) {
-          // R is under our control
-          ControlledRelayData::State newState = enabled ? ControlledRelayData::STATE_ON : ControlledRelayData::STATE_OFF;
-          if (newState != rdata.state) {
-            rdata.state = newState;
-            if (!this -> r -> write (rdata)) {
-              DPRINTLN (F("Failed write to relay actuator"));
-            }
-          }
-        //~ } else {
-          //~ DPRINTLN (F("Relay is under manual control"));
-        }
-      } else {
-        DPRINTLN (F("Relay actuator cannot be read"));
-      }
-    }
+		if (r) {
+			if (this -> r -> read (rdata)) {
+				if (rdata.controller == ControlledRelayData::CTRL_AUTO) {
+					// R is under our control
+					ControlledRelayData::State newState = enabled ? ControlledRelayData::STATE_ON : ControlledRelayData::STATE_OFF;
+					if (newState != rdata.state) {
+						rdata.state = newState;
+						if (!this -> r -> write (rdata)) {
+							DPRINTLN (F("Failed write to relay actuator"));
+						}
+					}
+				//~ } else {
+					//~ DPRINTLN (F("Relay is under manual control"));
+				}
+			} else {
+				DPRINTLN (F("Relay actuator cannot be read"));
+			}
+		}
 	}
 
 	virtual boolean toManual () {
@@ -56,11 +57,11 @@ public:
 
 		// Set initial state
 		Stereotype* st;
-    while (!this -> t -> read (st)) {
-      delay (1000);
-    }
+		while (!this -> t -> read (st)) {
+			delay (1000);
+		}
 
-    T& data = *static_cast<T *> (st);
+		T& data = *static_cast<T *> (st);
 		enableRelay (mustEnable (data));
 	}
 };
@@ -79,11 +80,11 @@ public:
 
 		// Set initial state
 		Stereotype* st;
-    while (!this -> t -> read (st)) {
-      delay (1000);
-    }
+		while (!this -> t -> read (st)) {
+			delay (1000);
+		}
 
-    T& data = *static_cast<T *> (st);
+		T& data = *static_cast<T *> (st);
 		enabled = this -> mustEnable (data);
 	}
 
@@ -158,9 +159,9 @@ protected:
 				// Instant when we detect end of motion
 				startTime = millis ();
 			}
-    } else if (!enabled && this -> mustEnable (data)) {
-      // Turn on immediately
-      enabled = true;
+		} else if (!enabled && this -> mustEnable (data)) {
+			// Turn on immediately
+			enabled = true;
 		} else {
 			startTime = 0;
 		}
