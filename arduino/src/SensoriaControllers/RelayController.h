@@ -1,7 +1,6 @@
 #include <Sensoria.h>
 #include <SensoriaCore/common.h>
 #include <SensoriaCore/debug.h>
-//~ #include <SensoriaClient/TransducerProxy.h>
 #include <SensoriaCore/Actuator.h>
 #include <SensoriaClient/NotificationManager.h>
 #include <SensoriaStereotypes/AllStereotypes.h>
