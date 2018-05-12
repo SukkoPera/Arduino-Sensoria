@@ -7,8 +7,10 @@
 #include "ControlledRelayData.h"
 #include "MotionData.h"
 #include "TimeControlData.h"
+#include "ValueSetData.h"
+#include "DateTimeData.h"
 
-#define N_STEREOTYPES 5
+#define N_STEREOTYPES 7
 
 extern Stereotype* stereotypes[N_STEREOTYPES];
 

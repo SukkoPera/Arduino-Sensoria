@@ -109,6 +109,41 @@ char *utoa(unsigned int v, char *ssp, int radix) {
 
 #endif	// ARDUINO_ARCH_STM32F1
 
+// Reworked from Arduino's Print.h
+char *ultoa(unsigned long n, char *sp, int radix) {
+	char buf[8 * sizeof(long) + 1]; // Assumes 8-bit chars plus zero byte.
+	char *str = &buf[sizeof(buf) - 1];
+
+	*str = '\0';
+
+	// prevent crash if called with base == 1
+	if (radix < 2) radix = 10;
+
+	do {
+		char c = n % radix;
+		n /= radix;
+
+		*--str = c < 10 ? c + '0' : c + 'A' - 10;
+	} while(n);
+	
+	while (*str)
+		*sp++ = *str++;
+	*sp = '\0';
+
+	return sp;
+}
+
+static char *strchr_escaped (char *s, int c) {
+	static const char ESCAPE_CHAR = '\\';
+
+	char prev = ' ';
+	while (*s && (*s != c || prev == ESCAPE_CHAR)) {
+			prev = *s++;
+	}
+
+	return *s ? s : NULL;
+}
+
 int splitString (char *str, char **parts, size_t n, const char sep) {
 	size_t i;
 	char *c;
@@ -117,7 +152,7 @@ int splitString (char *str, char **parts, size_t n, const char sep) {
 		parts[i] = str;
 
 		// Find next separator
-		if ((c = strchr (str, sep))) {
+		if ((c = strchr_escaped (str, sep))) {
 			*c = '\0';	// Terminate
 
 			// Find next non-separator
