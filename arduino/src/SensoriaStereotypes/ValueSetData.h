@@ -2,14 +2,18 @@
 #define VALUESETDATA_H_INCLUDED
 
 #include <stdlib.h>		// If cstdlib is used instead, min() disappears
+#include <string.h>
 #include <cerrno>
 #include <climits>
 #include <SensoriaCore/Stereotype.h>
 #include <SensoriaCore/utils.h>
 #include <SensoriaCore/debug.h>
 
-class ValueSetData: public Stereotype {
+template <int N, int MAXL>
+class ValueSetDataT: public Stereotype {
 private:
+	byte used;
+
 	void strUnescape (char* s) {
 		static const char ESCAPE_CHAR = '\\';
 		char* t = s;
@@ -35,15 +39,17 @@ private:
 
 public:
 	//~ static const byte UNKNOWN = -1;
-	static const byte MAX_N_DATA = 10;
+	static const byte MAX_N_DATA = N;
+	char intbuf[MAXL];
 
 	char* data[MAX_N_DATA];
 	byte nData;
 
-	ValueSetData (): Stereotype ("VS") {
+	ValueSetDataT (): Stereotype ("VS"), nData (0), used (0) {
+		intbuf[0] = '\0';
 	}
 
-	ValueSetData& operator= (ValueSetData& other) {
+	ValueSetDataT& operator= (ValueSetDataT& other) {
 		for (byte i = 0; i < min (other.nData, MAX_N_DATA); ++i)
 			data[i] = other.data[i];
 		nData = other.nData;
@@ -51,7 +57,7 @@ public:
 	}
 
 	bool operator== (Stereotype const& genericOther) override {
-		ValueSetData const& other = static_cast<ValueSetData const&> (genericOther);
+		ValueSetDataT const& other = static_cast<ValueSetDataT const&> (genericOther);
 
 		bool ret = nData == other.nData;
 		for (byte i = 0; ret && i < min (nData, MAX_N_DATA); ++i) {
@@ -67,6 +73,9 @@ public:
 		for (byte i = 0; i < min (nData, MAX_N_DATA); ++i)
 			data[i] = NULL;
 		nData = 0;
+
+		intbuf[0] = '\0';
+		used = 0;
 	}
 
 	boolean unmarshal (char *s) override {
@@ -106,13 +115,13 @@ public:
 			// Go through each member and append
 			for (byte i = 0; i < min (nData, MAX_N_DATA); ++i) {
 				buf[l++] = 'V';
-				buf[l++] = i + '0';
+				buf[l++] = i + '0';				// WARNING: Won't work if MAX_N_DATA >= 10
 				buf[l++] = ':';
-				buf[l++] = '\0';
-				strcat (buf, data[i]);
+				buf[l] = '\0';
+				strncat (buf, data[i], size);			// FIXME: Use strlcat()
 				strncat_P (buf, PSTR (" "), size);
 
-				l += strlen (data[i] + 1);
+				l += strlen (data[i]) + 1;
 			}
 
 			// Remove trailing space
@@ -123,7 +132,7 @@ public:
 		} else {
 			buf = NULL;
 		}
-DPRINTLN ("!");
+
 		return buf;
 	}
 
@@ -148,6 +157,33 @@ DPRINTLN ("!");
 
 		return ret;
 	}
+
+	bool append (const char *str) {
+		bool ret = true;
+
+		size_t l = strlen (str);
+		size_t avail = MAXL - used - 1;
+		if (nData < MAX_N_DATA && l < avail) {
+			data[nData] = intbuf + used;
+			strncpy (data[nData], str, avail);
+			used += l + 1;
+
+			++nData;
+		} else {
+			ret = false;
+		}
+
+		return ret;
+	}
+
+	bool append (int i) {
+		char buf[16];
+		//~ snprintf (buf, 16, "%d", i);
+		itoa (i, buf, 10);
+		return append (buf);
+	}
 };
+
+typedef ValueSetDataT<5, 32> ValueSetData;
 
 #endif

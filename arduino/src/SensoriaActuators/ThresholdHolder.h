@@ -35,12 +35,15 @@ public:
 		return ret;
 	}
 
-	//~ boolean read (ValueSetData& vs) override {
-		//~ for (byte i = 0; i < min (vs.nData, N_TEMPS); ++i) {
-			//~ itoa (thresholds[i], vs.data[i], 10);
-		//~ }
-		//~ return true;
-	//~ }
+	boolean read (ValueSetData& vs) override {
+		bool ret = true;
+
+		for (byte i = 0; ret && i < N_TEMPS; ++i) {
+			ret = ret && vs.append (thresholds[i]);
+		}
+
+		return ret;
+	}
 };
 
 #endif
