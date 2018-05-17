@@ -58,7 +58,12 @@ public:
 	}
 
 	char *marshal (char *buf, unsigned int size) override {
-		ultoa (unixtime, buf, 10);
+		if (size >= 11)
+			ultoa (unixtime, buf, 10);
+		else
+			buf = NULL;
+
+		return buf;
 	}
 };
 
