@@ -45,7 +45,7 @@ public:
 	char* data[MAX_N_DATA];
 	byte nData;
 
-	ValueSetDataT (): Stereotype ("VS"), nData (0), used (0) {
+	ValueSetDataT (): Stereotype ("VS"), used (0), nData (0) {
 		intbuf[0] = '\0';
 	}
 
@@ -126,9 +126,6 @@ public:
 
 			// Remove trailing space
 			buf[strlen (buf) > 0 ? strlen (buf) - 1 : 0] = '\0';
-
-			DPRINT ("buf = ");
-			DPRINTLN (buf);
 		} else {
 			buf = NULL;
 		}
