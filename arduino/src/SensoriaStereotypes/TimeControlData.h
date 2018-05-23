@@ -1,6 +1,7 @@
 #ifndef TIMECTRLDATA_H_INCLUDED
 #define TIMECTRLDATA_H_INCLUDED
 
+#include <PString.h>
 #include <SensoriaCore/Stereotype.h>
 #include <SensoriaCore/utils.h>
 #include <SensoriaCore/debug.h>
@@ -89,19 +90,31 @@ public:
 	}
 
 	char *marshal (char *buf, unsigned int size) override {
-		//~ if (size >= 10) {
-			//~ buf[0] = '\0';
+		char* ret = NULL;
+		size_t p = 0;
 
-			//~ if (motionDetected) {
-					//~ strncat_P (buf, PSTR ("MOTION"), size);
-			//~ } else {
-					//~ strncat_P (buf, PSTR ("NO_MOTION"), size);
-			//~ }
-		//~ } else {
-			buf = NULL;
-		//~ }
+		if (size >= NDAYS * (NHOURS + 4 + 1)) {
+			PString pstr (buf, size);
 
-		return buf;
+			for (byte d = 0; d < NDAYS; ++d) {
+				p += pstr.print ('P');
+				p += pstr.print (DAY_ABBREVS[d]);
+				p += pstr.print (':');
+				for (byte h = 0; h < NHOURS; ++h) {
+					byte v = data[d][h];
+					if (/* d >= 0 && */ v <= 9)
+						p += pstr.print (v);
+				}
+
+				if (d < NDAYS - 1)
+					p += pstr.print (' ');
+			}
+		}
+
+		if (p == NDAYS * (NHOURS + 4 + 1) - 1)
+			ret = buf;
+
+		return ret;
 	}
 
 private:

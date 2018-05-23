@@ -5,6 +5,7 @@
 #include <string.h>
 #include <cerrno>
 #include <climits>
+#include <PString.h>
 #include <SensoriaCore/Stereotype.h>
 #include <SensoriaCore/utils.h>
 #include <SensoriaCore/debug.h>
@@ -81,18 +82,19 @@ public:
 	boolean unmarshal (char *s) override {
 		boolean ret = true;
 
-		char* p[10];
+		char* p[MAX_N_DATA];
 		byte skips = 0;
-		if ((nData = splitString(s, p, MAX_N_DATA, ' ')) > 0) {
+		if ((nData = splitString (s, p, MAX_N_DATA, ' ')) > 0) {
 			for (byte i = 0; i < nData; i++) {
 				char* q[2];
-				if (splitString(p[i], q, 2, ':') == 2 && toupper (q[0][0] == 'V')) {
-						strUnescape (q[1]);     // Done in place
-						data[i - skips] = q[1];
+				if (splitString(p[i], q, 2, ':') == 2 && toupper (q[0][0] == 'V') && strlen (q[0]) > 1) {
+					int n = atoi (q[0] + 1);
+					strUnescape (q[1]);     // Done in place
+					data[n - skips] = q[1];
 				} else {
-						DPRINT (F("Bad key: "));
-						DPRINTLN (p[i]);
-						++skips;
+					DPRINT (F("Bad key: "));
+					DPRINTLN (p[i]);
+					++skips;
 				}
 			}
 		} else {
@@ -106,31 +108,28 @@ public:
 		return ret;
 	}
 
+	// TODO: Escape spaces!
 	char *marshal (char *buf, unsigned int size) override {
-		// Start with an empty string
-		if (size > 0) {
-			buf[0] = '\0';
-			size_t l = 0;
+		char* ret = NULL;
+		PString pstr (buf, size);
 
-			// Go through each member and append
-			for (byte i = 0; i < min (nData, MAX_N_DATA); ++i) {
-				buf[l++] = 'V';
-				buf[l++] = i + '0';				// WARNING: Won't work if MAX_N_DATA >= 10
-				buf[l++] = ':';
-				buf[l] = '\0';
-				strncat (buf, data[i], size);			// FIXME: Use strlcat()
-				strncat_P (buf, PSTR (" "), size);
+		// Go through each member and append
+		byte n = min (nData, MAX_N_DATA);
+		boolean ok = true;
+		for (byte i = 0; i < n && ok; ++i) {
+			pstr.print ('V');
+			pstr.print (i);
+			ok = pstr.print (':') == 1;
+			ok = ok && pstr.print (data[i]) == strlen (data[i]);        // TODO: Test!
 
-				l += strlen (data[i]) + 1;
-			}
-
-			// Remove trailing space
-			buf[strlen (buf) > 0 ? strlen (buf) - 1 : 0] = '\0';
-		} else {
-			buf = NULL;
+			if (i < n - 1)
+				pstr.print (' ');
 		}
 
-		return buf;
+		if (ok)
+			ret = buf;
+
+		return ret;
 	}
 
 	boolean getDataInt (byte n, int& val) {

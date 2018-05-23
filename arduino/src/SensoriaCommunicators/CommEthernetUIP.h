@@ -7,8 +7,11 @@
 #include <SensoriaCore/utils.h>
 #include <SensoriaCore/debug.h>
 
+#ifdef ARDUINO_ARCH_STM32F1
+#define IN_BUF_SIZE 768
+#else
 #define IN_BUF_SIZE 192
-
+#endif
 
 
 class SensoriaEthernetUIPCommunicator: public SensoriaCommunicator {

@@ -18,7 +18,11 @@
 
 class SensoriaServer {
 private:
+#ifdef ARDUINO_ARCH_STM32F1
+	static const word OUT_BUF_SIZE = 512;
+#else
 	static const byte OUT_BUF_SIZE = 192;
+#endif
 
 	SensoriaCommunicator* comm;
 

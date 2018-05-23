@@ -118,6 +118,14 @@ public:
 	}
 
 	boolean read (TimeControlData& rd) override {
-		return false;	// FIXME
+		boolean ret = true;
+
+		for (byte d = 0; d < DAYS_PER_WEEK; ++d) {
+			for (byte h = 0; h < HOURS_PER_DAY; ++h) {
+				rd.data[d][h] = getValue (d, h);
+			}
+		}
+
+		return ret;
 	}
 };
