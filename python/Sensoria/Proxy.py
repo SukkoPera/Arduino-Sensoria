@@ -98,9 +98,9 @@ class ActuatorProxy (TransducerProxy):
 		rep0 = parts[0].upper ()
 		if rep0 != "OK":
 			if len (parts) > 1:
-				raise Error, "Write failed: %s" % parts[1]
+				raise Error (parts[1])
 			else:
-				raise Error, "Write failed"
+				raise Error ()
 
 	def read (self, raw = False):
 		assert self.server is not None
