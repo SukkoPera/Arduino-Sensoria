@@ -74,6 +74,14 @@ void SensoriaServer::clearSensorBuffer () {
 void SensoriaServer::process_cmd (char *buffer, const SensoriaAddress* senderAddr) {
 	char *cmd, *args;
 
+	{
+		char addrbuf[32];
+		DPRINT (F("Processing command: \""));
+		DPRINT (buffer);
+		DPRINT (F("\" from "));
+		DPRINTLN (senderAddr -> toString (addrbuf, sizeof (addrbuf)));
+	}
+
 	// Separate command and arguments
 	strstrip (buffer);
 	char *space = strchr (buffer, ' ');
@@ -87,15 +95,6 @@ void SensoriaServer::process_cmd (char *buffer, const SensoriaAddress* senderAdd
 
 	cmd = buffer;
 	strupr (cmd);	// Done in place
-
-	{
-		char addrbuf[32];
-		DPRINT (F("Processing command: \""));
-		DPRINT (cmd);
-		DPRINT (F("\" from "));
-		DPRINTLN (senderAddr -> toString (addrbuf, sizeof (addrbuf)));
-	}
-
 	if (strcmp_P (cmd, PSTR ("HLO")) == 0) {
 		cmd_hlo (senderAddr, args);
 #ifdef ENABLE_CMD_QRY
@@ -382,32 +381,30 @@ void SensoriaServer::cmd_wri (const SensoriaAddress* clientAddr, char *args) {
 					st -> clear ();
 					if (st -> unmarshal (rest)) {
 						outBuf.print (F("WRI "));
-						outBuf.print (t -> name);
-						outBuf.print (' ');
 						outBuf.print (t -> writeGeneric (st) ? F("OK") : F("ERR"));
 					} else {
 						DPRINT (F("Unmarshaling with "));
 						DPRINT (st -> tag);
 						DPRINT (F(" failed for: "));
 						DPRINTLN (rest);
-						outBuf.print (F("ERR Unmarshaling failed"));
+						outBuf.print (F("WRI ERR Unmarshaling failed"));
 					}
 				} else {
-					outBuf.print (F("ERR Nothing to write"));
+					outBuf.print (F("WRI ERR Nothing to write"));
 				}
 			} else {
-				outBuf.print (F("ERR Transducer is not an actuator"));
+				outBuf.print (F("WRI ERR Transducer is not an actuator"));
 			}
 		} else {
 			DPRINT (F("ERR No such transducer: "));
 			DPRINTLN (args);
 
-			outBuf.print (F("ERR No such transducer: "));
+			outBuf.print (F("WRI ERR No such transducer: "));
 			outBuf.print (args);
 		}
 	} else {
 		DPRINTLN (F("ERR Missing transducer name"));
-		outBuf.print (F("ERR Missing transducer name"));
+		outBuf.print (F("WRI ERR Missing transducer name"));
 	}
 
 	// Send reply
