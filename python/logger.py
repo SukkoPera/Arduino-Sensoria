@@ -80,7 +80,10 @@ while KEEP_GOING:
 					print ex
 
 		# All readings done, save to DB
-		db.insert (now, data, commit = True)
+		try:
+			db.insert (now, data, commit = True)
+		except Sensoria.Error as ex:
+			print "Error while saving to DB: %s"  % str (ex)
 
 	print "--- READ COMPLETE ---"
 
