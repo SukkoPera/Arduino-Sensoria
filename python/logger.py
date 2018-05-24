@@ -29,15 +29,17 @@ parser.add_argument ('--interval', "-i", action = 'store', type = int, default =
 										 help = "Keep reading transducers periodically", metavar = "SECONDS")
 parser.add_argument ('--autodiscover', "-A", action = 'store', type = int, default = None,
 										 help = "Autodiscover interval (0 to disable)", metavar = "SECONDS")
-parser.add_argument ('--verbose', "-v", action = 'store_true', default = False,
+parser.add_argument ('--verbose', "-v", action = 'count',
 										 help = "Enable debugging messages")
 
 args = parser.parse_args ()
-if args.verbose:
-	# ~ logging.basicConfig (filename='example.log',level=logging.DEBUG)
-	logging.basicConfig (level = logging.DEBUG)
+if args.verbose == 2:
+	logging.basicConfig (level = logging.DEBUG_COMMS, format = '[%(asctime)s - %(levelname)s:%(filename)s:%(lineno)d] %(message)s')
+elif args.verbose == 1:
+	logging.basicConfig (level = logging.DEBUG, format = '[%(asctime)s - %(levelname)s:%(filename)s:%(lineno)d] %(message)s')
 else:
-	logging.basicConfig (level = logging.INFO)
+	logging.basicConfig (level = logging.INFO, format = '[%(asctime)s] %(message)s')
+
 
 if args.autodiscover is None:
 	sensoria = Sensoria.Client (servers = args.addresses)
