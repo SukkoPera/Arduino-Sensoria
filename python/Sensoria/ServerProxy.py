@@ -2,16 +2,25 @@
 
 import sys
 import socket
+import logging
 
 from common import *
 
-class ServerProxy:
-	DEBUG = False
+# Register a new logging level
+# https://stackoverflow.com/questions/2183233
+logging.DEBUG_COMMS = 9
+logging.addLevelName (logging.DEBUG_COMMS, "DEBUG_COMMS")
+def __debugcomms (self, message, *args, **kws):
+	if self.isEnabledFor (logging.DEBUG_COMMS):
+		self._log (logging.DEBUG_COMMS, message, args, **kws)
+logging.Logger.debugComms = __debugcomms
+
+class ServerProxy (object):
 	RECV_BUFSIZE = 4096
 	DEFAULT_PORT = 9999
-	DEBUG_COMMS = False
 
 	def __init__ (self, name, transducerList, sock, ip, port = DEFAULT_PORT):
+		self._logger = logging.getLogger ("ServerProxy")
 		self.name = name
 		self.transducerList = transducerList		# Exactly as received
 		self.address = ip
@@ -23,24 +32,29 @@ class ServerProxy:
 		self._transducers = {}
 
 	def sendcmd (self, cmd):
-		self._sock.sendto (cmd, (self.address, self.port))
 		try:
-			if ServerProxy.DEBUG:
-				print "<-- %s" % cmd
-			reply, addr = self._sock.recvfrom (ServerProxy.RECV_BUFSIZE)
-			if ServerProxy.DEBUG:
-				print "--> %s" % reply.strip ()
-			return reply.strip ()
+			# Create a new socket every time, so that we always use a different
+			# ephemeral port and we only get the relevant reply
+			sock = socket.socket (socket.AF_INET, socket.SOCK_DGRAM)
+			sock.settimeout (5)
+			sock.connect ((self.address, self.port))
+			localaddr, localport = sock.getsockname ()
+
+			self._logger.debugComms ("%s:%u <-- %s:%u %s", self.address, self.port, localaddr, localport, cmd)
+			sock.send (cmd)
+			reply = sock.recv (ServerProxy.RECV_BUFSIZE)
+			reply = reply.strip ()
+			self._logger.debugComms ("%s:%u --> %s:%u %s", self.address, self.port, localaddr, localport, reply)
+			return reply
 		except socket.error as ex:
 			raise Error, "sendcmd() FAILED: %s" % str (ex)
+		finally:
+			sock.shutdown (socket.SHUT_RDWR)
+			sock.close ()
 
 	def send (self, args):
-		if self.DEBUG_COMMS:
-			print "<-- %s" % args
 		cmd = args.split (" ", 1)[0].upper ()
 		rep = self.sendcmd (args)
-		if self.DEBUG_COMMS:
-			print "--> %s" % rep
 		if rep is not None:
 			parts = rep.split (" ", 1)
 			rep0 = parts[0]

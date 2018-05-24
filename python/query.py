@@ -2,6 +2,7 @@
 
 import argparse
 import time
+import logging
 
 import Sensoria
 
@@ -18,9 +19,18 @@ parser.add_argument ('--interval', "-i", action = 'store', type = int, default =
 										 help = "Keep polling sensors periodically", metavar = "SECONDS")
 parser.add_argument ('--autodiscover', "-A", action = 'store', type = int, default = None,
 										 help = "Autodiscover interval (0 to disable)", metavar = "SECONDS")
+parser.add_argument ('--verbose', "-v", action = 'count',
+										 help = "Enable debugging messages")
 
 
 args = parser.parse_args ()
+if args.verbose == 2:
+	logging.basicConfig (level = logging.DEBUG_COMMS, format = '[%(asctime)s - %(levelname)s:%(filename)s:%(lineno)d] %(message)s')
+elif args.verbose == 1:
+	logging.basicConfig (level = logging.DEBUG, format = '[%(asctime)s - %(levelname)s:%(filename)s:%(lineno)d] %(message)s')
+else:
+	logging.basicConfig (level = logging.INFO)
+
 if args.autodiscover is None:
 	sensoria = Sensoria.Client (servers = args.addresses)
 elif args.autodiscover > 0:
