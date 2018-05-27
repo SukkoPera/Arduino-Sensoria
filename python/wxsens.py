@@ -880,7 +880,7 @@ class Frame (wx.Frame):
 		self._lastTransducerUpdate = None
 
 		self.currentListViewType = (self.config.viewDetails, self.config.groupByGenre)
-		self._redrawLock = threading.RLock ()
+		# ~ self._redrawLock = threading.RLock ()
 		self._updateLock = threading.RLock ()
 		self.timer = wx.Timer (self)
 		self.Bind (wx.EVT_TIMER, self.update, self.timer)
@@ -979,7 +979,7 @@ class Frame (wx.Frame):
 			self.redraw ()
 
 	def redraw (self, event = None):
-		self._redrawLock.acquire ()
+		# ~ self._redrawLock.acquire ()
 		print "Redrawing"
 
 		if self.currentListViewType != (self.config.viewDetails, self.config.groupByGenre):
@@ -998,7 +998,7 @@ class Frame (wx.Frame):
 		else:
 			self._lc.RefreshObjects (self.transducerList.transducers)
 
-		self._redrawLock.release ()
+		# ~ self._redrawLock.release ()
 
 	# This is safe to be called from other threads
 	def setStatusBar (self, msg, duration = None):
