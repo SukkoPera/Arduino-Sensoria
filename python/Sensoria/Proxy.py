@@ -100,7 +100,7 @@ class SensorProxy (TransducerProxy):
 			if len (parts) != 2:
 				raise Error, "Unexpected REA reply: '%s'" % reply
 			name, rest = parts
-			assert name == self.name
+			assert name == self.name, "REA sensor name mismatch: '%s' vs '%s'" % (name, self.name)
 			if raw:
 				return rest
 			else:
@@ -139,7 +139,7 @@ class ActuatorProxy (TransducerProxy):
 		if len (parts) != 2:
 			raise Error, "Unexpected REA reply: '%s'" % reply
 		name, rest = parts
-		assert name == self.name
+		assert name == self.name, "REA actuator name mismatch: '%s' vs '%s'" % (name, self.name)
 		if raw:
 			return rest
 		else:
