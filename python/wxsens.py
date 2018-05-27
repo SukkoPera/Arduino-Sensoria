@@ -970,13 +970,13 @@ class Frame (wx.Frame):
 		wx.CallAfter (self.update, force = True)
 
 	def update (self, event = None, force = False):
+		self._updateLock.acquire ()
 		if force or self._lastTransducerUpdate is None or timedelta_total_seconds (datetime.datetime.now () - self._lastTransducerUpdate) >= self.config.transducerUpdateInterval:
-			self._updateLock.acquire ()
 			print "Updating (%s)" % ("forced" if force else "periodic")
 			self.transducerList.massUpdate ()
 			self._lastTransducerUpdate = datetime.datetime.now ()
-			self._updateLock.release ()
-			self.redraw ()
+		self._updateLock.release ()
+		self.redraw ()
 
 	def redraw (self, event = None):
 		# ~ self._redrawLock.acquire ()
