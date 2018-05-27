@@ -20,7 +20,7 @@ class TimerPanel (wx.grid.Grid):
 	def __init__ (self, parent):
 		super (TimerPanel, self).__init__ (parent)
 
-		self._schedule = [[[0 for i in range (TimerPanel.SLOTS_PER_HOUR)] for i in range (TimerPanel.NHOURS)] for i in range (TimerPanel.NDAYS)]
+		self.clearSchedule ()
 
 		# GUI stuff
 		self.CreateGrid (TimerPanel.NDAYS, TimerPanel.NSLOTS)
@@ -39,6 +39,10 @@ class TimerPanel (wx.grid.Grid):
 
 		self.Bind (wx.grid.EVT_GRID_CELL_LEFT_CLICK, self.onCellLeftClick)
 		self.Bind (wx.grid.EVT_GRID_CELL_RIGHT_CLICK, self.onCellRightClick)
+
+	def clearSchedule (self):
+		# Call setter, do not access attribute directly
+		self.schedule = [[[0 for i in range (TimerPanel.SLOTS_PER_HOUR)] for i in range (TimerPanel.NHOURS)] for i in range (TimerPanel.NDAYS)]
 
 	@property
 	def schedule (self):
@@ -132,6 +136,9 @@ class TimerEditDialog (wx.Dialog):
 		sizer.Add (self._tPanel, 0, wx.EXPAND | wx.ALL, 30)
 
 		btnBox = wx.BoxSizer (wx.HORIZONTAL)
+		btnClear = wx.Button (self, wx.NewId(), 'C&lear')
+		btnBox.Add (btnClear, 0)
+		btnClear.Bind (wx.EVT_BUTTON, self.onClear)
 		btnCancel = wx.Button (self, wx.ID_CANCEL, '&Cancel')		# Using ID_CANCEL automatically closes dialog
 		btnBox.Add (btnCancel, 0)
 		btnOk = wx.Button (self, wx.ID_OK, '&OK')
@@ -164,4 +171,9 @@ class TimerEditDialog (wx.Dialog):
 			else:
 				wx.MessageBox ("Unable to set timer schedule", "Error", wx.ICON_ERROR)
 		self.Close ()
+		event.Skip ()
+		
+	def onClear (self, event):
+		print "Clearing Timer Data"
+		self._tPanel.clearSchedule ()
 		event.Skip ()
