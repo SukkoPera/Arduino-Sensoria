@@ -127,7 +127,8 @@ class TimerEditDialog (wx.Dialog):
 		sizer = wx.BoxSizer (wx.VERTICAL)
 
 		self._tPanel = TimerPanel (self)
-		self._tPanel.schedule = self.transducer.lastRead.schedule
+		if self.transducer.lastReadRaw is not None:
+			self._tPanel.schedule = self.transducer.lastReadRaw.schedule
 		sizer.Add (self._tPanel, 0, wx.EXPAND | wx.ALL, 30)
 
 		btnBox = wx.BoxSizer (wx.HORIZONTAL)
@@ -157,6 +158,10 @@ class TimerEditDialog (wx.Dialog):
 		try:
 			self.transducer.write (tc)
 		except Sensoria.Error as ex:
-			wx.MessageBox ("Unable to set timer schedule.\n\n%s" % str (ex), "Error", wx.ICON_ERROR)
+			reason = str (ex)
+			if reason is not None:
+				wx.MessageBox ("Unable to set timer schedule\n\n%s" % reason, "Error", wx.ICON_ERROR)
+			else:
+				wx.MessageBox ("Unable to set timer schedule", "Error", wx.ICON_ERROR)
 		self.Close ()
 		event.Skip ()

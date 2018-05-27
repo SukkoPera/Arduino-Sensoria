@@ -21,8 +21,8 @@ class SettingsEditDialog (wx.Dialog):
 		self._textCtrls = []
 		gs = wx.FlexGridSizer (SettingsEditDialog.NSETTINGS, 2, 10, 5)
 		for i in xrange (0, SettingsEditDialog.NSETTINGS):
-			if i < len (t.lastRead.values) and t.lastRead.values[i]:
-				s = str (t.lastRead.values[i])
+			if t.lastReadRaw is not None and i < len (t.lastReadRaw.values) and t.lastReadRaw.values[i]:
+				s = str (t.lastReadRaw.values[i])
 			else:
 				s = ""
 
@@ -64,8 +64,12 @@ class SettingsEditDialog (wx.Dialog):
 				vs.values[i] = v
 
 		try:
-			print self.transducer.write (vs)
+			self.transducer.write (vs)
 		except Sensoria.Error as ex:
-			wx.MessageBox ("Unable to save settings.\n\n%s" % str (ex), "Error", wx.ICON_ERROR)
+			reason = str (ex)
+			if reason is not None:
+				wx.MessageBox ("Unable to save settings\n\n%s" % reason, "Error", wx.ICON_ERROR)
+			else:
+				wx.MessageBox ("Unable to save settings", "Error", wx.ICON_ERROR)
 		self.Close ()
 		event.Skip ()

@@ -85,25 +85,34 @@ class Config (object):
 
 class TransducerWrapper (object):
 	def __init__ (self, sensoria, transducer):
+		self._logger = logging.getLogger ('TransducerWrapper')
 		self.sensoria = sensoria
 		self.transducer = transducer
-		self._lastRead = None
-		self.updateTime = None
+		self._lastRead = None				# Stereotype from last successful read
+		self.updateTime = None				# Time of last successful read
+		self.failed = True					# True if last read failed
+		self.failMessage = "Not yet read"	# Contains error message if last read failed
+		self.lastAttemptTime = None			# Time of last read attempt, same as updateTime if it succeeded
 		self.outputFormat = None
 
 	def __repr__ (self):
 		return "<TransducerWrapper '%s'>" % self.transducer.name
 
 	def update (self):
+		self.lastAttemptTime = datetime.datetime.now ()
 		try:
 			self._lastRead = self.transducer.read ()
-			self.updateTime = datetime.datetime.now ()
+			self.updateTime = self.lastAttemptTime
+			self.failed = False
+			self.failMessage = None
 		except Sensoria.Error as ex:
-			print "ERROR: Cannot read %s: %s" % (self.name, str (ex))
-			self._lastRead = "ERROR: %s" % str (ex)
-		except KeyError as ex:
-			print "ERROR: No such transducer: %s" % self.name
-			self._lastRead = "ERROR: No such transducer: %s" % self.name
+			self.failed = True
+			self.failMessage = str (ex) if len (str (ex)) > 0 else "Unknown error"
+			self._logger.error ("Read failed - " + self.failMessage)
+		# ~ except KeyError as ex:
+			# ~ self.failed = True
+			# ~ self.failMessage = "No such transducer: %s" % self.name
+			# ~ self._logger.error ("Read failed - " + self.failMessage)
 
 	def enableChangeNotification (self):
 		if not self.transducer.notify (self.onChangeNotification, Sensoria.ON_CHANGE):
@@ -152,7 +161,10 @@ class TransducerWrapper (object):
 
 	@property
 	def lastRead (self):
-		if self.outputFormat is not None:
+		"Returns the result of the last reading in a somehow \"smart\" way"
+		if self.failed:
+			return "ERROR: %s" % self.failMessage
+		elif self.outputFormat is not None:
 			return self.formatReading (self.outputFormat)
 		else:
 			return self._lastRead
@@ -328,7 +340,7 @@ class InfoBox (wx.Dialog):
 		super (InfoBox, self).__init__ (None, -1, "%s %s" % ("Sensor" if t.genre == Sensoria.SENSOR else "Actuator", t.name), style = wx.DEFAULT_DIALOG_STYLE | wx.THICK_FRAME | wx.TAB_TRAVERSAL)
 		sizer = wx.BoxSizer (wx.VERTICAL)
 
-		gs = wx.FlexGridSizer (9, 2, 10, 5)
+		gs = wx.FlexGridSizer (12, 2, 10, 5)
 		gs.AddMany ([
 			(wx.StaticText (self, -1, 'Name:'), 0, wx.ALIGN_CENTER_VERTICAL),
 			(ReadOnlyTextCtrl (self, -1, t.name, style = wx.TE_CENTER), 1, wx.EXPAND),
@@ -344,10 +356,16 @@ class InfoBox (wx.Dialog):
 			(ReadOnlyTextCtrl (self, -1, "%s:%u" % (t.server.address, t.server.port), style = wx.TE_CENTER), 1, wx.EXPAND),
 			(wx.StaticText (self, -1, 'Last Reading:'), 0, wx.ALIGN_CENTER_VERTICAL),
 			(ReadOnlyTextCtrl (self, -1, "%s" % t.lastRead, style = wx.TE_CENTER), 1, wx.EXPAND),
-			(wx.StaticText (self, -1, 'Last Reading (Unformatted):'), 0, wx.ALIGN_CENTER_VERTICAL),
+			(wx.StaticText (self, -1, 'Last Reading (Raw):'), 0, wx.ALIGN_CENTER_VERTICAL),
 			(ReadOnlyTextCtrl (self, -1, "%s" % t.lastReadRaw, style = wx.TE_CENTER), 1, wx.EXPAND),
 			(wx.StaticText (self, -1, 'Last Update:'), 0, wx.ALIGN_CENTER_VERTICAL),
-			(ReadOnlyTextCtrl (self, -1, "%s" % t.updateTime.strftime ("%c") if t.updateTime else "N/A", style = wx.TE_CENTER), 1, wx.EXPAND)
+			(ReadOnlyTextCtrl (self, -1, "%s" % t.updateTime.strftime ("%c") if t.updateTime else "N/A", style = wx.TE_CENTER), 1, wx.EXPAND),
+			(wx.StaticText (self, -1, 'Last Read Attempt:'), 0, wx.ALIGN_CENTER_VERTICAL),
+			(ReadOnlyTextCtrl (self, -1, "%s" % t.lastAttemptTime.strftime ("%c") if t.lastAttemptTime else "N/A", style = wx.TE_CENTER), 1, wx.EXPAND),
+			(wx.StaticText (self, -1, 'Failed:'), 0, wx.ALIGN_CENTER_VERTICAL),
+			(ReadOnlyTextCtrl (self, -1, "%s" % t.failed, style = wx.TE_CENTER), 1, wx.EXPAND),
+			(wx.StaticText (self, -1, 'Fail Message:'), 0, wx.ALIGN_CENTER_VERTICAL),
+			(ReadOnlyTextCtrl (self, -1, "%s" % t.failMessage if t.failMessage else "N/A", style = wx.TE_CENTER), 1, wx.EXPAND)
 		])
 		gs.AddGrowableCol (1, 1)
 		sizer.Add (gs, 0, wx.EXPAND | wx.ALL, 30)
@@ -554,7 +572,7 @@ class PopupMenuActuatorCR (PopupMenuTransducer):
 		showRelCtrl = True
 		showOn = True
 		showOff = True
-		if transducer.lastRead is not None:
+		if not transducer.failed and transducer.lastRead is not None:
 			if transducer.lastRead.controller == Sensoria.stereotypes.ControlledRelayData.ControlledRelayData.AUTO:
 				showTakeCtrl = True
 				showRelCtrl = False
@@ -940,7 +958,7 @@ class Frame (wx.Frame):
 
 	@staticmethod
 	def rowFormatter (listItem, t):
-		if type (t.lastRead) is str and t.lastRead.startswith ("ERROR"):
+		if t.failed:
 			listItem.SetTextColour (wx.RED)
 
 	# This is safe to be called from other threads
