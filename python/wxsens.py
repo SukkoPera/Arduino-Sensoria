@@ -92,7 +92,7 @@ class TransducerWrapper (object):
 		self.outputFormat = None
 
 	def __repr__ (self):
-		return "<Transducer '%s'>" % self.transducer.name
+		return "<TransducerWrapper '%s'>" % self.transducer.name
 
 	def update (self):
 		try:
