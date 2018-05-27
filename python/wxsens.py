@@ -15,6 +15,8 @@ import Sensoria
 
 from ObjectListView import ObjectListView, GroupListView, ColumnDefn
 
+from threadpool import ThreadPool
+
 # For Python 2.6
 def timedelta_total_seconds (timedelta):
 	return (timedelta.microseconds + 0.0 + \
@@ -84,6 +86,9 @@ class Config (object):
 			cfgp.write (configfile)
 
 class TransducerWrapper (object):
+	THREADPOOL = ThreadPool (4)
+	FRAME = None
+
 	def __init__ (self, sensoria, transducer):
 		self._logger = logging.getLogger ('TransducerWrapper')
 		self.sensoria = sensoria
@@ -98,7 +103,13 @@ class TransducerWrapper (object):
 	def __repr__ (self):
 		return "<TransducerWrapper '%s'>" % self.transducer.name
 
-	def update (self):
+	def update (self, async = True):
+		if async:
+			TransducerWrapper.THREADPOOL.add_task (self._updateFunc)
+		else:
+			self._updateFunc ()
+
+	def _updateFunc (self):
 		self.lastAttemptTime = datetime.datetime.now ()
 		try:
 			self._lastRead = self.transducer.read ()
@@ -113,6 +124,8 @@ class TransducerWrapper (object):
 			# ~ self.failed = True
 			# ~ self.failMessage = "No such transducer: %s" % self.name
 			# ~ self._logger.error ("Read failed - " + self.failMessage)
+		if TransducerWrapper.FRAME is not None:
+			TransducerWrapper.FRAME.forceRedraw ()
 
 	def enableChangeNotification (self):
 		if not self.transducer.notify (self.onChangeNotification, Sensoria.ON_CHANGE):
@@ -484,11 +497,11 @@ class PopupMenuTransducer (wx.Menu):
 		item = wx.MenuItem (self, wx.ID_REDO, "&Notify on Change")
 		self.AppendItem (item)
 		self.Bind (wx.EVT_MENU, self.onNotifyChange, item)
-		
+
 		item = wx.MenuItem (self, wx.ID_UNDO, "Stop N&otifications on Change")
 		self.AppendItem (item)
 		self.Bind (wx.EVT_MENU, self.onCancelNotifications, item)
-		
+
 		item = wx.MenuItem (self, wx.ID_CANCEL, "C&ancel ALL Notifications")
 		self.AppendItem (item)
 		self.Bind (wx.EVT_MENU, self.onCancelAllNotifications, item)
@@ -865,6 +878,8 @@ class Frame (wx.Frame):
 		self._box = wx.BoxSizer (wx.VERTICAL)
 		self._lc = self._makeListView (self._panel)
 		self._box.Add (self._lc, 1, wx.ALL | wx.EXPAND)
+
+		TransducerWrapper.FRAME = self
 
 		self._panel.SetSizer (self._box)
 		self._panel.Layout ()
