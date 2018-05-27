@@ -45,6 +45,36 @@ class TransducerProxy (object):
 			# Already setup
 			return True
 
+	def stopNotify (self, typ):
+		typeStrings = {
+			PERIODIC: "PRD",
+			ON_CHANGE: "CHA"
+		}
+
+		assert self.server is not None
+		assert typ in typeStrings
+
+		reply = self.server.send ("NDL %s %s" % (self.name, typeStrings[typ]))
+		if reply.upper () == "OK":
+			# FIXME
+			# ~ self.notificationClients.append (callback)
+			return True
+		else:
+			raise Error, "Unexpected NDL reply: '%s'" % reply
+			return False
+
+	def cancelAllNotifications (self):
+		assert self.server is not None
+
+		reply = self.server.send ("NCL")
+		if reply.upper () == "OK":
+			# FIXME
+			# ~ self.notificationClients.append (callback)
+			return True
+		else:
+			raise Error, "Unexpected NCL reply: '%s'" % reply
+			return False
+
 	# This can only be called from Client
 	def _processNotification (self, marshaledData):
 			data = self.stereoclass.unmarshalStatic (marshaledData)

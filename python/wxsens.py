@@ -109,6 +109,14 @@ class TransducerWrapper (object):
 		if not self.transducer.notify (self.onChangeNotification, Sensoria.ON_CHANGE):
 			print "Enable notification failed"
 
+	def disableChangeNotification (self):
+		if not self.transducer.stopNotify (Sensoria.ON_CHANGE):
+			print "Disable notification failed"
+
+	def disableAllNotifications (self):
+		if not self.transducer.cancelAllNotifications ():
+			print "Disable all notifications failed"
+
 	def onChangeNotification (self, data):
 		print "Received notification for transducer %s: %s" % (self.name, str (data))
 		self._lastRead = data
@@ -456,6 +464,14 @@ class PopupMenuTransducer (wx.Menu):
 		item = wx.MenuItem (self, wx.ID_REDO, "&Notify on Change")
 		self.AppendItem (item)
 		self.Bind (wx.EVT_MENU, self.onNotifyChange, item)
+		
+		item = wx.MenuItem (self, wx.ID_UNDO, "Stop N&otifications on Change")
+		self.AppendItem (item)
+		self.Bind (wx.EVT_MENU, self.onCancelNotifications, item)
+		
+		item = wx.MenuItem (self, wx.ID_CANCEL, "C&ancel ALL Notifications")
+		self.AppendItem (item)
+		self.Bind (wx.EVT_MENU, self.onCancelAllNotifications, item)
 
 		if addSeparator:
 			self.AppendSeparator ()
@@ -485,6 +501,14 @@ class PopupMenuTransducer (wx.Menu):
 	def onNotifyChange (self, event):
 		print "Shall get notifications on change of %s" % self.transducer.name
 		self.transducer.enableChangeNotification ()
+
+	def onCancelNotifications (self, event):
+		print "Shall cancel notifications on change of %s" % self.transducer.name
+		self.transducer.disableChangeNotification ()
+
+	def onCancelAllNotifications (self, event):
+		print "Shall cancel all notifications from %s" % self.transducer.name
+		self.transducer.disableAllNotifications ()
 
 class PopupMenuActuatorRS (PopupMenuTransducer):
 	def __init__ (self, transducer):
