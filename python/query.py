@@ -29,7 +29,7 @@ if args.verbose == 2:
 elif args.verbose == 1:
 	logging.basicConfig (level = logging.DEBUG, format = '[%(asctime)s - %(levelname)s:%(filename)s:%(lineno)d] %(message)s')
 else:
-	logging.basicConfig (level = logging.INFO)
+	logging.basicConfig (level = logging.INFO, format = '[%(asctime)s] %(message)s')
 
 if args.autodiscover is None:
 	sensoria = Sensoria.Client (servers = args.addresses)
