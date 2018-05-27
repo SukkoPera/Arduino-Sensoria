@@ -47,7 +47,7 @@ class ServerProxy (object):
 			self._logger.debugComms ("%s:%u --> %s:%u %s", self.address, self.port, localaddr, localport, reply)
 			return reply
 		except socket.error as ex:
-			raise Error, "sendcmd() FAILED: %s" % str (ex)
+			raise Error, "Communication error - %s" % str (ex)
 		finally:
 			sock.shutdown (socket.SHUT_RDWR)
 			sock.close ()
