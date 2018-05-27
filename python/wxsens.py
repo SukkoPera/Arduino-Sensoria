@@ -282,6 +282,8 @@ class TransducerList (object):
 			self._changed = True
 		else:
 			self._logger.error ("Tried to add already-known transducer: %s", t.name)
+			tw = None
+		return tw
 
 	def remove (self, t):
 		tw = filter (lambda tt: tt.name == t.name, self.transducers)
@@ -667,10 +669,12 @@ class MyAutodiscoveryHandler (Sensoria.AutodiscoveryHandler):
 		self._transducerList.lock ()
 		for t in ts:
 			print "NEW: %s" % t.name
-			self._transducerList.add (t)
+			tw = self._transducerList.add (t)
+			if tw is not None:
+				tw.update ()
 		self._transducerList.unlock ()
 		self._frame.forceRedraw ()
-		self._frame.forceUpdate ()
+		# ~ self._frame.forceUpdate ()
 
 	def onTransducersRemoved (self, ts):
 		if len (ts) == 1:
