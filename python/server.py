@@ -11,6 +11,7 @@ import time
 import copy
 
 import Sensoria
+import Sensoria.stereotypes as stereotypes2		# FIXME!
 from Sensoria.stereotypes.WeatherData import WeatherData
 from Sensoria.stereotypes.RelayData import RelayData
 from Sensoria.stereotypes.ControlledRelayData import ControlledRelayData
@@ -141,14 +142,10 @@ class TimedActuator (Actuator):
 		tmp = TimeControlData ()
 		self.schedule = copy.deepcopy (tmp.schedule)
 
-	def write (self, rawdata):		# FIXME: Get this unmarshaled earlier!
-		data = TimeControlData ()
-		if data.unmarshal (rawdata):
-			self.schedule = copy.deepcopy (data.schedule)
-			ret = True, "Schedule updated"
-		else:
-			ret = False, "Unmarshal failed"
-		return ret
+	def write (self, data):
+		assert isinstance (data, TimeControlData)
+		self.schedule = copy.deepcopy (data.schedule)
+		return True, "Schedule updated"
 
 	def read (self):
 		data = TimeControlData ()
@@ -160,14 +157,10 @@ class ValueSetActuator (Actuator):
 		super (ValueSetActuator, self).__init__ (name, ValueSetData.getIdString (), description, version)
 		self.values = [None] * ValueSetData.NVALUES
 
-	def write (self, rawdata):		# FIXME: Get this unmarshaled earlier!
-		data = ValueSetData ()
-		if data.unmarshal (rawdata):
-			self.values = copy.deepcopy (data.values)
-			ret = True, "Values updated"
-		else:
-			ret = False, "Unmarshal failed"
-		return ret
+	def write (self, data):
+		assert isinstance (data, ValueSetData)
+		self.values = copy.deepcopy (data.values)
+		return True, "Values updated"
 
 	def read (self):
 		data = ValueSetData ()
@@ -192,13 +185,11 @@ class RelayActuator (Actuator):
 		    rd.state = RelayData.OFF
 		return rd
 
-	def write (self, rawdata):		# FIXME: Get this unmarshaled earlier!
-		data = RelayData ()
-		data.unmarshal (rawdata)
-
-		if data.state == RelayData.ON:
+	def write (self, rd):
+		assert isinstance (data, RelayData)
+		if rd.state == RelayData.ON:
 			self.state = RelayActuator.State.ON
-		elif data.state == RelayData.OFF:
+		elif rd.state == RelayData.OFF:
 			self.state = RelayActuator.State.OFF
 		return True, "Relay is now %s" % self.state
 
@@ -231,12 +222,11 @@ class ControlledRelayActuator (Actuator):
 
 		return crd
 
-	def write (self, rawdata):		# FIXME: Get this unmarshaled earlier!
-		# Don't set fields to UNKNOWN!
-
-		data = ControlledRelayData ()
-		data.unmarshal (rawdata)
-
+	def write (self, data):
+		assert isinstance (data, ControlledRelayData)
+		
+		# NEVER set fields to UNKNOWN!
+		
 		if data.state == ControlledRelayData.ON:
 			self.state = ControlledRelayActuator.State.ON
 		elif data.state == ControlledRelayData.OFF:
@@ -251,7 +241,10 @@ class ControlledRelayActuator (Actuator):
 
 
 class CommandListener (object):
+	PROTOCOL_VERSION = 1
+
 	def __init__ (self, name, port = LISTEN_PORT):
+		self._load_stereotypes ()
 		self.serverName = name
 		self.sensors = {}
 		self.notificationRequests = []
@@ -262,6 +255,19 @@ class CommandListener (object):
 
 		print >> sys.stderr, 'Starting up on %s port %s' % server_address
 		self._sock.bind (server_address)
+
+	def _load_stereotypes (self):
+		# Load stereotypes (Hmmm... A bit of a hack?)
+		self.stereotypes = {}
+		for clsname in stereotypes2.__all__:
+			# ~ exec ("import stereotypes.%s" % clsname)
+			cls = eval ("stereotypes2.%s.%s" % (clsname, clsname))
+			id_ = cls.getIdString ()
+			print "Registering stereotype: %s (%s)" % (clsname, id_)
+			if id_ in self.stereotypes:
+				print "Duplicate stereotype: %s" % id_
+			else:
+				self.stereotypes[cls.getIdString ()] = cls
 
 	def register_sensor (self, sensor):
 		if sensor.name in self.sensors:
@@ -299,8 +305,7 @@ class CommandListener (object):
 		self._reply (addr, "VER %s" % self.serverName)
 
 	def _hlo (self, addr, args):
-		self._reply (addr, "HLO %s %s" % (self.serverName, "|".join (("%s %s %s %s" % (sensor.name, sensor.get_type_string (), sensor.stereotype, sensor.description)).rstrip () for sensor in self.sensors.itervalues ())))
-
+		self._reply (addr, "HLO %s %d %s" % (self.serverName, CommandListener.PROTOCOL_VERSION, "|".join (("%s %s %s %s" % (sensor.name, sensor.get_type_string (), sensor.stereotype, sensor.description)).rstrip () for sensor in self.sensors.itervalues ())))
 
 	def _rea (self, addr, args):
 		if args is not None and len (args) > 0:
@@ -308,40 +313,46 @@ class CommandListener (object):
 			try:
 				sensor = self.sensors[name]
 				val = sensor.read ()
-				#~ if ts is not None:
-					#~ self._reply (addr, "REA %s %s %s" % (name, str (val), ts))
-				#~ else:
-				self._reply (addr, "REA %s %s" % (name, str (val.marshal ())))
-				#~ else:
-					#~ self._reply (addr, "ERR Sensor is not readable")
+				if val is not None:
+					st = "OK"
+				else:
+					st = "ERR"
+				self._reply (addr, "REA %s %s" % (st, str (val.marshal ())))
 			except KeyError:
-				self._reply (addr, "ERR No such sensor: %s" % name)
+				self._reply (addr, "REA ERR No such sensor: %s" % name)
+			except Exception as ex:
+				self._reply (addr, "REA ERR Read failed: %s" % str (ex))
 		else:
-			self._reply (addr, "ERR Missing sensor number")
+			self._reply (addr, "REA ERR Missing transducer name")
 
 	def _wri (self, addr, args):
 		if args is not None and len (args) > 0:
 			parts = args.split (" ", 1)
 			name = parts[0].upper ()
-			val = parts[1]
+			rawdata = parts[1]
 			try:
 				sensor = self.sensors[name]
 				if sensor.type == Sensor.Type.ACTUATOR:
-					ok, msg = sensor.write (val)
-					if ok:
-						st = "OK"
+					stereoclass = self.stereotypes[sensor.stereotype]
+					data = stereoclass ()
+					if data.unmarshal (rawdata):
+						ok, msg = sensor.write (data)
+						if ok:
+							st = "OK"
+						else:
+							st = "ERR"
+						if msg is not None:
+							self._reply (addr, "WRI %s %s" % (st, msg))
+						else:
+							self._reply (addr, "WRI %s" % st)
 					else:
-						st = "ERR"
-					if msg is not None:
-						self._reply (addr, "WRI %s %s" % (st, msg))
-					else:
-						self._reply (addr, "WRI %s" % st)
+						self._reply (addr, "WRI ERR Unmarshal failed")
 				else:
-					self._reply (addr, "ERR Sensor is not writable")
+					self._reply (addr, "WRI ERR Sensor is not writable")
 			except KeyError:
-				self._reply (addr, "ERR No such sensor: %s" % name)
+				self._reply (addr, "WRI ERR No such sensor: %s" % name)
 		else:
-			self._reply (addr, "ERR Missing or malformed args")
+			self._reply (addr, "WRI ERR Missing or malformed args")
 
 	def _nrq (self, addr, args):
 		if args is not None and len (args) > 0:
