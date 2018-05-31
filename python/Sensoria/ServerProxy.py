@@ -19,9 +19,10 @@ class ServerProxy (object):
 	RECV_BUFSIZE = 4096
 	DEFAULT_PORT = 9999
 
-	def __init__ (self, name, transducerList, sock, ip, port = DEFAULT_PORT):
+	def __init__ (self, name, protoVer, transducerList, sock, ip, port = DEFAULT_PORT):
 		self._logger = logging.getLogger ("ServerProxy")
 		self.name = name
+		self.protocolVersion = protoVer
 		self.transducerList = transducerList		# Exactly as received
 		self.address = ip
 		self.port = port

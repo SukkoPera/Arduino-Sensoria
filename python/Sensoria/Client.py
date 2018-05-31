@@ -163,12 +163,12 @@ class Client (object):
 			while not timeout:
 				try:
 					reply, addr = s.recvfrom (1024)
-					model, transducerList = self._parseHloReply (reply, addr)
+					model, protoVer, transducerList = self._parseHloReply (reply, addr)
 					if model in discovered:
 						# Same server discovered twice. Just some sort of useless protection, actually
 						logger.warning ("Duplicate server, ignoring: %s (%s)", model, addr)
 					else:
-						srvpx = ServerProxy (model, transducerList, self._sock, *addr)
+						srvpx = ServerProxy (model, protoVer, transducerList, self._sock, *addr)
 						discovered[model] = srvpx
 						if model in self._servers:
 							# This is a server we already know
@@ -289,6 +289,7 @@ class Client (object):
 
 	def _parseHloReply (self, reply, addr):
 		model = None
+		protoVer = 0
 		transducerList = None
 		reply = reply.strip ()
 		parts = reply.split (" ", 2)
@@ -301,13 +302,19 @@ class Client (object):
 				self._logger.error ("Unexpected HLO reply: %s", reply)
 		elif len (parts) > 2:
 			model = parts[1]
-			transducerList = parts[2]
+			try:
+				subparts = parts[2].split (" ", 1)
+				protoVer = int (subparts[0])
+				transducerList = subparts[1]
+			except ValueError:
+				# Protocol 0 just did not include the version in the HLO reply
+				transducerList = parts[2]
 			#~ print reply, addr
-			self._logger.info ("Found \"%s\" at %s:%d", model, addr[0], addr[1])
+			self._logger.info ("Found \"%s\" speaking protocol %d at %s:%d", model, protoVer, addr[0], addr[1])
 		else:
 			# No transducers
 			model = parts[1]
-		return model, transducerList
+		return model, protoVer, transducerList
 
 	def _queryServer (self, addr):
 		srvpx = None
@@ -318,9 +325,9 @@ class Client (object):
 		s.settimeout (10)
 		try:
 			reply, addr = s.recvfrom (1024)
-			model, transducerList = self._parseHloReply (reply, addr)
+			model, protoVer, transducerList = self._parseHloReply (reply, addr)
 			if model is not None and transducerList is not None:
-				srvpx = ServerProxy (model, transducerList, self._sock, *addr)
+				srvpx = ServerProxy (model, protoVer, transducerList, self._sock, *addr)
 		except socket.error as ex:
 			# How can this happen?
 			self._logger.error ("Query of server at %s:%d failed", addr[0], addr[1])

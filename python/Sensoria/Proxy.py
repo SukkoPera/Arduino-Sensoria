@@ -99,8 +99,20 @@ class SensorProxy (TransducerProxy):
 			parts = reply.split (" ", 1)
 			if len (parts) != 2:
 				raise Error, "Unexpected REA reply: '%s'" % reply
-			name, rest = parts
-			assert name == self.name, "REA sensor name mismatch: '%s' vs '%s'" % (name, self.name)
+			
+			if self.server.protocolVersion == 0:
+				name, rest = parts
+				assert name == self.name, "REA sensor name mismatch: '%s' vs '%s'" % (name, self.name)
+			elif self.server.protocolVersion == 1:
+				status, rest = parts
+				if status.upper () != "OK":
+					if len (parts) > 1:
+						raise Error (parts[1])
+					else:
+						raise Error ()
+			else:
+				raise Error, "Unsupported protocol version for REA"
+				
 			if raw:
 				return rest
 			else:
@@ -138,8 +150,20 @@ class ActuatorProxy (TransducerProxy):
 		parts = reply.split (" ", 1)
 		if len (parts) != 2:
 			raise Error, "Unexpected REA reply: '%s'" % reply
-		name, rest = parts
-		assert name == self.name, "REA actuator name mismatch: '%s' vs '%s'" % (name, self.name)
+		
+		if self.server.protocolVersion == 0:
+			name, rest = parts
+			assert name == self.name, "REA actuator name mismatch: '%s' vs '%s'" % (name, self.name)
+		elif self.server.protocolVersion == 1:
+			status, rest = parts
+			if status.upper () != "OK":
+				if len (parts) > 1:
+					raise Error (parts[1])
+				else:
+					raise Error ()
+		else:
+			raise Error, "Unsupported protocol version for REA"
+			
 		if raw:
 			return rest
 		else:
