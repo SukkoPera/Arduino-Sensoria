@@ -86,7 +86,7 @@ class Config (object):
 			cfgp.write (configfile)
 
 class TransducerWrapper (object):
-	THREADPOOL = ThreadPool (4)
+	THREADPOOL = ThreadPool (num_threads = 4, qlen = 20)
 	FRAME = None
 
 	def __init__ (self, sensoria, transducer):
@@ -105,7 +105,10 @@ class TransducerWrapper (object):
 
 	def update (self, async = True):
 		if async:
-			TransducerWrapper.THREADPOOL.add_task (self._updateFunc)
+			try:
+				TransducerWrapper.THREADPOOL.add_task (self._updateFunc, self.transducer.server)
+			except ThreadPool.Full:
+				self._logger.warning ("Thread pool is full, transducer update discarded")
 		else:
 			self._updateFunc ()
 
