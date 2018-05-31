@@ -29,7 +29,7 @@ class Config (object):
 	def __init__ (self):
 		self.winPos = None
 		self.winSize = None
-		self.transducerUpdateInterval = 5	# s
+		self.transducerUpdateInterval = 30	# s
 		self.servers = []
 		self.formatStrings = {}
 		self.viewDetails = False
