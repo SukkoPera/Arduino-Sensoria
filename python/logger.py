@@ -51,7 +51,7 @@ if args.no_discovery and args.autodiscovery:
 elif not args.no_discovery:
 	sensoria.discover ()
 	if args.autodiscovery is not None:
-		self._sensoria.enableAutodiscovery (args.autodiscovery)
+		sensoria.enableAutodiscovery (args.autodiscovery)
 
 db = Sensoria.DB ()
 
