@@ -9,19 +9,18 @@ import Sensoria
 # ./query.py OH OT
 # ./query -s
 parser = argparse.ArgumentParser (description = 'Query Sensoria devices')
-parser.add_argument ('--read', "-r", metavar = "TRANSDUCER_NAME", nargs = '*', default = [],
-										 help = "Read a transducer")
 parser.add_argument ('--address', metavar = "ADDRESS", nargs = '*', default = [], dest = "addresses",
 										 help = "Address of node to query (Can be used multiple times)")
 parser.add_argument ('--read-actuators', "-a", action = 'store_true', default = False,
 										 help = "Read Actuators too")
 parser.add_argument ('--interval', "-i", action = 'store', type = int, default = 0,
-										 help = "Keep polling sensors periodically", metavar = "SECONDS")
-parser.add_argument ('--autodiscover', "-A", action = 'store', type = int, default = None,
-										 help = "Autodiscover interval (0 to disable)", metavar = "SECONDS")
+										 help = "Keep reading transducers periodically", metavar = "SECONDS")
+parser.add_argument ('--no-discovery', "-n", action = 'store_true', default = False,
+										 help = "Do not discover transducers at startup")
+parser.add_argument ('--autodiscovery', "-A", action = 'store', type = int, default = None,
+										 help = "Autodiscovery interval", metavar = "SECONDS")
 parser.add_argument ('--verbose', "-v", action = 'count',
 										 help = "Enable debugging messages")
-
 
 args = parser.parse_args ()
 if args.verbose == 2:
@@ -31,15 +30,18 @@ elif args.verbose == 1:
 else:
 	logging.basicConfig (level = logging.INFO, format = '[%(asctime)s] %(message)s')
 
-if args.autodiscover is None:
-	sensoria = Sensoria.Client (servers = args.addresses)
-elif args.autodiscover > 0:
-	sensoria = Sensoria.Client (servers = args.addresses, autodiscInterval = args.autodiscover)
-else:
-	sensoria = Sensoria.Client (servers = args.addresses, autodiscover = False)
+sensoria = Sensoria.Client (servers = args.addresses)
+if args.no_discovery and args.autodiscovery:
+	# Someone must be losing his/her mind...
+	args.print_usage ()
+elif not args.no_discovery:
+	sensoria.discover ()
+	if args.autodiscovery is not None:
+		self._sensoria.enableAutodiscovery (args.autodiscovery)
+
 while True:
-	if len (args.read) > 0:
-		for tname in args.read:
+	if len (args.addresses) > 0:
+		for tname in args.addresses:
 			tname = tname.upper ()
 			if tname in sensoria.transducers:
 				try:
