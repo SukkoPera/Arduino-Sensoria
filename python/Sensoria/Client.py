@@ -30,14 +30,13 @@ class AutodiscoveryHandler (object):
 class Client (object):
 	RECV_BUFSIZE = 16384
 	DEFAULT_AUTODISCOVER_INTERVAL = 60		# sec
-	INITIAL_AUTODISCOVER_DELAY = 1		# sec
 	DISCOVER_TIMEOUT = 3		# sec
 	MAX_SERVER_FAILURES = 3
 	DEFAULT_NOTIFICATION_PORT = 9998
 	NOTIFICATION_BUFSIZE = 2048
 	DEBUG = True
 
-	def __init__ (self, servers = [], autodiscover = True, autodiscInterval = DEFAULT_AUTODISCOVER_INTERVAL):
+	def __init__ (self, servers = []):
 		self._logger = logging.getLogger ('client')
 		# ~ self._logger.setLevel (logging.DEBUG)
 		# ~ self._logger.addHandler (logging.StreamHandler ())
@@ -45,6 +44,9 @@ class Client (object):
 		self._servers = {}
 		self._setupSocket ()
 		self._handlers = []
+		self._autodiscoverEnabled = False
+		self._autodiscoverTimer = None
+		self._discoverLock = threading.RLock ()
 		# Notification listener is disabled by default
 		self._notificationListenerThread = None
 		for srv in servers:
@@ -56,12 +58,6 @@ class Client (object):
 				srvpx = self._queryServer ((srv, ServerProxy.DEFAULT_PORT))
 			if srvpx is not None:
 				self._addServer (self._realizeServer (srvpx))
-		if autodiscover and autodiscInterval is not None:
-			self._logger.debug ("Running autodiscovery every %d seconds", autodiscInterval)
-			self._autodiscInterval = autodiscInterval
-			self._startAutodiscoverTimer (Client.INITIAL_AUTODISCOVER_DELAY)	# First time
-		else:
-			self._autodiscoverTimer = None
 
 	def enableNotifications (self):
 		self.notificationRequests = []
@@ -139,101 +135,123 @@ class Client (object):
 		else:
 			self._servers[srvpx.name] = srvpx
 
-	def _startAutodiscoverTimer (self, interval):
+	def enableAutodiscovery (self, interval = DEFAULT_AUTODISCOVER_INTERVAL):
+		if self._autodiscoverEnabled:
+			self.disableAutodiscovery ()
+		self._logger.debug ("Autodiscovery enabled every %d seconds", interval)
+		self._autodiscInterval = interval
 		self._autodiscoverTimer = threading.Timer (interval, self._autodiscoverTimerCallback)
 		self._autodiscoverTimer.daemon = True
+		self._autodiscoverEnabled = True
 		self._autodiscoverTimer.start ()
 
-	def _autodiscoverTimerCallback (self):
-		logger = logging.getLogger ("client.autodiscovery")
-		logger.debug ("--- Autodiscovery start ---")
+	def disableAutodiscovery (self):
+		self._logger.debug ("Autodiscovery disabled")
+		self._autodiscoverEnabled = False
+		if self._autodiscoverTimer is not None:
+			self._autodiscoverTimer.cancel ()
+			self._autodiscoverTimer = None
 
-		# Tell handlers we're ready to roll
-		for h in self._handlers:
-			h.onAutodiscoveryStarted ()
+	def discover (self):
+		if self._discoverLock.acquire (blocking = False):
+			logger = logging.getLogger ("client.autodiscovery")
+			logger.debug ("--- Autodiscovery start ---")
 
-		try:
-			discovered = {}
-			s = socket.socket (socket.AF_INET, socket.SOCK_DGRAM)
-			s.setsockopt (socket.SOL_SOCKET,socket.SO_BROADCAST, 1)
-			s.sendto ("HLO", ('<broadcast>', ServerProxy.DEFAULT_PORT))
-			#~ s.sendto ("HLO", ('localhost', ServerProxy.DEFAULT_PORT))
-			s.settimeout (Client.DISCOVER_TIMEOUT)
-			timeout = False
-			while not timeout:
-				try:
-					reply, addr = s.recvfrom (1024)
-					model, protoVer, transducerList = self._parseHloReply (reply, addr)
-					if model in discovered:
-						# Same server discovered twice. Just some sort of useless protection, actually
-						logger.warning ("Duplicate server, ignoring: %s (%s)", model, addr)
-					else:
-						srvpx = ServerProxy (model, protoVer, transducerList, self._sock, *addr)
-						discovered[model] = srvpx
-						if model in self._servers:
-							# This is a server we already know
-							logger.debug ("Server %s is already known", model)
-							knownSrv = self._servers[model]
+			# Tell handlers we're ready to roll
+			for h in self._handlers:
+				h.onAutodiscoveryStarted ()
 
-							# Server responded, so clear failure count
-							knownSrv.failures = 0
+			try:
+				discovered = {}
+				s = socket.socket (socket.AF_INET, socket.SOCK_DGRAM)
+				s.setsockopt (socket.SOL_SOCKET,socket.SO_BROADCAST, 1)
+				s.sendto ("HLO", ('<broadcast>', ServerProxy.DEFAULT_PORT))
+				s.settimeout (Client.DISCOVER_TIMEOUT)
+				timeout = False
+				while not timeout:
+					try:
+						reply, addr = s.recvfrom (1024)
+						model, protoVer, transducerList = self._parseHloReply (reply, addr)
+						if model in discovered:
+							# Same server discovered twice. Just some sort of useless protection, actually
+							logger.warning ("Duplicate server, ignoring: %s (%s)", model, addr)
+						else:
+							srvpx = ServerProxy (model, protoVer, transducerList, self._sock, *addr)
+							discovered[model] = srvpx
+							if model in self._servers:
+								# This is a server we already know
+								logger.debug ("Server %s is already known", model)
+								knownSrv = self._servers[model]
 
-							# Check if server somehow changed
-							different = False
+								# Server responded, so clear failure count
+								knownSrv.failures = 0
 
-							# Is address still the same?
-							if knownSrv.address != srvpx.address or knownSrv.port != srvpx.port:
-								logger.info ("Server has different address: %s -> %s", knownSrv.address, srvpx.address)
-								different = True
-							else:
-								# Address unchanged, check transducer list
-								if knownSrv.transducerList != srvpx.transducerList:
-									logger.info ("Server has different transducer list")
+								# Check if server somehow changed
+								different = False
+
+								# Is address still the same?
+								if knownSrv.address != srvpx.address or knownSrv.port != srvpx.port:
+									logger.info ("Server has different address: %s -> %s", knownSrv.address, srvpx.address)
 									different = True
+								else:
+									# Address unchanged, check transducer list
+									if knownSrv.transducerList != srvpx.transducerList:
+										logger.info ("Server has different transducer list")
+										different = True
 
-							if not different:
-								logger.debug ("Server is unchanged")
+								if not different:
+									logger.debug ("Server is unchanged")
+								else:
+									logger.info ("Server has changed, updating")
+
+									# Remove old server, informing handlers
+									del self._servers[model]
+									for h in self._handlers:
+										h.onTransducersRemoved (knownSrv.transducers.values ())
+									del knownSrv
+
+									# And add new
+									self._addServer (self._realizeServer (srvpx))
+									for h in self._handlers:
+										h.onTransducersAdded (srvpx.transducers.values ())
 							else:
-								logger.info ("Server has changed, updating")
+								logger.debug ("Server %s is new", model)
+								if srvpx.transducerList is not None:
+									self._addServer (self._realizeServer (srvpx))
+								else:
+									logger.warning ("Server %s has no transducers, ignoring" % model)
 
-								# Remove old server, informing handlers
-								del self._servers[model]
-								for h in self._handlers:
-									h.onTransducersRemoved (knownSrv.transducers.values ())
-								del knownSrv
-
-								# And add new
-								self._addServer (self._realizeServer (srvpx))
+								# Inform handlers
 								for h in self._handlers:
 									h.onTransducersAdded (srvpx.transducers.values ())
-						else:
-							logger.debug ("Server %s is new", model)
-							if srvpx.transducerList is not None:
-								self._addServer (self._realizeServer (srvpx))
-							else:
-								logger.warning ("Server %s has no transducers, ignoring" % model)
+					except socket.error as ex:
+						timeout = True
 
-							# Inform handlers
-							for h in self._handlers:
-								h.onTransducersAdded (srvpx.transducers.values ())
-				except socket.error as ex:
-					timeout = True
+				for model, srvpx in self._servers.iteritems ():
+					if model not in discovered:
+						logger.warning ("Server %s did not respond to autodiscovery", model)
+						srvpx.failures += 1
+			except Error as ex:
+				logger.error ("Autodiscovery failed: %s", str (ex))
 
-			for model, srvpx in self._servers.iteritems ():
-				if model not in discovered:
-					logger.warning ("Server %s did not respond to autodiscovery", model)
-					srvpx.failures += 1
-		except Error as ex:
-			logger.error ("Autodiscovery failed: %s", str (ex))
+			# Tell handlers we're done
+			for h in self._handlers:
+				h.onAutodiscoveryCompleted ()
 
+			logger.debug ("--- Autodiscovery end ---")
+			self._discoverLock.release ()
+		else:
+			# Autodiscovery is already in progress, ignore
+			# This might happen if we are called manually while the functions is
+			# already being called by the autodiscovery thread
+			pass
 
-		# Tell handlers we're done
-		for h in self._handlers:
-			h.onAutodiscoveryCompleted ()
+	def _autodiscoverTimerCallback (self):
+		self.discover ()
 
 		# Restart timer
-		self._startAutodiscoverTimer (self._autodiscInterval)
-		logger.debug ("--- Autodiscovery end ---")
+		if self._autodiscoverEnabled:
+			self._startAutodiscoverTimer (self._autodiscInterval)
 
 	def _setupSocket (self):
 		self._sock = socket.socket (socket.AF_INET, socket.SOCK_DGRAM)

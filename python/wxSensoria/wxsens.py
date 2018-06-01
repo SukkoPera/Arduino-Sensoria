@@ -22,6 +22,8 @@ def timedelta_total_seconds (timedelta):
 	return (timedelta.microseconds + 0.0 + \
 		(timedelta.seconds + timedelta.days * 24 * 3600) * 10 ** 6) / 10 ** 6
 
+THREADPOOL = ThreadPool (num_threads = 4, qlen = 20)
+
 class Config (object):
 	FILENAME = "wxsens.ini"
 	SERVER_LIST_SEPARATOR = ','
@@ -30,6 +32,7 @@ class Config (object):
 		self.winPos = None
 		self.winSize = None
 		self.transducerUpdateInterval = 30	# s
+		self.autodiscoverInterval = 60
 		self.servers = []
 		self.formatStrings = {}
 		self.viewDetails = False
@@ -49,7 +52,9 @@ class Config (object):
 			self.winPos = (cfgp.getint ('Window', 'x'), cfgp.getint ('Window', 'y'))
 			self.winSize = (cfgp.getint ('Window', 'width'), cfgp.getint ('Window', 'height'))
 			self.transducerUpdateInterval = cfgp.getint ('Transducers', 'UpdateInterval')
+			self.autodiscoverInterval = cfgp.getint ('Network', 'AutodiscoverInterval')
 			self.servers = cfgp.get ('Network', 'Servers').split (Config.SERVER_LIST_SEPARATOR)
+			self.servers = filter (len, self.servers)		# Filter out any empty lines
 			for tname, fmt in cfgp.items ('Format'):
 				tname = tname.upper ()		# ConfigParser lowercases everything
 				self.formatStrings[tname] = fmt
@@ -71,6 +76,7 @@ class Config (object):
 		cfgp.set ('Transducers', 'UpdateInterval', self.transducerUpdateInterval)
 
 		cfgp.add_section ('Network')
+		cfgp.set ('Network', 'AutodiscoverInterval', self.autodiscoverInterval)
 		cfgp.set ('Network', 'Servers', Config.SERVER_LIST_SEPARATOR.join (self.servers))
 
 		cfgp.add_section ('Format')
@@ -86,7 +92,6 @@ class Config (object):
 			cfgp.write (configfile)
 
 class TransducerWrapper (object):
-	THREADPOOL = ThreadPool (num_threads = 4, qlen = 20)
 	FRAME = None
 
 	def __init__ (self, sensoria, transducer):
@@ -106,7 +111,7 @@ class TransducerWrapper (object):
 	def update (self, async = True):
 		if async:
 			try:
-				TransducerWrapper.THREADPOOL.add_task (self._updateFunc, self.transducer.server)
+				THREADPOOL.add_task (self._updateFunc, self.transducer.server)
 			except ThreadPool.Full:
 				self._logger.warning ("Thread pool is full, transducer update discarded")
 		else:
@@ -731,6 +736,12 @@ class MenuBar (wx.MenuBar):
 	MENUITEM_UPD_5MIN = wx.NewId ()
 	MENUITEM_FORCE_UPD = wx.ID_REFRESH
 
+	MENUITEM_DSCV_DISABLED = wx.NewId ()
+	MENUITEM_DSCV_30SEC = wx.NewId ()
+	MENUITEM_DSCV_1MIN = wx.NewId ()
+	MENUITEM_DSCV_5MIN = wx.NewId ()
+	MENUITEM_FORCE_DSCV = wx.NewId ()
+
 	itemIntervalMap = {
 		MENUITEM_UPD_5SEC: 5,
 		MENUITEM_UPD_15SEC: 15,
@@ -739,17 +750,40 @@ class MenuBar (wx.MenuBar):
 		MENUITEM_UPD_5MIN: 60 * 5
 	}
 
+	itemDiscoveryIntervalMap = {
+		MENUITEM_DSCV_DISABLED: 0,
+		MENUITEM_DSCV_30SEC: 30,
+		MENUITEM_DSCV_1MIN: 60,
+		MENUITEM_DSCV_5MIN: 60 * 5
+	}
+
 	def __init__ (self, frame):
 		super (MenuBar, self).__init__ ()
 		self._logger = logging.getLogger ('MenuBar')
 		self._frame = frame
 
 		m1 = wx.Menu ()
-		m11 = m1.Append (wx.ID_ADD, "&Servers\tAlt-S", "Configure manual servers")
-		self._frame.Bind (wx.EVT_MENU, self.onServers, m11)
-		m12 = m1.AppendSeparator ()
-		m13 = m1.Append (wx.ID_EXIT, "E&xit\tAlt-X", "Close window and exit program")
-		self._frame.Bind (wx.EVT_MENU, self.onQuit, m13)
+		adSubmenu = wx.Menu ()
+		ad1 = adSubmenu.Append (MenuBar.MENUITEM_FORCE_DSCV, "&Now!\tF6")
+		self._frame.Bind (wx.EVT_MENU, self.onForceDiscovery, ad1)
+		ad2 = adSubmenu.AppendSeparator ()
+		ad3 = adSubmenu.Append (MenuBar.MENUITEM_DSCV_DISABLED, "&Disabled", kind = wx.ITEM_RADIO)
+		ad4 = adSubmenu.Append (MenuBar.MENUITEM_DSCV_30SEC, "Every &30 seconds", kind = wx.ITEM_RADIO)
+		ad5 = adSubmenu.Append (MenuBar.MENUITEM_DSCV_1MIN, "Every minute", kind = wx.ITEM_RADIO)
+		ad6 = adSubmenu.Append (MenuBar.MENUITEM_DSCV_5MIN, "Every 5 minutes", kind = wx.ITEM_RADIO)
+		for m in [ad3, ad4, ad5, ad6]:
+			id_ = m.GetId ()
+			assert id_ in MenuBar.itemDiscoveryIntervalMap
+			t = MenuBar.itemDiscoveryIntervalMap[id_]
+			if t == self._frame.config.autodiscoverInterval:
+				m.Check ()
+			self._frame.Bind (wx.EVT_MENU, self.onAutodiscoveryIntervalChanged, m)
+		m11 = m1.AppendMenu (wx.NewId (), "&Autodiscovery", adSubmenu)
+		m12 = m1.Append (wx.ID_ADD, "&Servers\tAlt-S", "Configure manual servers")
+		self._frame.Bind (wx.EVT_MENU, self.onServers, m12)
+		m13 = m1.AppendSeparator ()
+		m14 = m1.Append (wx.ID_EXIT, "E&xit\tAlt-X", "Close window and exit program")
+		self._frame.Bind (wx.EVT_MENU, self.onQuit, m14)
 		self.Append (m1, "&File")
 
 		m2 = wx.Menu ()
@@ -796,6 +830,19 @@ class MenuBar (wx.MenuBar):
 
 	def onQuit (self, event):
 		wx.CallAfter (self._frame.onQuit, event)
+
+	def onAutodiscoveryIntervalChanged (self, event):
+		assert event.Id in MenuBar.itemDiscoveryIntervalMap
+		t = MenuBar.itemDiscoveryIntervalMap[event.Id]
+		self._logger.info ("Setting autodiscovery interval to %u seconds" % t)
+		self._frame.config.autodiscoverInterval = t
+		if t == 0:
+			self._frame._sensoria.disableAutodiscovery ()
+		else:
+			self._frame._sensoria.enableAutodiscovery (t)
+
+	def onForceDiscovery (self, event):
+		THREADPOOL.add_task (self._frame._sensoria.discover, None)
 
 	def onUpdateIntervalChanged (self, event):
 		assert event.Id in MenuBar.itemIntervalMap
@@ -887,13 +934,22 @@ class Frame (wx.Frame):
 		self._panel.SetSizer (self._box)
 		self._panel.Layout ()
 
-		#~ self._sensoria = Sensoria.Client (servers = ["localhost"], autodiscover = False)
-		self._sensoria = Sensoria.Client (autodiscInterval = 60 * 3)
-		self._sensoria.enableNotifications ()
+		self._sensoria = Sensoria.Client (servers = self.config.servers)
 		self.transducerList = TransducerList (self._sensoria, self.config)
 		self._lc.SetObjects (self.transducerList.transducers)
+		self.transducerList.lock ()
+		for t in self._sensoria.transducers.itervalues ():
+			print "FOUND TRANSDUCER (Manual): %s" % t.name
+			tw = self.transducerList.add (t)
+			if tw is not None:
+				tw.update ()
+		self.transducerList.unlock ()
 		self._adHandler = MyAutodiscoveryHandler (self, self.transducerList)
 		self._sensoria.registerHandler (self._adHandler)
+		if self.config.autodiscoverInterval != 0:
+			self._sensoria.enableAutodiscovery (self.config.autodiscoverInterval)
+			THREADPOOL.add_task (self._sensoria.discover, None)
+		self._sensoria.enableNotifications ()
 
 		self._lastTransducerUpdate = None
 
