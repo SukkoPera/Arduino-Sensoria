@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import sys
 import argparse
 import time
 import datetime
@@ -20,7 +21,7 @@ signal.signal (signal.SIGHUP, sigHandler)
 signal.signal (signal.SIGTERM, sigHandler)
 
 
-parser = argparse.ArgumentParser (description = 'Query Sensoria devices')
+parser = argparse.ArgumentParser (description = 'Log data from Sensoria transducers')
 parser.add_argument ('--address', metavar = "ADDRESS", nargs = '*', default = [], dest = "addresses",
 										 help = "Address of node to query (Can be used multiple times)")
 parser.add_argument ('--read-actuators', "-a", action = 'store_true', default = False,
@@ -45,7 +46,8 @@ else:
 sensoria = Sensoria.Client (servers = args.addresses)
 if args.no_discovery and args.autodiscovery:
 	# Someone must be losing his/her mind...
-	args.print_usage ()
+	parser.print_help ()
+	sys.exit (1)
 elif not args.no_discovery:
 	sensoria.discover ()
 	if args.autodiscovery is not None:

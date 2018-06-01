@@ -8,7 +8,7 @@ import Sensoria
 
 # ./query.py OH OT
 # ./query -s
-parser = argparse.ArgumentParser (description = 'Query Sensoria devices')
+parser = argparse.ArgumentParser (description = 'Query Sensoria transducers')
 parser.add_argument ('--address', metavar = "ADDRESS", nargs = '*', default = [], dest = "addresses",
 										 help = "Address of node to query (Can be used multiple times)")
 parser.add_argument ('--read-actuators', "-a", action = 'store_true', default = False,
@@ -33,7 +33,7 @@ else:
 sensoria = Sensoria.Client (servers = args.addresses)
 if args.no_discovery and args.autodiscovery:
 	# Someone must be losing his/her mind...
-	args.print_usage ()
+	parser.print_help ()
 elif not args.no_discovery:
 	sensoria.discover ()
 	if args.autodiscovery is not None:
