@@ -3,6 +3,9 @@
 import datetime
 import copy
 
+from xml.etree import ElementTree
+from xml.dom import minidom
+
 import wx
 import wx.grid
 
@@ -136,16 +139,25 @@ class TimerEditDialog (wx.Dialog):
 		sizer.Add (self._tPanel, 0, wx.EXPAND | wx.ALL, 30)
 
 		btnBox = wx.BoxSizer (wx.HORIZONTAL)
-		btnClear = wx.Button (self, wx.NewId(), 'C&lear')
+		btnImport = wx.Button (self, wx.ID_SAVE, '&Import')
+		btnBox.Add (btnImport, 0)
+		btnImport.Bind (wx.EVT_BUTTON, self.onImport)
+		btnExport = wx.Button (self, wx.ID_SAVEAS, '&Export')
+		btnBox.Add (btnExport, 0)
+		btnExport.Bind (wx.EVT_BUTTON, self.onExport)
+		btnClear = wx.Button (self, wx.NewId (), 'C&lear')
 		btnBox.Add (btnClear, 0)
+
 		btnClear.Bind (wx.EVT_BUTTON, self.onClear)
+
+		btnBox.AddSpacer ((0, 0), 1, wx.EXPAND, 10)
 		btnCancel = wx.Button (self, wx.ID_CANCEL, '&Cancel')		# Using ID_CANCEL automatically closes dialog
 		btnBox.Add (btnCancel, 0)
 		btnOk = wx.Button (self, wx.ID_OK, '&OK')
 		btnBox.Add (btnOk, 0)
 		btnOk.SetDefault ()
 		btnOk.Bind (wx.EVT_BUTTON, self.onOk)
-		sizer.Add (btnBox, 0, wx.ALIGN_RIGHT | wx.RIGHT | wx.BOTTOM, 10)
+		sizer.Add (btnBox, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 10)
 
 		# Making the dialog fixed-size is pretty tedious...
 		self.SetSizerAndFit (sizer)
@@ -172,8 +184,56 @@ class TimerEditDialog (wx.Dialog):
 				wx.MessageBox ("Unable to set timer schedule", "Error", wx.ICON_ERROR)
 		self.Close ()
 		event.Skip ()
-		
+
 	def onClear (self, event):
 		print "Clearing Timer Data"
 		self._tPanel.clearSchedule ()
 		event.Skip ()
+
+	def onImport (self, event):
+		openFileDialog = wx.FileDialog(self, "Import Schedule", "", "",
+                                       "XML files (*.xml)|*.xml",
+                                       wx.FD_OPEN | wx.FD_FILE_MUST_EXIST)
+		openFileDialog.ShowModal ()
+		srcfile = openFileDialog.GetPath ()
+		openFileDialog.Destroy ()
+
+		print "Importing schedule from file '%s'" % srcfile
+		tree = ElementTree.parse (srcfile)
+		root = tree.getroot ()
+		if root.tag != "schedule":
+			print "Invalid file"
+		else:
+			# Quick way to get an empty schedule of the right size
+			self._tPanel.clearSchedule ()
+			schedule = self._tPanel.schedule
+			for n, d in enumerate (root):	# Well, I guess this is not very robust...
+				for h, s in enumerate (d):
+					for l, a in enumerate (s):
+						schedule[n][h][l] = int (a.text)
+			self._tPanel.schedule = schedule
+		event.Skip ()
+
+	def onExport (self, event):
+		saveFileDialog = wx.FileDialog (self, "Export Schedule", "", "",
+                                       "XML files (*.xml)|*.xml",
+                                       wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT)
+		saveFileDialog.ShowModal ()
+		destfile = saveFileDialog.GetPath ()
+		saveFileDialog.Destroy ()
+
+		print "Exporting schedule to file '%s'" % destfile
+		root = ElementTree.Element ("schedule")
+		for n, d in enumerate (self._tPanel.schedule):
+			day = ElementTree.SubElement (root, "day", name = TimerPanel.DAY_NAMES[n].lower ())
+			for h, s in enumerate (d):
+				hElem = ElementTree.SubElement (day, "hour", h = str (h))
+				for l, a in enumerate (s):
+					sElem = ElementTree.SubElement (hElem, "slot", n = str (l))
+					sElem.text = str (a)
+		xml = ElementTree.tostring (root, encoding = 'ascii')
+		pretty = minidom.parseString (xml).toprettyxml (encoding = 'ascii')
+		with open (destfile, "w") as fp:
+			fp.write (pretty)
+		event.Skip ()
+
