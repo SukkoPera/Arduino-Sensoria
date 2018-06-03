@@ -3,8 +3,8 @@
 
 #include <stdlib.h>		// If cstdlib is used instead, min() disappears
 #include <string.h>
-#include <cerrno>
-#include <climits>
+#include <errno.h>
+#include <limits.h>
 #include <PString.h>
 #include <SensoriaCore/Stereotype.h>
 #include <SensoriaCore/utils.h>
