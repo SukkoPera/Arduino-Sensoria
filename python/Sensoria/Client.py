@@ -251,7 +251,7 @@ class Client (object):
 
 		# Restart timer
 		if self._autodiscoverEnabled:
-			self._startAutodiscoverTimer (self._autodiscInterval)
+			self.enableAutodiscovery (self._autodiscInterval)
 
 	def _setupSocket (self):
 		self._sock = socket.socket (socket.AF_INET, socket.SOCK_DGRAM)
