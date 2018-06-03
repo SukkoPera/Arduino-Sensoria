@@ -107,8 +107,6 @@ char *utoa(unsigned int v, char *ssp, int radix) {
 		return ssp;
 }
 
-#endif	// ARDUINO_ARCH_STM32F1
-
 // Reworked from Arduino's Print.h
 char *ultoa(unsigned long n, char *sp, int radix) {
 	char buf[8 * sizeof(long) + 1]; // Assumes 8-bit chars plus zero byte.
@@ -132,6 +130,7 @@ char *ultoa(unsigned long n, char *sp, int radix) {
 
 	return sp;
 }
+#endif	// ARDUINO_ARCH_STM32F1
 
 static char *strchr_escaped (char *s, int c) {
 	static const char ESCAPE_CHAR = '\\';
