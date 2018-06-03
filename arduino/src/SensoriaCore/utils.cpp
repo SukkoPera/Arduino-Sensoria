@@ -49,62 +49,62 @@ char *floatToString (double val, char *outstr) {
 // Modifed by SukkoPera to reflect the avrlibc function behavior, i.e.:
 // The utoa() function returns the pointer passed as s.
 char *itoa(int value, char *ssp, int radix) {
-		char tmp[16];// be careful with the length of the buffer
-		char *tp = tmp;
-		char *sp = ssp;
-		int i;
-		unsigned v;
+	char tmp[16];// be careful with the length of the buffer
+	char *tp = tmp;
+	char *sp = ssp;
+	int i;
+	unsigned v;
 
-		int sign = (radix == 10 && value < 0);
-		if (sign)
-				v = -value;
-		else
-				v = (unsigned) value;
+	int sign = (radix == 10 && value < 0);
+	if (sign)
+			v = -value;
+	else
+			v = (unsigned) value;
 
-		while (v || tp == tmp)
-		{
-				i = v % radix;
-				v /= radix;
-				if (i < 10)
-					*tp++ = i + '0';
-				else
-					*tp++ = i + 'a' - 10;
-		}
-
-		if (sign)
-				*sp++ = '-';
-
-		while (tp > tmp)
-				*sp++ = *--tp;
-
-		*sp = '\0';
-
-		return ssp;
-}
-
-// Modified version of the above that handles unsigned int's
-// By SukkoPera
-char *utoa(unsigned int v, char *ssp, int radix) {
-		char tmp[16];// be careful with the length of the buffer
-		char *tp = tmp;
-		char *sp = ssp;
-		int i;
-
-		while (v || tp == tmp) {
+	while (v || tp == tmp)
+	{
 			i = v % radix;
 			v /= radix;
 			if (i < 10)
 				*tp++ = i + '0';
 			else
 				*tp++ = i + 'a' - 10;
-		}
+	}
 
-		while (tp > tmp)
+	if (sign)
+			*sp++ = '-';
+
+	while (tp > tmp)
 			*sp++ = *--tp;
 
-		*sp = '\0';
+	*sp = '\0';
 
-		return ssp;
+	return ssp;
+}
+
+// Modified version of the above that handles unsigned int's
+// By SukkoPera
+char *utoa(unsigned int v, char *ssp, int radix) {
+	char tmp[16];// be careful with the length of the buffer
+	char *tp = tmp;
+	char *sp = ssp;
+	int i;
+
+	while (v || tp == tmp) {
+		i = v % radix;
+		v /= radix;
+		if (i < 10)
+			*tp++ = i + '0';
+		else
+			*tp++ = i + 'a' - 10;
+	}
+
+	while (tp > tmp)
+		*sp++ = *--tp;
+
+	*sp = '\0';
+
+	return ssp;
 }
 
 // Reworked from Arduino's Print.h
@@ -123,7 +123,7 @@ char *ultoa(unsigned long n, char *sp, int radix) {
 
 		*--str = c < 10 ? c + '0' : c + 'A' - 10;
 	} while(n);
-	
+
 	while (*str)
 		*sp++ = *str++;
 	*sp = '\0';
