@@ -243,6 +243,8 @@ void SensoriaServer::cmd_hlo (const SensoriaAddress* clientAddr, char *args) {
 	outBuf.print (F("HLO "));
 	outBuf.print (serverName);
 	outBuf.print (' ');
+	outBuf.print (SensoriaServer::PROTOCOL_VERSION);
+	outBuf.print (' ');
 
 	for (byte i = 0; i < nTransducers; i++) {
 		Transducer& t = *transducers[i];
@@ -317,6 +319,7 @@ void SensoriaServer::cmd_qry (const SensoriaAddress* clientAddr, char *args) {
 
 void SensoriaServer::cmd_rea (const SensoriaAddress* clientAddr, char *args) {
 	outBuf.begin ();
+	outBuf.print (F("REA "));
 
 	// Get first arg
 	if (args != NULL) {
@@ -333,25 +336,23 @@ void SensoriaServer::cmd_rea (const SensoriaAddress* clientAddr, char *args) {
 				clearSensorBuffer ();
 				char *buf = st -> marshal (sensorBuf, SENSOR_BUF_SIZE);
 				if (buf) {
-					outBuf.print (F("REA "));
-					outBuf.print (t -> name);
-					outBuf.print (' ');
+					outBuf.print (F("OK "));
 					outBuf.print (buf);
 				} else {
 					outBuf.print (F("ERR Marshaling failed"));
 				}
 			} else {
-				outBuf.print (F("ERR Read failed"));
+				outBuf.print (F("ERR"));
 			}
 		} else {
-			DPRINT (F("ERR No such transducer: "));
+			DPRINT (F("REA ERR No such transducer: "));
 			DPRINTLN (args);
 
 			outBuf.print (F("ERR No such transducer: "));
 			outBuf.print (args);
 		}
 	} else {
-		DPRINTLN (F("ERR Missing transducer name"));
+		DPRINTLN (F("REA ERR Missing transducer name"));
 		outBuf.print (F("ERR Missing transducer name"));
 	}
 
@@ -362,6 +363,7 @@ void SensoriaServer::cmd_rea (const SensoriaAddress* clientAddr, char *args) {
 
 void SensoriaServer::cmd_wri (const SensoriaAddress* clientAddr, char *args) {
 	outBuf.begin ();
+	outBuf.print (F("WRI "));
 
 	// Get first arg
 	if (args != NULL) {
@@ -380,31 +382,30 @@ void SensoriaServer::cmd_wri (const SensoriaAddress* clientAddr, char *args) {
 					Stereotype *st = getStereotype (t -> stereotype);
 					st -> clear ();
 					if (st -> unmarshal (rest)) {
-						outBuf.print (F("WRI "));
 						outBuf.print (t -> writeGeneric (st) ? F("OK") : F("ERR"));
 					} else {
 						DPRINT (F("Unmarshaling with "));
 						DPRINT (st -> tag);
 						DPRINT (F(" failed for: "));
 						DPRINTLN (rest);
-						outBuf.print (F("WRI ERR Unmarshaling failed"));
+						outBuf.print (F("ERR Unmarshaling failed"));
 					}
 				} else {
-					outBuf.print (F("WRI ERR Nothing to write"));
+					outBuf.print (F("ERR Nothing to write"));
 				}
 			} else {
-				outBuf.print (F("WRI ERR Transducer is not an actuator"));
+				outBuf.print (F("ERR Transducer is not an actuator"));
 			}
 		} else {
 			DPRINT (F("ERR No such transducer: "));
 			DPRINTLN (args);
 
-			outBuf.print (F("WRI ERR No such transducer: "));
+			outBuf.print (F("ERR No such transducer: "));
 			outBuf.print (args);
 		}
 	} else {
 		DPRINTLN (F("ERR Missing transducer name"));
-		outBuf.print (F("WRI ERR Missing transducer name"));
+		outBuf.print (F("ERR Missing transducer name"));
 	}
 
 	// Send reply

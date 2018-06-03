@@ -17,6 +17,9 @@
 //~ #define ENABLE_CMD_QRY
 
 class SensoriaServer {
+public:
+	static const byte PROTOCOL_VERSION = 1;
+
 private:
 #ifdef ARDUINO_ARCH_STM32F1
 	static const word OUT_BUF_SIZE = 512;
