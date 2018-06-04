@@ -171,9 +171,11 @@ public:
 		}
 	}
 
+#ifdef ENABLE_NOTIFICATIONS
   virtual SensoriaAddress* getNotificationAddress (const SensoriaAddress* client) {
 		return NULL;
 	}
+#endif
 
 	virtual boolean receiveCmd (char*& cmd, SensoriaAddress* client) override {
 		ByteAddress& bAddr = *const_cast<ByteAddress*> (reinterpret_cast<const ByteAddress*> (client));
@@ -223,7 +225,9 @@ public:
 		return false;
 	}
 
+#ifdef ENABLE_NOTIFICATIONS
 	virtual boolean receiveNotification (char*& notification) override {
 		return false;
 	}
+#endif
 };

@@ -120,6 +120,7 @@ public:
 		}
 	}
 
+#ifdef ENABLE_NOTIFICATIONS
 	virtual SensoriaAddress* getNotificationAddress (const SensoriaAddress* client) override {
 		UdpAddress* addr = reinterpret_cast<UdpAddress*> (getAddress ());
 		if (addr) {
@@ -130,6 +131,7 @@ public:
 
 		return addr;
 	}
+#endif
 
 	/*****/
 
@@ -253,11 +255,13 @@ public:
 		return ret;
 	}
 
+#ifdef ENABLE_NOTIFICATIONS
 	boolean receiveNotification (char*& notification) override {
 		IPAddress ip;
 		uint16_t port;
 		return receiveGeneric (udpNot, notification, ip, port);
 	}
+#endif
 };
 
 #endif    // PLATFORM_ESP8266

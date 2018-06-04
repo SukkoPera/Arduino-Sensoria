@@ -48,7 +48,9 @@ public:
 
 	virtual void releaseAddress (SensoriaAddress* addr) = 0;
 
+#ifdef ENABLE_NOTIFICATIONS
 	virtual SensoriaAddress* getNotificationAddress (const SensoriaAddress* client) = 0;
+#endif
 
 	// Functions for servers
 	virtual boolean receiveCmd (char*& cmd, SensoriaAddress* client) = 0;
@@ -64,8 +66,9 @@ public:
 
 	virtual boolean receiveBroadcastReply (char*& reply, SensoriaAddress*& sender, unsigned int timeout) = 0;
 
+#ifdef ENABLE_NOTIFICATIONS
 	virtual boolean receiveNotification (char*& notification) = 0;
-
+#endif
 
 
 
