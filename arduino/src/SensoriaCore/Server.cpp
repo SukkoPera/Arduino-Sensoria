@@ -97,10 +97,6 @@ void SensoriaServer::process_cmd (char *buffer, const SensoriaAddress* senderAdd
 	strupr (cmd);	// Done in place
 	if (strcmp_P (cmd, PSTR ("HLO")) == 0) {
 		cmd_hlo (senderAddr, args);
-#ifdef ENABLE_CMD_QRY
-	} else if (strcmp_P (cmd, PSTR ("QRY")) == 0) {
-		cmd_qry (senderAddr, args);
-#endif
 	} else if (strcmp_P (cmd, PSTR ("REA")) == 0) {
 		cmd_rea (senderAddr, args);
 	} else if (strcmp_P (cmd, PSTR ("WRI")) == 0) {
@@ -264,58 +260,6 @@ void SensoriaServer::cmd_hlo (const SensoriaAddress* clientAddr, char *args) {
 	outBuf.print ('\n');
 	comm -> reply ((const char *) outBuf, clientAddr);
 }
-
-#ifdef ENABLE_CMD_QRY
-void SensoriaServer::cmd_qry (const SensoriaAddress* clientAddr, char *args) {
-	if (args != NULL) {
-		// Get first arg
-		char *space = strchr (args, ' ');
-		if (space)
-			*space = '\0';
-
-		Transducer *t = getTransducer (args);
-		if (t) {
-			sendClient (F("QRY "));
-			sendClient (t -> name);
-			sendClient (F("|"));
-			sendClient (t -> type == Transducer::SENSOR ? ("S") : ("A"));
-			sendClient (F("|"));
-			sendClient (t -> stereotype);
-			sendClient (F("|"));
-			sendClient (t -> description);
-			sendClient (F("|"));
-			sendClient (t -> version, true);
-		} else {
-			DPRINT (F("ERR No such transducer: "));
-			DPRINTLN (args);
-
-			sendClient (F("ERR No such transducer: "));
-			sendClient (args, true);
-		}
-	} else {
-		// List sensors
-		sendClient (F("QRY "));
-
-		for (byte i = 0; i < nTransducers; i++) {
-			Transducer *t = transducers[i];
-			sendClient (t -> name);
-			sendClient (" ");		   // No F() here saves flash and wastes no RAM
-			sendClient (t -> type == Transducer::SENSOR ? ("S") : ("A"));
-			sendClient (" ");
-			sendClient (t -> stereotype);
-			sendClient (" ");
-
-			sendClient (t -> description);
-
-			if (i < nTransducers - 1)
-				sendClient (F("|"));
-		}
-
-		// Send reply
-		sendClient ();
-	}
-}
-#endif
 
 void SensoriaServer::cmd_rea (const SensoriaAddress* clientAddr, char *args) {
 	outBuf.begin ();

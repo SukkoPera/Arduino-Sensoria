@@ -14,8 +14,6 @@
 #include "common.h"
 #include "debug.h"
 
-//~ #define ENABLE_CMD_QRY
-
 class SensoriaServer {
 public:
 	static const byte PROTOCOL_VERSION = 1;
@@ -60,10 +58,6 @@ private:
 #endif
 
 	void cmd_hlo (const SensoriaAddress* clientAddr, char *args);
-
-#ifdef ENABLE_CMD_QRY
-	void cmd_qry (const SensoriaAddress* clientAddr, char *args);
-#endif
 
 	void cmd_rea (const SensoriaAddress* clientAddr, char *args);
 
