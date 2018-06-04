@@ -20,7 +20,7 @@ public:
 	}
 
 	bool begin (FlashString name, FlashString description, byte i2cAddr = DEFAULT_ADDRESS) {
-		if (Sensor::begin (name, F("WD"), description, F("20171121"))) {
+		if (Sensor::begin (name, F("WD"), description)) {
       if (!sensor.begin (i2cAddr)) {
         DPRINTLN (F("SHT3x not found"));
         return false;

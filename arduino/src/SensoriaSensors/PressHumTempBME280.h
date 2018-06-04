@@ -13,7 +13,7 @@ public:
 	}
 
 	boolean begin (FlashString name, FlashString description, BoschBME280& _sensor) {
-		if (Sensor::begin (name, F("WD"), description, F("20180428"))) {
+		if (Sensor::begin (name, F("WD"), description)) {
 			sensor = &_sensor;
 			return true;
 		} else {

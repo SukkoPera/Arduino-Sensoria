@@ -10,7 +10,7 @@ public:
 		pin = _pin;
 		pinMode (pin, INPUT);
 
-		return Sensor::begin (name, F("MD"), description, F("20170224"));
+		return Sensor::begin (name, F("MD"), description);
 	}
 
 	boolean read (MotionData& md) override {

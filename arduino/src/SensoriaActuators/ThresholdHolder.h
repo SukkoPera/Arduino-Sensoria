@@ -12,7 +12,7 @@ public:
 	signed int thresholds[N_THRES];
 
 	boolean begin (FlashString name, FlashString description) {
-		return Actuator::begin (name, F("VS"), description, F("20180511"));
+		return Actuator::begin (name, F("VS"), description);
 	}
 
 	boolean write (ValueSetData& vs) override {

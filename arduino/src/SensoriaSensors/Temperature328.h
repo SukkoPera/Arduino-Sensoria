@@ -19,7 +19,7 @@ private:
 
 public:
 	boolean begin (FlashString name, FlashString description) {
-		return Sensor::begin (name, F("WD"), description, F("20160201"));
+		return Sensor::begin (name, F("WD"), description);
 	}
 
   boolean read (WeatherData& wd) override {

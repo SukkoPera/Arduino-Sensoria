@@ -16,7 +16,7 @@ public:
 	}
 
 	boolean begin (FlashString name, FlashString description, SFE_BMP180& _sensor) {
-		if (Sensor::begin (name, F("WD"), description, F("20160320"))) {
+		if (Sensor::begin (name, F("WD"), description)) {
 			sensor = &_sensor;
 			return true;
 		} else {

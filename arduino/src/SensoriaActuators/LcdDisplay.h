@@ -43,7 +43,7 @@ public:
 	}
 
 	virtual bool begin (const __FlashStringHelper *name, const __FlashStringHelper *description, LCD* _lcd) {
-		if (_lcd != NULL && Actuator::begin (name, description, F("20151128"))) {
+		if (_lcd != NULL && Actuator::begin (name, description)) {
 			lcd = _lcd;
 			return true;
 		} else {

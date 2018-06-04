@@ -36,7 +36,7 @@ public:
 	bool begin (FlashString name, FlashString description, byte _pin) {
 		pin = _pin;
 
-		return Sensor::begin (name, F("WD"), description, F("20160320"));
+		return Sensor::begin (name, F("WD"), description);
 	}
 
   boolean read (WeatherData& wd) override {
