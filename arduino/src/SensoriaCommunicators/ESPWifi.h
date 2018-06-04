@@ -3,63 +3,10 @@
 #include <SensoriaCore/common.h>
 #include <WiFiEsp.h>
 #include <WiFiEspUdp.h>
+#include <SensoriaCommunicators/UdpAddress.h>
 #include <SensoriaCore/debug.h>
 
 #define IN_BUF_SIZE 192
-
-class UdpAddress: public SensoriaAddress {
-public:
-	IPAddress ip;
-	uint16_t port;
-	boolean inUse;
-	
-	UdpAddress (): ip (0,0,0,0), port (0), inUse (false) {
-	}
-	
-	UdpAddress (const IPAddress& _ip, const uint16_t _port):
-		ip (_ip), port (_port), inUse (false) {
-	}
-
-	char* toString (char* buf, byte size) const override {
-		char tmp[6];    // Max length of a 16-bit integer + 1
-
-		// Clear output string
-		buf[0] = '\0';
-
-		// Stringize IP
-		for (int i = 0; i < 4; i++) {
-			 	utoa (ip[i], tmp, 10);
-				strncat (buf, tmp, size);
-				strncat (buf, ".", size);
-		}
-
-		// Replace last dot with a colon
-		buf[strlen (buf) - 1] = ':';
-
-		// Append port
-		utoa (port, tmp, 10);
-		strncat (buf, tmp, size);
-
-		return buf;
-	}
-
-protected:
-	virtual bool equalTo (const SensoriaAddress& otherBase) const override {
-		const UdpAddress& other = static_cast<const UdpAddress&> (otherBase);
-		return ip == other.ip && port == other.port;
-	}
-
-	virtual void clone (const SensoriaAddress& otherBase) override {
-		const UdpAddress& other = static_cast<const UdpAddress&> (otherBase);
-		ip = other.ip;
-		port = other.port;
-		inUse = other.inUse;
-	}
-
-	// Default copy/assignment operators should be fine
-};
-
-/******************************************************************************/
 
 
 /* This uses Bruno Portaluri's WiFiEsp library:
@@ -86,11 +33,6 @@ private:
 
 	unsigned long lastBroadcastTime;
 
-	/* 255.255.255.255 does not seem to work, see:
-	 * https://github.com/bportaluri/WiFiEsp/issues/95
-	 */
-#define BROADCAST_ADDRESS 192,168,1,255
-
 	boolean receiveGeneric (WiFiEspUDP& udp, char*& str, IPAddress& senderAddr, uint16_t& senderPort) {
 		// Assume we'll receive nothing
 		boolean ret = false;
@@ -106,7 +48,8 @@ private:
 				buffer[len] = '\0';  // Ensure command is a valid string
 				str = reinterpret_cast<char *> (buffer);
 			}
-#if 0
+
+#ifdef DEBUG_COMMUNICATOR
 			DPRINT (F("Received packet of size "));
 			DPRINT (packetSize);
 			DPRINT (F(" from "));
@@ -124,6 +67,18 @@ private:
 	}
 
 	boolean sendGeneric (const char *str, IPAddress& dest, uint16_t port) {
+#ifdef DEBUG_COMMUNICATOR
+			DPRINT (F("Sending packet of size "));
+			DPRINT (strlen (str));
+			DPRINT (F(" to "));
+			DPRINT (dest);
+			DPRINT (F(", port "));
+			DPRINT (port);
+			DPRINT (F(": \""));
+			DPRINT (str);
+			DPRINTLN (F("\""));
+#endif
+
 		int ret = udpMain.beginPacket (dest, port);
 		if (ret) {
 			udpMain.write (reinterpret_cast<const uint8_t *> (str), strlen (str));
@@ -137,14 +92,19 @@ public:
 	SensoriaAddress* getAddress () override {
 		SensoriaAddress* ret = NULL;
 
-#if 0
-		byte cnt = 0;
-		for (byte i = 0; i < N_ADDRESSES && !ret; i++) {
-			if (!addressPool[i].inUse)
-				++cnt;
+#ifdef DEBUG_COMMUNICATOR
+		static unsigned long last = 0;
+		if (last == 0 || millis () - last >= 5000) {
+			byte cnt = 0;
+			for (byte i = 0; i < N_ADDRESSES && !ret; i++) {
+				if (!addressPool[i].inUse)
+					++cnt;
+			}
+			DPRINT (F("Addresses not in use: "));
+			DPRINTLN (cnt);
+
+			last = millis ();
 		}
-		DPRINT (F("Addresses not in use: "));
-		DPRINTLN (cnt);
 #endif
 
 		for (byte i = 0; i < N_ADDRESSES && !ret; i++) {
@@ -185,6 +145,7 @@ public:
 		}
 	}
 
+#ifdef ENABLE_NOTIFICATIONS
 	virtual SensoriaAddress* getNotificationAddress (const SensoriaAddress* client) override {
 		UdpAddress* addr = reinterpret_cast<UdpAddress*> (getAddress ());
 		if (addr) {
@@ -195,6 +156,7 @@ public:
 
 		return addr;
 	}
+#endif
 
 	/*****/
 
@@ -290,8 +252,16 @@ public:
 
 	SendResult broadcast (const char* cmd) override {
 		UdpAddress bcAddr;
-		bcAddr.ip = IPAddress (BROADCAST_ADDRESS);
+		bcAddr.ip = IPAddress (((uint32_t) WiFi.localIP ()) | (~(uint32_t) WiFi.subnetMask ()));
 		bcAddr.port = DEFAULT_BROADCAST_PORT;
+
+#ifdef DEBUG_COMMUNICATOR
+		char buf[32];
+		bcAddr.toString (buf, sizeof (buf));
+		DPRINT (F("Broadcast address is: "));
+		DPRINTLN (buf);
+#endif
+
 		SendResult ret = this -> reply (cmd, &bcAddr);
 		if (ret == SEND_OK) {
 			lastBroadcastTime = millis ();
@@ -322,11 +292,13 @@ public:
 		return ret;
 	}
 
+#ifdef ENABLE_NOTIFICATIONS
 	boolean receiveNotification (char*& notification) override {
 		IPAddress ip;
 		uint16_t port;
 		return receiveGeneric (udpNot, notification, ip, port);
 	}
+#endif
 
 
 
