@@ -43,16 +43,15 @@ public:
 protected:
 	virtual bool equalTo (const SensoriaAddress& otherBase) const override {
 		const UdpAddress& other = static_cast<const UdpAddress&> (otherBase);
-		return ip == other.ip && port == other.port;
+		return ip == other.ip && port == other.port;		// Need to check inUse too?
 	}
 
 	virtual void clone (const SensoriaAddress& otherBase) override {
 		const UdpAddress& other = static_cast<const UdpAddress&> (otherBase);
 		ip = other.ip;
 		port = other.port;
+		inUse = other.inUse;
 	}
-
-	// Default copy/assignment operators should be fine
 };
 
 #endif
