@@ -83,13 +83,18 @@ public:
 		SensoriaAddress* ret = NULL;
 
 #ifdef DEBUG_COMMUNICATOR
-		byte cnt = 0;
-		for (byte i = 0; i < N_ADDRESSES && !ret; i++) {
-			if (!addressPool[i].inUse)
-				++cnt;
+		static unsigned long last = 0;
+		if (last == 0 || millis () - last >= 5000) {
+			byte cnt = 0;
+			for (byte i = 0; i < N_ADDRESSES && !ret; i++) {
+				if (!addressPool[i].inUse)
+					++cnt;
+			}
+			DPRINT (F("Addresses not in use: "));
+			DPRINTLN (cnt);
+
+			last = millis ();
 		}
-		DPRINT (F("Addresses not in use: "));
-		DPRINTLN (cnt);
 #endif
 
 		for (byte i = 0; i < N_ADDRESSES && !ret; i++) {
