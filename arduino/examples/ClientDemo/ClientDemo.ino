@@ -1,8 +1,7 @@
-#include <SoftwareSerial.h>
 #include <Sensoria.h>
 #include <SensoriaClient/SensoriaClient.h>
 #include <SensoriaStereotypes/WeatherData.h>
-#include <SensoriaCommunicators/ESPWifi.h>
+#include <SensoriaCommunicators/ESPStandAlone.h>
 
 //~ IPAddress outdoor1 (192, 168, 1, 152);
 
@@ -10,8 +9,7 @@
 #define WIFI_SSID        "ssid"
 #define WIFI_PASSWORD    "password"
 
-SoftwareSerial swSerial (6, 7);
-SensoriaEsp8266Communicator comm;
+ESPCommunicator comm;
 SensoriaClient client;
 
 
@@ -30,14 +28,13 @@ void mypanic (int interval) {
 void setup () {
   Serial.begin (9600);
 
-  swSerial.begin (9600);
-  if (!comm.begin (swSerial, WIFI_SSID, WIFI_PASSWORD)) {
-    mypanic (100);
-  }
+	if (!comm.begin (WIFI_SSID, WIFI_PASSWORD)) {
+		mypanic (100);
+	}
 
-  client.begin (comm, true);
+	client.begin (comm, false);
 
-	UdpAddress* outdoor1 = comm.getAddress (192, 168, 1, 152, 9999);
+	UdpAddress* outdoor1 = comm.getAddress (192, 168, 1, 136, 9999);
 	while (!client.registerNode (outdoor1)) {
 		Serial.println (F("Cannot register outdoor1 node"));
       delay (1000);
