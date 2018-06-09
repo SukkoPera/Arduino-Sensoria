@@ -237,13 +237,15 @@ public:
 		boolean ret = false;
 
 		while (!ret && millis () - lastBroadcastTime < timeout) {
-			UdpAddress addr;
-			ret = receiveGeneric (udpMain, reply, addr.ip, addr.port);
+			IPAddress ip;
+			uint16_t port;
+			ret = receiveGeneric (udpMain, reply, ip, port);
 			if (ret) {
 				// Got something
 				UdpAddress* senderUdp = reinterpret_cast<UdpAddress*> (getAddress ());
 				if (senderUdp) {
-					*senderUdp = addr;
+					senderUdp -> ip = ip;
+					senderUdp -> port = port;			// Don't touch the inUse flag!
 					sender = senderUdp;
 				} else {
 					DPRINTLN (F("Cannot allocate address for broadcast reply"));
