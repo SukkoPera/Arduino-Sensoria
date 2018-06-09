@@ -15,6 +15,8 @@ class ServerProxy {
 public:
 	char name[MAX_SERVER_NAME];
 
+	byte protocolVersion;
+
 	byte nFailures;
 
 	ServerProxy (SensoriaCommunicator* _comm, SensoriaAddress* address);
