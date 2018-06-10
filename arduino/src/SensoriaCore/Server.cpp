@@ -3,6 +3,26 @@
 #include "Server.h"
 #include "common.h"
 
+
+#define OK_STR "OK"
+static const char _OK[] PROGMEM = OK_STR;
+#define OK_FSTR PSTR_TO_F(_OK)
+#define ERR_STR "ERR"
+static const char _ERR[] PROGMEM = ERR_STR;
+#define ERR_FSTR PSTR_TO_F(_ERR)
+
+#define ENABLE_DETAILED_ERRORS
+
+// Note that these do NOT put CMD in front of message
+#ifdef ENABLE_DETAILED_ERRORS
+#define ERR_MSG(msg) (F(ERR_STR " " msg))
+#else
+#define ERR_MSG(msg) (F(ERR_STR))
+#endif
+
+#define OK_MSG(msg) (F(OK_STR " " msg))
+
+
 SensoriaServer::SensoriaServer (): comm (NULL), outBuf (outBufRaw, OUT_BUF_SIZE) {
 }
 
@@ -15,12 +35,20 @@ boolean SensoriaServer::begin (FlashString _serverName, SensoriaCommunicator& _c
 	nNotificationReqs = 0;
 #endif
 
+#ifdef ENABLE_CMD_DIE
+	running = true;
+#endif
+
 	return strlen_P (F_TO_PSTR (_serverName)) > 0;
 }
 
-//~ boolean SensoriaServer::stop () {
-	//~ return true;
-//~ }
+boolean SensoriaServer::end () {
+#ifdef ENABLE_CMD_DIE
+	running = false;
+#endif
+
+	return true;
+}
 
 Stereotype* SensoriaServer::getStereotype (FlashString s) {
 	Stereotype *st = NULL;
@@ -109,6 +137,14 @@ void SensoriaServer::process_cmd (char *buffer, const SensoriaAddress* senderAdd
 	} else if (strcmp_P (cmd, PSTR ("NCL")) == 0) {
 		cmd_ncl (senderAddr, args);
 #endif
+#ifdef ENABLE_CMD_DIE
+	} else if (strcmp_P (cmd, PSTR ("DIE")) == 0) {
+		cmd_die (senderAddr, args);
+#endif
+#ifdef ENABLE_CMD_RST
+	} else if (strcmp_P (cmd, PSTR ("RST")) == 0) {
+		cmd_rst (senderAddr, args);
+#endif
 	} else {
 		DPRINT (F("Unsupported command: \""));
 		DPRINT (cmd);
@@ -145,6 +181,24 @@ int SensoriaServer::findNotification (const SensoriaAddress* clientAddr, Notific
 	}
 
 	return ret;
+}
+
+void SensoriaServer::deleteNotification (byte i) {
+	DPRINT (F("Deleting notification request "));
+	DPRINTLN (i);
+
+	NotificationRequest& req = notificationReqs[i];
+	comm -> releaseAddress (req.destAddr);
+
+	/* NRQs 0...nNotificationReqs-1 are always valid, so deleting a
+	 * NRQ means we have to shift all subsequent NRQs down by one
+	 * place
+	 */
+	for (byte j = 0; i + j + 1 < nNotificationReqs; j++) {
+		notificationReqs[i + j] = notificationReqs[i + j + 1];
+	}
+
+	nNotificationReqs--;
 }
 
 /**
@@ -201,29 +255,36 @@ void SensoriaServer::handleNotificationReqs () {
 #endif
 
 void SensoriaServer::loop () {
-	SensoriaAddress* addr = comm -> getAddress ();
-	if (!addr) {
-		DPRINTLN (F("No address available"));
-	} else {
-		char *cmd;
-
-		if (comm -> receiveCmd (cmd, addr)) {
-#if 0
-			char buf[24];
-			DPRINT (F("Received command from "));
-			DPRINT (addr -> toString (buf, sizeof (buf)));
-			DPRINT (F(": \""));
-			DPRINT (cmd);
-			DPRINTLN (F("\""));
+#ifdef ENABLE_CMD_DIE
+	if (running) {
 #endif
-			process_cmd (cmd, addr);
+		SensoriaAddress* addr = comm -> getAddress ();
+		if (!addr) {
+			DPRINTLN (F("No address available"));
+		} else {
+			char *cmd;
+
+			if (comm -> receiveCmd (cmd, addr)) {
+#if 0
+				char buf[24];
+				DPRINT (F("Received command from "));
+				DPRINT (addr -> toString (buf, sizeof (buf)));
+				DPRINT (F(": \""));
+				DPRINT (cmd);
+				DPRINTLN (F("\""));
+#endif
+				process_cmd (cmd, addr);
+			}
+
+			comm -> releaseAddress (addr);
 		}
 
-		comm -> releaseAddress (addr);
-	}
-
 #ifdef ENABLE_NOTIFICATIONS
-	handleNotificationReqs ();
+		handleNotificationReqs ();
+#endif
+
+#ifdef ENABLE_CMD_DIE
+	}
 #endif
 }
 
@@ -565,3 +626,36 @@ void SensoriaServer::cmd_ncl (const SensoriaAddress* clientAddr, char *args) {
 }
 
 #endif    // ENABLE_NOTIFICATIONS
+
+#ifdef ENABLE_CMD_DIE
+void SensoriaServer::cmd_die (const SensoriaAddress* clientAddr, char *args) {
+	(void) *args;
+	
+	end ();
+
+	// This can't really fail
+	outBuf.begin ();
+	outBuf.print (F("DIE " OK_STR "\n"));
+	comm -> reply ((const char *) outBuf, clientAddr);
+}
+#endif
+
+#ifdef ENABLE_CMD_RST
+
+#include <avr/io.h>
+#include <avr/wdt.h>
+
+#define softReset() do {wdt_enable (WDTO_30MS); while(1) {}} while (0)
+
+void SensoriaServer::cmd_rst (const SensoriaAddress* clientAddr, char *args) {
+	(void) *args;
+	
+	// This can't really fail
+	outBuf.begin ();
+	outBuf.print (F("RST " OK_STR "\n"));
+	comm -> reply ((const char *) outBuf, clientAddr);
+	
+	delay (500);
+	softReset ();
+}
+#endif

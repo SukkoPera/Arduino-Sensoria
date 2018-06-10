@@ -14,6 +14,9 @@
 #include "common.h"
 #include "debug.h"
 
+//~ #define ENABLE_CMD_DIE
+//~ #define ENABLE_CMD_RST
+
 class SensoriaServer {
 public:
 	static const byte PROTOCOL_VERSION = 1;
@@ -35,6 +38,10 @@ private:
 	byte nNotificationReqs;
 
 	NotificationRequest notificationReqs[MAX_NOTIFICATION_REQS];
+#endif
+
+#ifdef ENABLE_CMD_DIE
+	boolean running;
 #endif
 
 	char outBufRaw[OUT_BUF_SIZE];
@@ -71,6 +78,14 @@ private:
 	void cmd_ncl (const SensoriaAddress* clientAddr, char *args);
 #endif
 
+#ifdef ENABLE_CMD_DIE
+	void cmd_die (const SensoriaAddress* clientAddr, char *args);
+#endif
+
+#ifdef ENABLE_CMD_RST
+	void cmd_rst (const SensoriaAddress* clientAddr, char *args);
+#endif
+
 protected:
 	void process_cmd (char *buffer, const SensoriaAddress* senderAddr);
 
@@ -78,6 +93,8 @@ public:
 	SensoriaServer ();
 
 	boolean begin (FlashString _serverName, SensoriaCommunicator& _comm);
+
+	boolean end ();
 
 	void loop ();
 
