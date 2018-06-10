@@ -17,6 +17,9 @@
 //~ #define ENABLE_CMD_DIE
 //~ #define ENABLE_CMD_RST
 
+#define ENABLE_DETAILED_ERRORS
+
+
 class SensoriaServer {
 public:
 	static const byte PROTOCOL_VERSION = 1;

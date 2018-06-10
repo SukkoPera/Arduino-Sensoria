@@ -11,8 +11,6 @@ static const char _OK[] PROGMEM = OK_STR;
 static const char _ERR[] PROGMEM = ERR_STR;
 #define ERR_FSTR PSTR_TO_F(_ERR)
 
-#define ENABLE_DETAILED_ERRORS
-
 // Note that these do NOT put CMD in front of message
 #ifdef ENABLE_DETAILED_ERRORS
 #define ERR_MSG(msg) (F(ERR_STR " " msg))
