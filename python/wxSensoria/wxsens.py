@@ -1089,7 +1089,7 @@ class Frame (wx.Frame):
 
 	def redraw (self, event = None):
 		# ~ self._redrawLock.acquire ()
-		print "Redrawing"
+		# ~ print "Redrawing"
 
 		if self.currentListViewType != (self.config.viewDetails, self.config.groupByGenre):
 			print "Changing ListView"
