@@ -69,9 +69,9 @@ int SensoriaServer::addTransducer (Transducer& transducer) {
 	if (nTransducers < MAX_TRANSDUCERS) {
 		// Look up stereotype
 		if (getStereotype (transducer.stereotype)) {
-			transducers[nTransducers++] = &transducer;
+			transducers[nTransducers] = &transducer;
 
-			return nTransducers - 1;
+			return nTransducers++;
 		} else {
 			DPRINT (F("Unknown stereotype: "));
 			DPRINTLN (transducer.stereotype);
