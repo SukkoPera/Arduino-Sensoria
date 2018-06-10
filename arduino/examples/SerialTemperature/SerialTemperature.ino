@@ -4,6 +4,10 @@
 #include <SensoriaSensors/Temperature328.h>
 TemperatureSensor328 secretSensor;
 
+// Fake relay controlling LED_BUILTIN
+#include <SensoriaActuators/Relay.h>
+Relay relay;
+
 #include <SensoriaCommunicators/Serial.h>
 SensoriaSerialCommunicator comm;
 
@@ -37,6 +41,18 @@ void setup (void) {
 		}
 	} else {
 		DPRINTLN (F("Sensor failed begin()"));
+	}
+
+
+	if (relay.begin (F("LL"), F("Builtin Led"), LED_BUILTIN)) {
+		if (srv.addTransducer (relay) >= 0) {
+			DPRINT (F("Sensor registered: "));
+			DPRINTLN (relay.name);
+		} else {
+			mypanic (1000);
+		}
+	} else {
+		DPRINTLN (F("Actuator failed begin()"));
 	}
 
 	// We're ready!
