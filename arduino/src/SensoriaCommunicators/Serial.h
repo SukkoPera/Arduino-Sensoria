@@ -173,7 +173,14 @@ public:
 
 #ifdef ENABLE_NOTIFICATIONS
   virtual SensoriaAddress* getNotificationAddress (const SensoriaAddress* client) {
-		return NULL;
+		ByteAddress* bAddr = reinterpret_cast<ByteAddress*> (getAddress ());
+		if (bAddr) {
+			const ByteAddress& clientBAddr = *reinterpret_cast<const ByteAddress*> (client);
+
+			bAddr -> addr = clientBAddr.addr;
+		}
+
+		return bAddr;
 	}
 #endif
 
@@ -191,7 +198,8 @@ public:
 	}
 
 	virtual boolean notify (const char* notification, const SensoriaAddress* client) override {
-		return false;
+		ByteAddress& bAddr = *const_cast<ByteAddress*> (reinterpret_cast<const ByteAddress*> (client));
+		return sendGeneric (notification, bAddr.addr) ? SEND_OK : SEND_ERR;
 	}
 
 	SendResult sendCmd (const char* cmd, const SensoriaAddress* server, char*& reply) override {
@@ -218,15 +226,23 @@ public:
 	}
 
 	virtual SendResult broadcast (const char* cmd) override {
+		(void) cmd;
+
 		return SEND_ERR;
 	}
 
   virtual boolean receiveBroadcastReply (char*& reply, SensoriaAddress*& sender, unsigned int timeout) override {
+		(void) reply;
+		(void) sender;
+		(void) timeout;
+
 		return false;
 	}
 
 #ifdef ENABLE_NOTIFICATIONS
 	virtual boolean receiveNotification (char*& notification) override {
+		(void) notification;
+
 		return false;
 	}
 #endif
