@@ -235,7 +235,7 @@ void SensoriaServer::handleNotificationReqs () {
 						outBuf.begin ();
 						outBuf.print (F("NOT "));
 						outBuf.print (req.transducer -> name);
-						outBuf.print (" ");   // No F() here saves flash and wastes no RAM
+						outBuf.print (' ');
 						outBuf.print (buf);
 						outBuf.print ('\n');
 						comm -> notify ((const char *) outBuf, req.destAddr);
@@ -307,7 +307,7 @@ void SensoriaServer::cmd_hlo (const SensoriaAddress* clientAddr, char *args) {
 		Transducer& t = *transducers[i];
 		outBuf.print (t.name);
 		outBuf.print (' ');
-		outBuf.print (t.type == Transducer::SENSOR ? ("S") : ("A"));
+		outBuf.print (t.type == Transducer::SENSOR ? 'S' : 'A');
 		outBuf.print (' ');
 		outBuf.print (t.stereotype);
 		outBuf.print (' ');
