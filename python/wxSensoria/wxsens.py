@@ -5,6 +5,7 @@ import os
 import sys
 import logging
 import datetime
+import copy
 import threading
 
 import wx
@@ -196,7 +197,13 @@ class TransducerWrapper (object):
 
 	def write (self, what):
 		if self.transducer.genre == Sensoria.ACTUATOR:
-			return self.transducer.write (what)
+			data = self.transducer.write (what)
+			if data is not None:
+				# We have new transducer status
+				self._lastRead = data
+				self.updateTime = datetime.datetime.now ()
+				self.failed = False
+				self.failMessage = None
 		else:
 			return False
 
@@ -486,8 +493,9 @@ class DialogSetFormat (wx.Dialog):
 		event.Skip ()
 
 class PopupMenuTransducer (wx.Menu):
-	def __init__ (self, transducer, addSeparator = False):
+	def __init__ (self, frame, transducer, addSeparator = False):
 		super (PopupMenuTransducer, self).__init__ ()
+		self.frame = frame
 		self.transducer = transducer
 
 		item = wx.MenuItem (self, wx.ID_REFRESH, "&Update")
@@ -552,8 +560,8 @@ class PopupMenuTransducer (wx.Menu):
 		self.transducer.disableAllNotifications ()
 
 class PopupMenuActuatorRS (PopupMenuTransducer):
-	def __init__ (self, transducer):
-		super (PopupMenuActuatorRS, self).__init__ (transducer, True)
+	def __init__ (self, frame, transducer):
+		super (PopupMenuActuatorRS, self).__init__ (frame, transducer, True)
 
 		# If state is unknown, show all possibilities
 		showOn = True
@@ -574,19 +582,27 @@ class PopupMenuActuatorRS (PopupMenuTransducer):
 
 	def onTurnOn (self, event):
 		print "Shall turn on %s" % self.transducer.name
-		d = self.transducer.lastRead
-		d.state = Sensoria.stereotypes.RelayData.RelayData.ON
-		self.transducer.write (d)
+		try:
+			d = copy.deepcopy (self.transducer.lastRead)		# Copy, don't modify original
+			d.state = Sensoria.stereotypes.RelayData.RelayData.ON
+			self.transducer.write (d)
+			self.frame.redraw ()
+		except Sensoria.Error as ex:
+			self.frame.setStatusBar ("Cannot turn on %s: %s" % (self.transducer.name, str (ex)))
 
 	def onTurnOff (self, event):
 		print "Shall turn off %s" % self.transducer.name
-		d = self.transducer.lastRead
-		d.state = Sensoria.stereotypes.RelayData.RelayData.OFF
-		self.transducer.write (d)
+		try:
+			d = copy.deepcopy (self.transducer.lastRead)		# Copy, don't modify original
+			d.state = Sensoria.stereotypes.RelayData.RelayData.OFF
+			self.transducer.write (d)
+			self.frame.redraw ()
+		except Sensoria.Error as ex:
+			self.frame.setStatusBar ("Cannot turn off %s: %s" % (self.transducer.name, str (ex)))
 
 class PopupMenuActuatorCR (PopupMenuTransducer):
-	def __init__ (self, transducer):
-		super (PopupMenuActuatorCR, self).__init__ (transducer, True)
+	def __init__ (self, frame, transducer):
+		super (PopupMenuActuatorCR, self).__init__ (frame, transducer, True)
 
 		# If state is unknown, show all possibilities
 		showTakeCtrl = True
@@ -628,31 +644,48 @@ class PopupMenuActuatorCR (PopupMenuTransducer):
 
 	def onTakeCtrl (self, event):
 		print "Shall take control of %s" % self.transducer.name
-		d = self.transducer.lastRead
-		d.controller = Sensoria.stereotypes.ControlledRelayData.ControlledRelayData.MANUAL
-		self.transducer.write (d)
+		try:
+			d = copy.deepcopy (self.transducer.lastRead)		# Copy, don't modify original
+			d.controller = Sensoria.stereotypes.ControlledRelayData.ControlledRelayData.MANUAL
+			self.transducer.write (d)
+			self.frame.redraw ()
+		except Sensoria.Error as ex:
+			self.frame.setStatusBar ("Cannot take control of %s: %s" % (self.transducer.name, str (ex)))
 
 	def onReleaseCtrl (self, event):
 		print "Shall release control of %s" % self.transducer.name
-		d = self.transducer.lastRead
-		d.controller = Sensoria.stereotypes.ControlledRelayData.ControlledRelayData.AUTO
-		self.transducer.write (d)
+		try:
+			d = copy.deepcopy (self.transducer.lastRead)		# Copy, don't modify original
+			d.controller = Sensoria.stereotypes.ControlledRelayData.ControlledRelayData.AUTO
+			self.transducer.write (d)
+			self.frame.redraw ()
+		except Sensoria.Error as ex:
+			self.frame.setStatusBar ("Cannot release control of %s: %s" % (self.transducer.name, str (ex)))
 
 	def onTurnOn (self, event):
 		print "Shall turn on %s" % self.transducer.name
-		d = self.transducer.lastRead
-		d.state = Sensoria.stereotypes.ControlledRelayData.ControlledRelayData.ON
-		self.transducer.write (d)
+		try:
+			d = copy.deepcopy (self.transducer.lastRead)		# Copy, don't modify original
+			d.state = Sensoria.stereotypes.ControlledRelayData.ControlledRelayData.ON
+			self.transducer.write (d)
+			self.frame.redraw ()
+		except Sensoria.Error as ex:
+			self.frame.setStatusBar ("Cannot turn on %s: %s" % (self.transducer.name, str (ex)))
 
 	def onTurnOff (self, event):
 		print "Shall turn off %s" % self.transducer.name
-		d = self.transducer.lastRead
-		d.state = Sensoria.stereotypes.ControlledRelayData.ControlledRelayData.OFF
-		self.transducer.write (d)
+		try:
+			d = copy.deepcopy (self.transducer.lastRead)		# Copy, don't modify original
+			d.state = Sensoria.stereotypes.ControlledRelayData.ControlledRelayData.OFF
+			self.transducer.write (d)
+			self.frame.redraw ()
+		except Sensoria.Error as ex:
+			self.frame.setStatusBar ("Cannot turn off %s: %s" % (self.transducer.name, str (ex)))
+
 
 class PopupMenuActuatorTC (PopupMenuTransducer):
-	def __init__ (self, transducer):
-		super (PopupMenuActuatorTC, self).__init__ (transducer, True)
+	def __init__ (self, frame, transducer):
+		super (PopupMenuActuatorTC, self).__init__ (frame, transducer, True)
 
 		item = wx.MenuItem (self, wx.ID_PREFERENCES, "&Edit Schedule...")
 		self.AppendItem (item)
@@ -663,10 +696,11 @@ class PopupMenuActuatorTC (PopupMenuTransducer):
 		dlg = TimerEditDialog (self.transducer)
 		dlg.ShowModal ()
 		dlg.Destroy ()
+		self.frame.redraw ()
 
 class PopupMenuActuatorVS (PopupMenuTransducer):
-	def __init__ (self, transducer):
-		super (PopupMenuActuatorVS, self).__init__ (transducer, True)
+	def __init__ (self, frame, transducer):
+		super (PopupMenuActuatorVS, self).__init__ (frame, transducer, True)
 
 		item = wx.MenuItem (self, wx.ID_PREFERENCES, "&Edit Settings...")
 		self.AppendItem (item)
@@ -677,6 +711,7 @@ class PopupMenuActuatorVS (PopupMenuTransducer):
 		dlg = SettingsEditDialog (self.transducer)
 		dlg.ShowModal ()
 		dlg.Destroy ()
+		self.frame.redraw ()
 
 # Map stereotypes to popup menus
 stereoTypeToMenu = {
@@ -1107,9 +1142,9 @@ class Frame (wx.Frame):
 			menu = None
 			if t.stereotype in stereoTypeToMenu:
 				menuClass = stereoTypeToMenu[t.stereotype]
-				menu = menuClass (t)
+				menu = menuClass (self, t)
 			else:
-				menu = PopupMenuTransducer (t)
+				menu = PopupMenuTransducer (self, t)
 
 			if menu is not None:
 				self.PopupMenu (menu, event.GetPoint ())

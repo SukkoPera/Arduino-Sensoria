@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+# TODO: Handle unmarshalling failures
+
 import sys
 
 from common import *
@@ -132,13 +134,23 @@ class ActuatorProxy (TransducerProxy):
 	def __init__ (self, name, typ, stereotype, description, stereoclass, srv):
 		super (ActuatorProxy, self).__init__ (srv, ACTUATOR, name, stereotype, stereoclass, description, "N/A")
 
-	def write (self, what):
+	def write (self, what, raw = False):
 		assert self.server is not None
 		marshalled = what.marshal ()
 		rep = self.server.send ("WRI %s %s" % (self.name, marshalled))
 		parts = rep.split (" ", 1)
 		rep0 = parts[0].upper ()
-		if rep0 != "OK":
+		if rep0 == "OK":
+			if len (parts) > 1:
+				# New transducer status follows
+				rest = parts[1]
+				if raw:
+					return rest
+				else:
+					return self.stereoclass.unmarshalStatic (rest)
+			else:
+				return None
+		else:
 			if len (parts) > 1:
 				raise Error (parts[1])
 			else:
