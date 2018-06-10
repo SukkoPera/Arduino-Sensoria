@@ -59,6 +59,8 @@ private:
 #ifdef ENABLE_NOTIFICATIONS
 	int findNotification (const SensoriaAddress* clientAddr, NotificationType type, char* tName);
 
+	void deleteNotification (byte i);
+
 	NotificationType parseNotificationTypeStr (char *nTypeStr);
 
 	void handleNotificationReqs ();
