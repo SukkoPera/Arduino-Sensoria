@@ -116,6 +116,10 @@ void SensoriaServer::process_cmd (char *buffer, const SensoriaAddress* senderAdd
 	if (space) {
 		*space = '\0';
 		args = space + 1;
+
+		// Trim off leading spaces
+		while (*args && isspace (*args))
+			++args;
 	} else {
 		// Command with no args
 		args = NULL;
