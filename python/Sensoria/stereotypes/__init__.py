@@ -5,5 +5,6 @@ __all__ = [
 	"MotionData",
 	"DateTimeData",
 	"TimeControlData",
-	"ValueSetData"
+	"ValueSetData",
+	"InstantMessageData"
 ]
