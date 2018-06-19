@@ -88,7 +88,7 @@ with daemon.DaemonContext ():
 	st = server.Clock ("$T", "System Clock")
 	se = EMailNotifier ("$E", "System E-Mail Notifier")
 	sn = SmartphoneNotifier ("$N", "System Smartphone Notifier", PUSHBULLET_API_KEY, PUSHBULLET_DEV_IDEN)
-	listener = server.CommandListener ("Sensoria System Daemon")
+	listener = server.CommandListener ("SensoriaSystem")
 	listener.register_sensor (st)
 	listener.register_sensor (se)
 	listener.register_sensor (sn)
