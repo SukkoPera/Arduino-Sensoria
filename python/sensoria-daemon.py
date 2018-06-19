@@ -6,8 +6,8 @@ import time
 from Sensoria.stereotypes.InstantMessageData import InstantMessageData
 
 
-PUSHBULLET_API_KEY = "o.JgTIatOlVDyKXcICVCWTptgqjqZ2QABw"
-PUSHBULLET_DEV_IDEN = "ujxLBF3bq5QsjAiVsKnSTs"
+PUSHBULLET_API_KEY = ""
+PUSHBULLET_DEV_IDEN = ""
 
 # Import smtplib for the actual sending function
 import smtplib
