@@ -15,9 +15,11 @@ import Sensoria.stereotypes as stereotypes2		# FIXME!
 from Sensoria.stereotypes.WeatherData import WeatherData
 from Sensoria.stereotypes.RelayData import RelayData
 from Sensoria.stereotypes.ControlledRelayData import ControlledRelayData
+from Sensoria.stereotypes.MotionData import MotionData
 from Sensoria.stereotypes.DateTimeData import DateTimeData
 from Sensoria.stereotypes.TimeControlData import TimeControlData
 from Sensoria.stereotypes.ValueSetData import ValueSetData
+from Sensoria.stereotypes.InstantMessageData import InstantMessageData
 
 LISTEN_PORT = 9999
 NOTIFICATION_PORT = 9998
@@ -314,14 +316,17 @@ class CommandListener (object):
 				sensor = self.sensors[name]
 				val = sensor.read ()
 				if val is not None:
-					st = "OK"
+					self._reply (addr, "REA OK %s" % str (val.marshal ()))
 				else:
-					st = "ERR"
-				self._reply (addr, "REA %s %s" % (st, str (val.marshal ())))
+					self._reply (addr, "REA ERR Read failed")
 			except KeyError:
 				self._reply (addr, "REA ERR No such sensor: %s" % name)
 			except Exception as ex:
-				self._reply (addr, "REA ERR Read failed: %s" % str (ex))
+				reason = str (ex)
+				if len (reason) > 0:
+					self._reply (addr, "REA ERR Read failed: %s" % reason)
+				else:
+					self._reply (addr, "REA ERR Read failed")
 		else:
 			self._reply (addr, "REA ERR Missing transducer name")
 
