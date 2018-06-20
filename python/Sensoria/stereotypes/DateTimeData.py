@@ -8,64 +8,59 @@ class DateTimeData (StereoType):
 		Stereotype: DT (Date/Time Data)
 
 		Output can contain one or more of the following:
-		* Date: D:<date:string:DDMMYYYY>
-		* Time: T:<time:string:HHMMSS>
-		* UnixTime: U:<unixtime:unsigned int:seconds since epoch>
+		* UTC: U:<unixtime:unsigned int:seconds since epoch>
+		* Local Time: L:<unixtime:unsigned int:seconds since epoch>
 
-		If more than one data item is present, they MUST all refer to the same date/time.
+		Time is expressed unixtime-style, i.e. as the number of seconds since
+		January 1st, 1970 00:00:00 UTC.
+
+		If more than one data item is present, they MUST all refer to the same
+		instant. Thus, L - U gives the timezone offset in seconds (including
+		DST, in case).
 	"""
 
 	_IDSTR = "DT"
 
 	def __init__ (self):
-		self.date = None
-		self.time = None
-		self.unixtime = None
+		self.utctime = None
+		self.localtime = None
 
-	# Commodity
+	# Commodity, 'ts' here is a strictly-defined Unix timestamp (i.e.: UTC)
 	@staticmethod
-	def fromDateTime (dt):
+	def fromTimestamp (ts):
+		# This certinly is more complex than I'd like it to be
 		dtd = DateTimeData ()
-		dtd.date = dt.date ()
-		dtd.time = dt.time ()
-		dtd.unixtime = time.mktime (dt.timetuple())
+		udt = datetime.datetime.utcfromtimestamp (ts)
+		dtd.utctime = time.mktime (udt.timetuple ())
+		ldt = datetime.datetime.fromtimestamp (ts)
+		dtd.localtime = time.mktime (ldt.timetuple ())
 		return dtd
 
 	# Commodity
 	@staticmethod
 	def fromNow ():
-		return DateTimeData.fromDateTime (datetime.datetime.now ())
-
-	# Commodity
-	@property
-	def datetime (self):
-		if self.date is not None and self.time is not None:
-			return datetime.datetime.combine (self.date, self.time)
+		return DateTimeData.fromTimestamp (time.time ())
 
 	def __eq__ (self, other):
+		# Since all data items MUST refer to the same instant, comparing one is
+		# sufficient
 		return isinstance (other, self.__class__) and \
-			self.date == other.date and \
-			self.time == other.time and \
-			self.unixtime == other.unixtime
+			self.utctime == other.utctime
 
 	def unmarshal (self, string):
 		d = dict ([p.split (":") for p in string.split (" ")])
-		if 'D' in d:
-			self.date = datetime.datetime.strptime (d['D'], "%d%m%y").date ()
-		if 'T' in d:
-			self.time = datetime.datetime.strptime (d['T'], "%H%M%S").time ()
 		if 'U' in d:
-			self.unixtime = int (d['U'])
+			self.utctime = int (d['U'])
+		if 'L' in d:
+			self.localtime = int (d['L'])
 		return True
 
 	def marshal (self):
 		ret = ""
-		if self.date is not None:
-			ret += "D:%s " % self.date.strftime ("%d%m%y")
-		if self.time is not None:
-			ret += "T:%s " % self.time.strftime ("%H%M%S")
-		if self.unixtime is not None:
-			ret += "U:%u " % self.unixtime
+		if self.utctime is not None:
+			ret += "U:%u " % self.utctime
+		if self.localtime is not None:
+			ret += "L:%u " % self.localtime
 		return ret.rstrip ()
 
 	def __repr__ (self):
