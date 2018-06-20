@@ -502,6 +502,10 @@ class PopupMenuTransducer (wx.Menu):
 		self.AppendItem (item)
 		self.Bind (wx.EVT_MENU, self.onUpdate, item)
 
+		item = wx.MenuItem (self, wx.ID_PROPERTIES, "Show &Info")
+		self.AppendItem (item)
+		self.Bind (wx.EVT_MENU, self.onInfo, item)
+
 		item = wx.MenuItem (self, wx.ID_EDIT, "&Set Format...\tCtrl+F")
 		self.AppendItem (item)
 		self.Bind (wx.EVT_MENU, self.onSetFormat, item)
@@ -510,17 +514,32 @@ class PopupMenuTransducer (wx.Menu):
 		self.AppendItem (item)
 		self.Bind (wx.EVT_MENU, self.onCopy, item)
 
-		item = wx.MenuItem (self, wx.ID_REDO, "&Notify on Change")
-		self.AppendItem (item)
-		self.Bind (wx.EVT_MENU, self.onNotifyChange, item)
+		nSubMenu = wx.Menu ()
+		item = wx.MenuItem (self, wx.ID_REDO, "Notify on &Change")
+		nSubMenu.AppendItem (item)
+		nSubMenu.Bind (wx.EVT_MENU, self.onNotifyChange, item)
 
 		item = wx.MenuItem (self, wx.ID_UNDO, "Stop N&otifications on Change")
-		self.AppendItem (item)
-		self.Bind (wx.EVT_MENU, self.onCancelNotifications, item)
+		nSubMenu.AppendItem (item)
+		nSubMenu.Bind (wx.EVT_MENU, self.onCancelChangeNotifications, item)
 
-		item = wx.MenuItem (self, wx.ID_CANCEL, "C&ancel ALL Notifications")
-		self.AppendItem (item)
-		self.Bind (wx.EVT_MENU, self.onCancelAllNotifications, item)
+		nSubMenu.AppendSeparator ()
+
+		item = wx.MenuItem (self, wx.ID_REDO, "Notify &Periodically")
+		nSubMenu.AppendItem (item)
+		nSubMenu.Bind (wx.EVT_MENU, self.onNotifyPeriodic, item)
+
+		item = wx.MenuItem (self, wx.ID_UNDO, "Stop Periodic No&tifications")
+		nSubMenu.AppendItem (item)
+		nSubMenu.Bind (wx.EVT_MENU, self.onCancelPeriodicNotifications, item)
+
+		nSubMenu.AppendSeparator ()
+
+		item = wx.MenuItem (self, wx.ID_CANCEL, "Stop &ALL Notifications")
+		nSubMenu.AppendItem (item)
+		nSubMenu.Bind (wx.EVT_MENU, self.onCancelAllNotifications, item)
+
+		self.AppendMenu (wx.NewId (), "&Notifications", nSubMenu)
 
 		if addSeparator:
 			self.AppendSeparator ()
@@ -528,6 +547,11 @@ class PopupMenuTransducer (wx.Menu):
 	def onUpdate (self, event):
 		print "Shall update %s" % self.transducer.name
 		self.transducer.update ()
+
+	def onInfo (self, event):
+		dlg = InfoBox (self.transducer)
+		dlg.ShowModal ()
+		dlg.Destroy ()
 
 	def onSetFormat (self, event):
 		print "Shall set format for %s" % self.transducer.name
@@ -551,13 +575,25 @@ class PopupMenuTransducer (wx.Menu):
 		print "Shall get notifications on change of %s" % self.transducer.name
 		self.transducer.enableChangeNotification ()
 
-	def onCancelNotifications (self, event):
+	def onCancelChangeNotifications (self, event):
 		print "Shall cancel notifications on change of %s" % self.transducer.name
 		self.transducer.disableChangeNotification ()
+
+	def onNotifyPeriodic (self, event):
+		print "Shall get periodic notifications of %s" % self.transducer.name
+		# ~ self.transducer.enableChangeNotification ()
+
+	def onCancelPeriodicNotifications (self, event):
+		print "Shall cancel periodic notifications of %s" % self.transducer.name
+		# ~ self.transducer.disableChangeNotification ()
 
 	def onCancelAllNotifications (self, event):
 		print "Shall cancel all notifications from %s" % self.transducer.name
 		self.transducer.disableAllNotifications ()
+
+	def defaultAction (self):
+		"""Action that is performed when transducer line is double-clicked"""
+		self.onInfo (None)
 
 class PopupMenuActuatorRS (PopupMenuTransducer):
 	def __init__ (self, frame, transducer):
@@ -600,6 +636,16 @@ class PopupMenuActuatorRS (PopupMenuTransducer):
 		except Sensoria.Error as ex:
 			self.frame.setStatusBar ("Cannot turn off %s: %s" % (self.transducer.name, str (ex)))
 
+	def toggle (self):
+		if not self.transducer.failed and self.transducer.lastRead is not None:
+			if self.transducer.lastRead.state == Sensoria.stereotypes.RelayData.RelayData.ON:
+				self.onTurnOff (None)
+			elif self.transducer.lastRead.state == Sensoria.stereotypes.RelayData.RelayData.OFF:
+				self.onTurnOn (None)
+
+	def defaultAction (self):
+		self.toggle ()
+
 class PopupMenuActuatorCR (PopupMenuTransducer):
 	def __init__ (self, frame, transducer):
 		super (PopupMenuActuatorCR, self).__init__ (frame, transducer, True)
@@ -618,8 +664,8 @@ class PopupMenuActuatorCR (PopupMenuTransducer):
 			elif transducer.lastRead.controller == Sensoria.stereotypes.ControlledRelayData.ControlledRelayData.MANUAL:
 				showTakeCtrl = False
 				showRelCtrl = True
-				if transducer.lastRead.state != Sensoria.stereotypes.RelayData.RelayData.UNKNOWN:
-					showOn = transducer.lastRead.state == Sensoria.stereotypes.RelayData.RelayData.OFF
+				if transducer.lastRead.state != Sensoria.stereotypes.ControlledRelayData.ControlledRelayData.UNKNOWN:
+					showOn = transducer.lastRead.state == Sensoria.stereotypes.ControlledRelayData.ControlledRelayData.OFF
 					showOff = not showOn
 
 		if showTakeCtrl:
@@ -682,6 +728,15 @@ class PopupMenuActuatorCR (PopupMenuTransducer):
 		except Sensoria.Error as ex:
 			self.frame.setStatusBar ("Cannot turn off %s: %s" % (self.transducer.name, str (ex)))
 
+	def defaultAction (self):
+		if not self.transducer.failed and self.transducer.lastRead is not None:
+			if self.transducer.lastRead.controller == Sensoria.stereotypes.ControlledRelayData.ControlledRelayData.AUTO:
+				self.onTakeCtrl (None)
+			else:
+				if self.transducer.lastRead.state == Sensoria.stereotypes.ControlledRelayData.ControlledRelayData.ON:
+					self.onTurnOff (None)
+				elif self.transducer.lastRead.state == Sensoria.stereotypes.ControlledRelayData.ControlledRelayData.OFF:
+					self.onTurnOn (None)
 
 class PopupMenuActuatorTC (PopupMenuTransducer):
 	def __init__ (self, frame, transducer):
@@ -698,6 +753,9 @@ class PopupMenuActuatorTC (PopupMenuTransducer):
 		dlg.Destroy ()
 		self.frame.redraw ()
 
+	def defaultAction (self):
+		self.onEdit (None)
+
 class PopupMenuActuatorVS (PopupMenuTransducer):
 	def __init__ (self, frame, transducer):
 		super (PopupMenuActuatorVS, self).__init__ (frame, transducer, True)
@@ -712,6 +770,9 @@ class PopupMenuActuatorVS (PopupMenuTransducer):
 		dlg.ShowModal ()
 		dlg.Destroy ()
 		self.frame.redraw ()
+
+	def defaultAction (self):
+		self.onEdit (None)
 
 # Map stereotypes to popup menus
 stereoTypeToMenu = {
@@ -1132,9 +1193,16 @@ class Frame (wx.Frame):
 	def onItemDoubleClicked (self, event):
 		t = self._lc.GetSelectedObject ()
 		if t is not None:
-			dlg = InfoBox (t)
-			dlg.ShowModal ()
-			dlg.Destroy ()
+			menu = None
+			if t.stereotype in stereoTypeToMenu:
+				menuClass = stereoTypeToMenu[t.stereotype]
+				menu = menuClass (self, t)
+				menu.defaultAction ()
+			else:
+				# Fallback, just in case
+				dlg = InfoBox (t)
+				dlg.ShowModal ()
+				dlg.Destroy ()
 
 	def onItemRightClicked (self, event):
 		t = self._lc.GetSelectedObject ()
