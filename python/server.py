@@ -341,15 +341,28 @@ class CommandListener (object):
 					stereoclass = self.stereotypes[sensor.stereotype]
 					data = stereoclass ()
 					if data.unmarshal (rawdata):
-						ok, msg = sensor.write (data)
+						ok, msg = sensor.write (data)		# FIXME: Discard msg
 						if ok:
-							st = "OK"
+							# Write succeeded, try to read back new status
+							try:
+								val = sensor.read ()
+								if val is not None:
+									# Read ok, append result to reply
+									self._reply (addr, "WRI OK %s" % str (val.marshal ()))
+								else:
+									# Write succeded but subsequent Read failed,
+									# WTF??? Report success and leave it to the
+									# client to sort out the situation.
+									self._reply (addr, "WRI OK")
+							except Exception as ex:
+								# Write succeded but marshaling the new
+								# status failed, report success anyway, the
+								# client can always try a new Read.
+								print >> sys.stderr, "Read after Write failed: %s" % str (ex)
+								self._reply (addr, "WRI OK")
 						else:
-							st = "ERR"
-						if msg is not None:
-							self._reply (addr, "WRI %s %s" % (st, msg))
-						else:
-							self._reply (addr, "WRI %s" % st)
+							# Write failed
+							self._reply (addr, "WRI ERR Write failed")
 					else:
 						self._reply (addr, "WRI ERR Unmarshal failed")
 				else:
