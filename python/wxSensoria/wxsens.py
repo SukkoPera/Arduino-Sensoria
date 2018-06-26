@@ -11,6 +11,7 @@ import threading
 import wx
 from timerpanel import TimerEditDialog
 from settingspanel import SettingsEditDialog
+from sendmessagedialog import SendMessageDialog
 
 import Sensoria
 
@@ -774,12 +775,31 @@ class PopupMenuActuatorVS (PopupMenuTransducer):
 	def defaultAction (self):
 		self.onEdit (None)
 
+class PopupMenuActuatorIM (PopupMenuTransducer):
+	def __init__ (self, frame, transducer):
+		super (PopupMenuActuatorIM, self).__init__ (frame, transducer, True)
+
+		item = wx.MenuItem (self, wx.ID_JUMP_TO, "&Send Message...")
+		self.AppendItem (item)
+		self.Bind (wx.EVT_MENU, self.onSend, item)
+
+	def onSend (self, event):
+		print "Shall send message through %s" % self.transducer.name
+		dlg = SendMessageDialog (self.transducer)
+		dlg.ShowModal ()
+		dlg.Destroy ()
+		self.frame.redraw ()
+
+	def defaultAction (self):
+		self.onSend (None)
+
 # Map stereotypes to popup menus
 stereoTypeToMenu = {
 	"RS": PopupMenuActuatorRS,
 	"CR": PopupMenuActuatorCR,
 	"TC": PopupMenuActuatorTC,
-	"VS": PopupMenuActuatorVS
+	"VS": PopupMenuActuatorVS,
+	"IM": PopupMenuActuatorIM
 }
 
 class MyAutodiscoveryHandler (Sensoria.AutodiscoveryHandler):
@@ -1143,6 +1163,8 @@ class Frame (wx.Frame):
 		self._updateLock.acquire ()
 		if force or self._lastTransducerUpdate is None or timedelta_total_seconds (datetime.datetime.now () - self._lastTransducerUpdate) >= self.config.transducerUpdateInterval:
 			print "Updating (%s)" % ("forced" if force else "periodic")
+			self.setStatusBar ("Updating all transducers...")
+			self.forceRedraw ()
 			self.transducerList.massUpdate ()
 			self._lastTransducerUpdate = datetime.datetime.now ()
 		self._updateLock.release ()
