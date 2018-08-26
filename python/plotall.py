@@ -67,6 +67,8 @@ yscale = []	#yldr
 yldr2 = []
 yrt = []
 yrh = []
+ylt = []
+ylh = []
 
 if args.from_ is not None or args.to is not None:
 	if args.from_ is not None and args.to is not None:
@@ -111,6 +113,8 @@ for dt, row in data:
 		y35.append (float ('nan'))
 		yrt.append (float ('nan'))
 		yrh.append (float ('nan'))
+		ylt.append (float ('nan'))
+		ylh.append (float ('nan'))
 	prev = dt
 
 	x.append (dt)
@@ -138,6 +142,14 @@ for dt, row in data:
 		#~ print "No reading for sensor IH in data from %s" % (dt)
 		yth3.append (float ('nan'))
 		yh3.append (float ('nan'))
+
+	if "LH" in row:
+		ylt.append (row["LH"].temperature)
+		ylh.append (row["LH"].humidity)
+	else:
+		#~ print "No reading for sensor IH in data from %s" % (dt)
+		ylt.append (float ('nan'))
+		ylh.append (float ('nan'))
 
 	if "RH" in row:
 		yrt.append (row["RH"].temperature)
@@ -353,6 +365,7 @@ for celsius, humidity in zip (ydallas, goodH):
 pt1, pt2, pt3 = perceivedTemp (ydallas, goodH)
 pti1, pti2, pti3 = perceivedTemp (yth3, yh3)
 ptr1, ptr2, ptr3 = perceivedTemp (yrt, yrh)
+ptl1, ptl2, ptl3 = perceivedTemp (ylt, ylh)
 
 plt.subplot (2, 2, 1)
 plt.title ("Temperature")
@@ -367,6 +380,9 @@ plt.fill_between (x, yth3, pti1, facecolor = 'r', alpha = 0.5)
 plt.plot (x, yrt, "c", label = "Sleeping Room")
 plt.plot (x, ptr1, "c")
 plt.fill_between (x, yrt, ptr1, facecolor = 'c', alpha = 0.5)
+plt.plot (x, ylt, "m", label = "Laboratory")
+plt.plot (x, ptl1, "m")
+plt.fill_between (x, ylt, ptl1, facecolor = 'm', alpha = 0.5)
 #plt.plot (x, yti, "b--", label = "Indoor")
 plt.plot (x, dp, "g--", label = "Dew Point")
 plt.plot (x, pt1, "b")
