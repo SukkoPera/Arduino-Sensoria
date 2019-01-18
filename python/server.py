@@ -421,6 +421,12 @@ class CommandListener (object):
 		else:
 			self._reply (addr, "ERR Missing or malformed args")
 
+	def _ncl (self, addr, args):
+		self._nrLock.acquire ()
+		self.notificationRequests = []
+		self._nrLock.release ()
+		self._reply (addr, "NCL OK")
+
 	def start (self):
 		self._shallStop = False
 		self._quitPipe = os.pipe ()
@@ -436,7 +442,8 @@ class CommandListener (object):
 			"REA": self._rea,
 			"WRI": self._wri,
 			"QRY": self._qry,
-			"NRQ": self._nrq
+			"NRQ": self._nrq,
+			"NCL": self._ncl
 		}
 
 		print >> sys.stderr, 'Waiting for commands...'
