@@ -188,7 +188,7 @@ class RelayActuator (Actuator):
 		return rd
 
 	def write (self, rd):
-		assert isinstance (data, RelayData)
+		assert isinstance (rd, RelayData)
 		if rd.state == RelayData.ON:
 			self.state = RelayActuator.State.ON
 		elif rd.state == RelayData.OFF:
