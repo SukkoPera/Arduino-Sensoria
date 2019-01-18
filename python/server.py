@@ -253,9 +253,9 @@ class CommandListener (object):
 		self._thread = None
 
 		self._sock = socket.socket (socket.AF_INET, socket.SOCK_DGRAM)
-		server_address = ('0', port)
+		server_address = ('', port)
 
-		print >> sys.stderr, 'Starting up on %s port %s' % server_address
+		print >> sys.stderr, 'Starting up on %s port %u' % ("INADDR_ANY" if not server_address[0] else server_address[0], server_address[1])
 		self._sock.bind (server_address)
 
 	def _load_stereotypes (self):

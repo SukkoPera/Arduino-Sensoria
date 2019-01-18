@@ -59,12 +59,12 @@ class Client (object):
 			if srvpx is not None:
 				self._addServer (self._realizeServer (srvpx))
 
-	def enableNotifications (self):
+	def enableNotifications (self, port = DEFAULT_NOTIFICATION_PORT):
 		self.notificationRequests = []
 		self._notificationSocket = socket.socket (socket.AF_INET, socket.SOCK_DGRAM)
-		server_address = ('0', Client.DEFAULT_NOTIFICATION_PORT)
+		server_address = ('', port)
 
-		print >> sys.stderr, 'Listening for notifications on %s port %s' % server_address
+		print >> sys.stderr, 'Listening for notifications on %s port %s', "INADDR_ANY" if not server_address[0] else server_address[0], server_address[1]
 		self._notificationSocket.bind (server_address)
 
 		self._shallStop = False
