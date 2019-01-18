@@ -29,10 +29,12 @@ THREADPOOL = ThreadPool (num_threads = 4, qlen = 20)
 class Config (object):
 	FILENAME = "wxsens.ini"
 	SERVER_LIST_SEPARATOR = ','
+	DEFAULT_SIZE = (600, 400)
 
 	def __init__ (self):
-		self.winPos = None
-		self.winSize = None
+		w, h = wx.DisplaySize ()
+		self.winPos = ((w - Config.DEFAULT_SIZE[0]) / 2, (h - Config.DEFAULT_SIZE[1]) / 2)
+		self.winSize = Config.DEFAULT_SIZE
 		self.transducerUpdateInterval = 30	# s
 		self.autodiscoverInterval = 60
 		self.servers = []
