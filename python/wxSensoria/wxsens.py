@@ -813,10 +813,6 @@ class MyAutodiscoveryHandler (Sensoria.AutodiscoveryHandler):
 		self._frame.setStatusBar ("Autodiscovery started")
 		self._frame.forceRedraw ()
 
-	def onAutodiscoveryCompleted (self):
-		self._frame.setStatusBar ("Autodiscovery complete")
-		self._frame.forceRedraw ()
-
 	def onTransducersAdded (self, ts):
 		if len (ts) == 1:
 			self._frame.setStatusBar ("Found new transducer: %s" % ts[0].name)
@@ -1062,12 +1058,14 @@ class Frame (wx.Frame):
 			if tw is not None:
 				tw.update ()
 		self.transducerList.unlock ()
+
+		self._sensoria.enableNotifications ()
+
 		self._adHandler = MyAutodiscoveryHandler (self, self.transducerList)
 		self._sensoria.registerHandler (self._adHandler)
 		if self.config.autodiscoverInterval != 0:
 			self._sensoria.enableAutodiscovery (self.config.autodiscoverInterval)
 			THREADPOOL.add_task (self._sensoria.discover, None)
-		self._sensoria.enableNotifications ()
 
 		self._lastTransducerUpdate = None
 

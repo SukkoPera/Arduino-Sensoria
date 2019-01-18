@@ -18,9 +18,6 @@ class AutodiscoveryHandler (object):
 	def onAutodiscoveryStarted (self):
 		pass
 
-	def onAutodiscoveryCompleted (self):
-		pass
-
 	def onTransducersAdded (self, transducers):
 		pass
 
@@ -32,6 +29,7 @@ class Client (object):
 	DEFAULT_AUTODISCOVER_INTERVAL = 60		# sec
 	DISCOVER_TIMEOUT = 3		# sec
 	MAX_SERVER_FAILURES = 3
+	DEFAULT_SERVER_PORT = ServerProxy.DEFAULT_PORT
 	DEFAULT_NOTIFICATION_PORT = 9998
 	NOTIFICATION_BUFSIZE = 2048
 	DEBUG = True
@@ -55,7 +53,7 @@ class Client (object):
 				srv, port = parts
 				srvpx = self._queryServer ((srv, int (port)))
 			else:
-				srvpx = self._queryServer ((srv, ServerProxy.DEFAULT_PORT))
+				srvpx = self._queryServer ((srv, Client.DEFAULT_SERVER_PORT))
 			if srvpx is not None:
 				self._addServer (self._realizeServer (srvpx))
 
@@ -82,8 +80,90 @@ class Client (object):
 			self._notificationListenerThread = None
 			print "Notification listener thread stopped"
 
+	def _notificationNot (self, addr, args):
+		logger = logging.getLogger ("client.notifications")
+		parts = args.split (" ", 1)
+		if len (parts) < 2:
+			logger.error ("Malformed notification: '%s'", data)
+		else:
+			name, rest = parts
+			if name in self.transducers:
+				try:
+					trans = self.transducers[name]
+					trans._processNotification (rest)
+				except Error as ex:
+					logger.error ("ERROR while processing notification: %s", str (ex))
+			else:
+				logger.error ("Received notification for unknown transducer: %s", name)
+
+	def _notificationAdv (self, addr, args):
+		logger = logging.getLogger ("client.autodiscovery")
+		logger.debug ("Got server advertisement: %s" % args)
+		data = self._parseAdvertisement (args, addr)
+		if data:
+			srvModel, srvId, srvAddr = data
+			logger.debug ("Parsed server advertisement to %s/%s/%s" % data)
+
+			if srvModel in self._servers:
+				# This is a server we already know
+				logger.debug ("Server %s is already known", srvModel)
+				knownSrv = self._servers[srvModel]
+
+				# Server responded, so clear failure count
+				knownSrv.failures = 0
+
+				# Check if server somehow changed
+				different = False
+
+				# Is address still the same?
+				if knownSrv.address != srvAddr[0] or knownSrv.port != srvAddr[1]:
+					logger.info ("Server has different address: %s -> %s", knownSrv.address, (srvAddr[0], srvAddr[1]))
+					different = True
+				else:
+					# Address unchanged, check server ID
+					if knownSrv.srvId != srvId:
+						logger.info ("Server has different server ID")
+						different = True
+
+				if not different:
+					logger.debug ("Server is unchanged")
+				else:
+					logger.info ("Server has changed, updating")
+
+					# Remove old server, informing handlers
+					del self._servers[srvModel]
+					for h in self._handlers:
+						h.onTransducersRemoved (knownSrv.transducers.values ())
+					del knownSrv
+
+					# And add new
+					srvpx = self._queryServer (srvAddr)
+					if srvpx is not None and srvpx.transducerList is not None:
+						self._addServer (self._realizeServer (srvpx))
+
+						# Inform handlers
+						for h in self._handlers:
+							h.onTransducersAdded (srvpx.transducers.values ())
+			else:
+				logger.debug ("Server %s is new", srvModel)
+				srvpx = self._queryServer (srvAddr)
+				if srvpx is not None and srvpx.transducerList is not None:
+					self._addServer (self._realizeServer (srvpx))
+
+					# Inform handlers
+					for h in self._handlers:
+						h.onTransducersAdded (srvpx.transducers.values ())
+				else:
+					logger.warning ("Server %s has no transducers, ignoring" % srvModel)
+
 	def _notificationThread (self):
-		print >> sys.stderr, 'Waiting for notifications...'
+		handlers = {
+			"ADV": self._notificationAdv,
+			"NOT": self._notificationNot
+		}
+
+		logger = logging.getLogger ("client.notifications")
+		logger.debug ('Waiting for notifications...')
 		while not self._shallStop:
 			rlist = [self._notificationSocket, self._quitPipe[0]]
 			r, w, x = select.select (rlist, [], [], 5)
@@ -99,31 +179,27 @@ class Client (object):
 					break
 				else:
 					data = line.strip ()
-					self.msg_ip = client_address[0]
-					self.msg_port = int (client_address[1])
-
-					data = data.strip ()
 					if Client.DEBUG:
-						print "%s:%s --> %s" % (self.msg_ip, self.msg_port, data)
+						logger.debug ("[NOTIFICATION] %s:%s --> %s", client_address[0], client_address[1], data)
 
-					parts = data.split (" ", 2)
-					if len (parts) < 3:
-						print >> sys.stderr, "Malformed notification: '%s'" % data
-						#~ self._reply (client_address, "ERR Malformed command: '%s'" % data)
+					parts = data.split (" ", 1)
+					if len (parts) < 1:
+						logger.error ("Malformed notification: '%s'", data)
 					else:
-						cmd, name, rest = parts
-						if cmd != "NOT":
-							print >> sys.stderr, "Received non-notification on notification channel"
+						cmd = parts[0].upper ()
+
+						if len (parts) > 1:
+							args = parts[1]
 						else:
-							if name in self.transducers:
-								try:
-									trans = self.transducers[name]
-									trans._processNotification (rest)
-								except Error as ex:
-									print >> sys.stderr, "ERROR while processing notification: %s" % str (ex)
-							else:
-								print >> sys.stderr, "Received notification for missing transducer: %s" % name
-		print "X"
+							args = None
+
+						try:
+							handler = handlers[cmd]
+							handler (client_address, args)
+						except KeyError:
+							logger.error ("Unknown command: '%s'", cmd)
+
+		logger.debug ("NotificationThread ending")
 
 	def registerHandler (self, h):
 		if h not in self._handlers:
@@ -155,90 +231,20 @@ class Client (object):
 	def discover (self):
 		if self._discoverLock.acquire (blocking = False):
 			logger = logging.getLogger ("client.autodiscovery")
-			logger.debug ("--- Autodiscovery start ---")
+			logger.debug ("Sending Autodiscovery packet")
 
 			# Tell handlers we're ready to roll
 			for h in self._handlers:
 				h.onAutodiscoveryStarted ()
 
 			try:
-				discovered = {}
 				s = socket.socket (socket.AF_INET, socket.SOCK_DGRAM)
 				s.setsockopt (socket.SOL_SOCKET,socket.SO_BROADCAST, 1)
-				s.sendto ("HLO", ('<broadcast>', ServerProxy.DEFAULT_PORT))
+				s.sendto ("WHO", ('<broadcast>', Client.DEFAULT_SERVER_PORT))
 				s.settimeout (Client.DISCOVER_TIMEOUT)
-				timeout = False
-				while not timeout:
-					try:
-						reply, addr = s.recvfrom (1024)
-						model, protoVer, transducerList = self._parseHloReply (reply, addr)
-						if model in discovered:
-							# Same server discovered twice. Just some sort of useless protection, actually
-							logger.warning ("Duplicate server, ignoring: %s (%s)", model, addr)
-						else:
-							srvpx = ServerProxy (model, protoVer, transducerList, self._sock, *addr)
-							discovered[model] = srvpx
-							if model in self._servers:
-								# This is a server we already know
-								logger.debug ("Server %s is already known", model)
-								knownSrv = self._servers[model]
-
-								# Server responded, so clear failure count
-								knownSrv.failures = 0
-
-								# Check if server somehow changed
-								different = False
-
-								# Is address still the same?
-								if knownSrv.address != srvpx.address or knownSrv.port != srvpx.port:
-									logger.info ("Server has different address: %s -> %s", knownSrv.address, srvpx.address)
-									different = True
-								else:
-									# Address unchanged, check transducer list
-									if knownSrv.transducerList != srvpx.transducerList:
-										logger.info ("Server has different transducer list")
-										different = True
-
-								if not different:
-									logger.debug ("Server is unchanged")
-								else:
-									logger.info ("Server has changed, updating")
-
-									# Remove old server, informing handlers
-									del self._servers[model]
-									for h in self._handlers:
-										h.onTransducersRemoved (knownSrv.transducers.values ())
-									del knownSrv
-
-									# And add new
-									self._addServer (self._realizeServer (srvpx))
-									for h in self._handlers:
-										h.onTransducersAdded (srvpx.transducers.values ())
-							else:
-								logger.debug ("Server %s is new", model)
-								if srvpx.transducerList is not None:
-									self._addServer (self._realizeServer (srvpx))
-								else:
-									logger.warning ("Server %s has no transducers, ignoring" % model)
-
-								# Inform handlers
-								for h in self._handlers:
-									h.onTransducersAdded (srvpx.transducers.values ())
-					except socket.error as ex:
-						timeout = True
-
-				for model, srvpx in self._servers.iteritems ():
-					if model not in discovered:
-						logger.warning ("Server %s did not respond to autodiscovery", model)
-						srvpx.failures += 1
 			except Error as ex:
 				logger.error ("Autodiscovery failed: %s", str (ex))
 
-			# Tell handlers we're done
-			for h in self._handlers:
-				h.onAutodiscoveryCompleted ()
-
-			logger.debug ("--- Autodiscovery end ---")
 			self._discoverLock.release ()
 		else:
 			# Autodiscovery is already in progress, ignore
@@ -305,33 +311,85 @@ class Client (object):
 			ret = None
 		return ret
 
+	def _parseQryReply (self, reply, addr):
+		model = None
+		protoVer = 0
+		srvId = None
+		transducerList = None
+		reply = reply.strip ()
+		parts = reply.split (" ", 4)
+		if len (parts) < 4 or len (parts) > 5:
+			self._logger.error ("Unexpected QRY reply: %s", reply)
+		elif parts[0].upper () != "QRY":
+			if parts[0].upper () == "ERR":
+				self._logger.warning ("Node at %s does not support QRY: %s", addr[0], reply)
+			else:
+				self._logger.error ("Unexpected QRY reply: %s", reply)
+		else:
+			model = parts[1]
+			protoVer = int (parts[2])
+			srvId = parts[3]
+			if len (parts) == 5:
+				transducerList = parts[4]
+			self._logger.info ("Found \"%s\" speaking protocol %d at %s:%d", model, protoVer, addr[0], addr[1])
+		return model, protoVer, srvId, transducerList
+
+	# Server2 xxxxxxxx 9999
+	def _parseAdvertisement (self, reply, addr):
+		ok = False
+		reply = reply.strip ()
+		parts = reply.split (" ", 2)
+		l = len (parts)
+		if l == 2:
+			# Use address from packet and default port
+			srvModel = parts[0]
+			srvId = parts[1]
+			srvAddr = addr[0], Client.DEFAULT_SERVER_PORT
+			ok = True
+		elif l == 3:
+			# Use address/port from advertisement
+			srvModel = parts[0]
+			srvId = parts[1]
+
+			addrParts = parts[2].split (":")
+			if len (addrParts) == 2:
+				# ip:port
+				srvAddr = addrParts
+				ok = True
+			elif len (addrParts) == 1:
+				# Either only IP or only port
+				if '.' in addrParts[0]:
+					# IP only
+					srvAddr = addrParts[0], Client.DEFAULT_SERVER_PORT
+					ok = True
+				else:
+					try:
+						srvAddr = addr[0], int (addrParts[0])
+						ok = True
+					except ValueError:
+						self._logger.error ("Cannot parse port in server advertisement: '%s'" % reply)
+			else:
+				self._logger.error ("Cannot parse address in server advertisement: '%s'" % reply)
+		else:
+			self._logger.error ("Cannot parse server advertisement: '%s'" % reply)
+		return (srvModel, srvId, srvAddr) if ok else None
+
 	def _parseHloReply (self, reply, addr):
 		model = None
 		protoVer = 0
 		transducerList = None
 		reply = reply.strip ()
-		parts = reply.split (" ", 2)
-		if len (parts) < 2:
-			self._logger.error ("Unexpected HLO reply: %s", reply)
-		elif parts[0].upper () != "HLO":
-			if parts[0].upper () == "ERR":
-				self._logger.warning ("Node at %s does not support HLO: %s", addr[0], reply)
-			else:
-				self._logger.error ("Unexpected HLO reply: %s", reply)
-		elif len (parts) > 2:
-			model = parts[1]
-			try:
-				subparts = parts[2].split (" ", 1)
-				protoVer = int (subparts[0])
-				transducerList = subparts[1]
-			except ValueError:
-				# Protocol 0 just did not include the version in the HLO reply
-				transducerList = parts[2]
+		parts = reply.split (" ", 1)
+		if len (parts) > 1:
+			model = parts[0]
+			subparts = parts[1].split (" ", 1)
+			protoVer = int (subparts[0])
+			transducerList = subparts[1]
 			#~ print reply, addr
 			self._logger.info ("Found \"%s\" speaking protocol %d at %s:%d", model, protoVer, addr[0], addr[1])
 		else:
 			# No transducers
-			model = parts[1]
+			model = parts[0]
 		return model, protoVer, transducerList
 
 	def _queryServer (self, addr):
@@ -339,13 +397,13 @@ class Client (object):
 		self._logger.debug ("Querying %s:%d", addr[0], addr[1])
 		s = socket.socket (socket.AF_INET, socket.SOCK_DGRAM)
 		s.setsockopt (socket.SOL_SOCKET,socket.SO_BROADCAST, 1)
-		s.sendto ("HLO", addr)
+		s.sendto ("QRY", addr)
 		s.settimeout (10)
 		try:
 			reply, addr = s.recvfrom (1024)
-			model, protoVer, transducerList = self._parseHloReply (reply, addr)
-			if model is not None and transducerList is not None:
-				srvpx = ServerProxy (model, protoVer, transducerList, self._sock, *addr)
+			model, protoVer, srvId, transducerList = self._parseQryReply (reply, addr)
+			if model is not None and srvId is not None and transducerList is not None:
+				srvpx = ServerProxy (model, protoVer, srvId, transducerList, self._sock, *addr)
 		except socket.error as ex:
 			# How can this happen?
 			self._logger.error ("Query of server at %s:%d failed", addr[0], addr[1])

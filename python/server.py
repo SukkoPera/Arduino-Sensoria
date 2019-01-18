@@ -9,6 +9,7 @@ import os
 import threading
 import time
 import copy
+import binascii
 
 import Sensoria
 import Sensoria.stereotypes as stereotypes2		# FIXME!
@@ -244,6 +245,7 @@ class ControlledRelayActuator (Actuator):
 
 class CommandListener (object):
 	PROTOCOL_VERSION = 1
+	DEFAULT_ADVERTISE_INTERVAL = 60		# Seconds
 
 	def __init__ (self, name, port = LISTEN_PORT):
 		self._load_stereotypes ()
@@ -251,6 +253,7 @@ class CommandListener (object):
 		self.sensors = {}
 		self.notificationRequests = []
 		self._thread = None
+		self.advertiseInterval = CommandListener.DEFAULT_ADVERTISE_INTERVAL
 
 		self._sock = socket.socket (socket.AF_INET, socket.SOCK_DGRAM)
 		server_address = ('', port)
@@ -285,29 +288,40 @@ class CommandListener (object):
 			del self.sensors[sensor.name]
 			print "Unregistered sensor %s" % (sensor.name)
 
+	def setAdvertiseInterval (self, sec):
+		self.advertiseInterval = sec
 
 	def _reply (self, addr, what):
 		if DEBUG:
 			print "%s:%s <-- %s" % (addr[0], addr[1], what)
 		self._sock.sendto (what + "\r\n", addr)
 
+	def _getServerId (self):
+		idStr = "%s %s" % (CommandListener.PROTOCOL_VERSION, "|".join (("%s %s %s %s" % (sensor.name, sensor.get_type_string (), sensor.stereotype, sensor.description)).rstrip () for sensor in self.sensors.itervalues ()))
+		return "%08x" % (binascii.crc32 (idStr) & 0xffffffff)
+
+	def _advertise (self):
+		try:
+			advMsg = "ADV %s %s %u" % (self.serverName, self._getServerId (), LISTEN_PORT)
+			s = socket.socket (socket.AF_INET, socket.SOCK_DGRAM)
+			s.setsockopt (socket.SOL_SOCKET,socket.SO_BROADCAST, 1)
+			# ~ s.sendto (advMsg, ('<broadcast>', NOTIFICATION_PORT))
+			s.sendto (advMsg, ('127.0.0.1', NOTIFICATION_PORT))
+		except Exception as ex:
+			print >> sys.stderr, "Periodic advertisement failed: %s" % str (ex)
+
 	def _qry (self, addr, args):
-		if args is not None and len (args) > 0:
-			name = args.upper ()
-			try:
-				sensor = self.sensors[name]
-				self._reply (addr, "QRY %s|%s|%s|%s|%s" % (sensor.name, sensor.get_type_string (), sensor.stereotype, sensor.description, sensor.version))
-			except KeyError:
-				self._reply (addr, "ERR No such transducer: %s" % name)
-		else:
-			# List all sensors
-			self._reply (addr, "QRY %s" % "|".join ("%s %s %s %s" % (sensor.name, sensor.get_type_string (), sensor.stereotype, sensor.description) for sensor in self.sensors.itervalues ()))
+		transducerList = "|".join (("%s %s %s %s" % (sensor.name, sensor.get_type_string (), sensor.stereotype, sensor.description)).rstrip () for sensor in self.sensors.itervalues ())
+		self._reply (addr, "QRY %s %d %s %s" % (self.serverName, CommandListener.PROTOCOL_VERSION, self._getServerId (), transducerList))
 
 	def _ver (self, addr, args):
 		self._reply (addr, "VER %s" % self.serverName)
 
 	def _hlo (self, addr, args):
 		self._reply (addr, "HLO %s %d %s" % (self.serverName, CommandListener.PROTOCOL_VERSION, "|".join (("%s %s %s %s" % (sensor.name, sensor.get_type_string (), sensor.stereotype, sensor.description)).rstrip () for sensor in self.sensors.itervalues ())))
+
+	def _who (self, addr, args):
+		self._advertise ()
 
 	def _rea (self, addr, args):
 		if args is not None and len (args) > 0:
@@ -412,6 +426,7 @@ class CommandListener (object):
 	def _serverThread (self):
 		handlers = {
 			"VER": self._ver,
+			"WHO": self._who,
 			"HLO": self._hlo,
 			"REA": self._rea,
 			"WRI": self._wri,
@@ -419,7 +434,8 @@ class CommandListener (object):
 			"NRQ": self._nrq
 		}
 
-		print  >> sys.stderr, 'Waiting for commands...'
+		print >> sys.stderr, 'Waiting for commands...'
+		nTimeouts = 0
 		while not self._shallStop:
 			rlist = [self._sock, self._quitPipe[0]]
 			r, w, x = select.select (rlist, [], [], 1)
@@ -429,42 +445,51 @@ class CommandListener (object):
 				print "Server thread exiting!"
 				os.read (self._quitPipe[0], 1)
 			elif self._sock in r:
-				line, client_address = self._sock.recvfrom (RECV_BUFSIZE)
+				try:
+					line, client_address = self._sock.recvfrom (RECV_BUFSIZE)
 
-				if line == "":
-					break
-				else:
-					line = line.strip ()
-					self.msg_ip = client_address[0]
-					self.msg_port = int (client_address[1])
+					if line == "":
+						break
+					else:
+						line = line.strip ()
+						self.msg_ip = client_address[0]
+						self.msg_port = int (client_address[1])
 
-					for data in line.split ("\n"):
-						data = data.strip ()
-						if DEBUG:
-							print "%s:%s --> %s" % (self.msg_ip, self.msg_port, data)
+						for data in line.split ("\n"):
+							data = data.strip ()
+							if DEBUG:
+								print "%s:%s --> %s" % (self.msg_ip, self.msg_port, data)
 
-						parts = data.split (" ", 1)
-						if len (parts) < 1:
-							print >> sys.stderr, "Malformed command: '%s'" % data
-							self._reply (client_address, "ERR Malformed command: '%s'" % data)
-						else:
-							cmd = parts[0].upper ()
-
-							if len (parts) > 1:
-								args = parts[1]
+							parts = data.split (" ", 1)
+							if len (parts) < 1:
+								print >> sys.stderr, "Malformed command: '%s'" % data
+								self._reply (client_address, "ERR Malformed command: '%s'" % data)
 							else:
-								args = None
+								cmd = parts[0].upper ()
 
-							try:
-								handler = handlers[cmd]
-								handler (client_address, args)
-							except KeyError:
-								print >> sys.stderr, "Unknown command: '%s'" % cmd
-								self._reply (client_address, "ERR Unknown command: '%s'" % cmd)
+								if len (parts) > 1:
+									args = parts[1]
+								else:
+									args = None
+
+								try:
+									handler = handlers[cmd]
+									handler (client_address, args)
+								except KeyError:
+									print >> sys.stderr, "Unknown command: '%s'" % cmd
+									self._reply (client_address, "ERR Unknown command: '%s'" % cmd)
+				except Exception as ex:
+					print >> sys.stderr, "Socket error: %s" % str (ex)
 			else:
 				# Periodically process notifications
 				for nrq in self.notificationRequests:
 					nrq.process ()
+				# Also send periodic server advertisement
+				nTimeouts += 1
+				if self.advertiseInterval != 0 and nTimeouts >= self.advertiseInterval:
+					print "Sending periodic advertisement"
+					self._advertise ()
+					nTimeouts = 0
 		print "X"
 
 	def stop (self):
