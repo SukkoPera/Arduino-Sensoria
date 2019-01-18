@@ -366,7 +366,7 @@ class ReadOnlyTextCtrl (wx.TextCtrl):
 
 class InfoBox (wx.Dialog):
 	def __init__(self, t):
-		super (InfoBox, self).__init__ (None, -1, "%s %s" % ("Sensor" if t.genre == Sensoria.SENSOR else "Actuator", t.name), style = wx.DEFAULT_DIALOG_STYLE | wx.THICK_FRAME | wx.TAB_TRAVERSAL)
+		super (InfoBox, self).__init__ (None, -1, "%s %s" % ("Sensor" if t.genre == Sensoria.SENSOR else "Actuator", t.name), style = wx.DEFAULT_DIALOG_STYLE | wx.TAB_TRAVERSAL)
 		sizer = wx.BoxSizer (wx.VERTICAL)
 
 		gs = wx.FlexGridSizer (12, 2, 10, 5)
@@ -417,7 +417,7 @@ class InfoBox (wx.Dialog):
 
 class ServersBox (wx.Dialog):
 	def __init__(self, frame):
-		super (ServersBox, self).__init__ (None, -1, "Servers", style = wx.DEFAULT_DIALOG_STYLE | wx.THICK_FRAME | wx.TAB_TRAVERSAL)
+		super (ServersBox, self).__init__ (None, -1, "Servers", style = wx.DEFAULT_DIALOG_STYLE | wx.TAB_TRAVERSAL)
 		self._frame = frame
 
 		sizer = wx.BoxSizer (wx.VERTICAL)
@@ -451,7 +451,7 @@ class ServersBox (wx.Dialog):
 
 class DialogSetFormat (wx.Dialog):
 	def __init__(self, t):
-		super (DialogSetFormat, self).__init__ (None, -1, "Set format for transducer %s" % t.name, style = wx.DEFAULT_DIALOG_STYLE | wx.THICK_FRAME | wx.TAB_TRAVERSAL)
+		super (DialogSetFormat, self).__init__ (None, -1, "Set format for transducer %s" % t.name, style = wx.DEFAULT_DIALOG_STYLE | wx.TAB_TRAVERSAL)
 		self._transducer = t
 
 		sizer = wx.BoxSizer (wx.VERTICAL)

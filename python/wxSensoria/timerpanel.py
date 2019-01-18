@@ -127,7 +127,7 @@ class TimerPanel (wx.grid.Grid):
 
 class TimerEditDialog (wx.Dialog):
 	def __init__(self, t):
-		super (TimerEditDialog, self).__init__ (None, title = "Edit Timer %s" % t.name, style = wx.DEFAULT_DIALOG_STYLE | wx.THICK_FRAME | wx.TAB_TRAVERSAL)
+		super (TimerEditDialog, self).__init__ (None, title = "Edit Timer %s" % t.name, style = wx.DEFAULT_DIALOG_STYLE | wx.TAB_TRAVERSAL)
 
 		self.transducer = t
 
