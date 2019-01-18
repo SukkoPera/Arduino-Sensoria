@@ -157,7 +157,7 @@ class TimerEditDialog (wx.Dialog):
 
 		btnClear.Bind (wx.EVT_BUTTON, self.onClear)
 
-		btnBox.AddSpacer ((0, 0), 1, wx.EXPAND, 10)
+		btnBox.AddStretchSpacer ()
 		btnCancel = wx.Button (self, wx.ID_CANCEL, '&Cancel')		# Using ID_CANCEL automatically closes dialog
 		btnBox.Add (btnCancel, 0)
 		btnOk = wx.Button (self, wx.ID_OK, '&OK')
