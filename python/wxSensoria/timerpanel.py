@@ -18,10 +18,17 @@ class TimerPanel (wx.grid.Grid):
 	NSLOTS = NHOURS * SLOTS_PER_HOUR
 	NDAYS = 7
 	DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
-	COLORS = [wx.NamedColour ("white"), wx.NamedColour ("yellow"), wx.NamedColour ("orange"), wx.NamedColour ("red")]
+	COLORS = [(255, 255, 255), (255, 255, 0), (255, 165, 0), (255, 0, 0)]
 
 	def __init__ (self, parent):
 		super (TimerPanel, self).__init__ (parent)
+
+		# Colors cannot be inited before the application is instantiated
+		colors = []
+		for r, g, b in TimerPanel.COLORS:
+			col = wx.Colour (r, g, b)
+			colors.append (col)
+		TimerPanel.COLORS = colors
 
 		self.clearSchedule ()
 
@@ -150,7 +157,7 @@ class TimerEditDialog (wx.Dialog):
 
 		btnClear.Bind (wx.EVT_BUTTON, self.onClear)
 
-		btnBox.AddStretchSpacer ()
+		btnBox.AddSpacer ((0, 0), 1, wx.EXPAND, 10)
 		btnCancel = wx.Button (self, wx.ID_CANCEL, '&Cancel')		# Using ID_CANCEL automatically closes dialog
 		btnBox.Add (btnCancel, 0)
 		btnOk = wx.Button (self, wx.ID_OK, '&OK')
