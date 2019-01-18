@@ -405,7 +405,7 @@ class CommandListener (object):
 						self._reply (addr, "NRQ OK")
 					elif typ == "PRD":
 						if len (parts) < 3:
-							self._reply (addr, "NRQ %s ERR No interval specified" % sensor.name)
+							self._reply (addr, "NRQ ERR No interval specified")
 						else:
 							intv = int (parts[2])
 							print >> sys.stderr, "Notifying values of %s every %d seconds" % (sensor.name, intv)
