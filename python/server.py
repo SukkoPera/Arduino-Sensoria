@@ -252,6 +252,7 @@ class CommandListener (object):
 		self.serverName = name
 		self.sensors = {}
 		self.notificationRequests = []
+		self._nrLock = threading.RLock ()
 		self._thread = None
 		self.advertiseInterval = CommandListener.DEFAULT_ADVERTISE_INTERVAL
 
@@ -398,7 +399,9 @@ class CommandListener (object):
 						#~ rest = parts[2:]
 						print >> sys.stderr, "Notifying on change of %s" % sensor.name
 						req = OnChangeNotificationRequest ((addr[0], NOTIFICATION_PORT), self._sock, sensor)
+						self._nrLock.acquire ()
 						self.notificationRequests.append (req)
+						self._nrLock.release ()
 						self._reply (addr, "NRQ OK")
 					elif typ == "PRD":
 						if len (parts) < 3:
@@ -407,7 +410,9 @@ class CommandListener (object):
 							intv = int (parts[2])
 							print >> sys.stderr, "Notifying values of %s every %d seconds" % (sensor.name, intv)
 							req = PeriodicNotificationRequest ((addr[0], NOTIFICATION_PORT), self._sock, sensor, intv)
+							self._nrLock.acquire ()
 							self.notificationRequests.append (req)
+							self._nrLock.release ()
 							self._reply (addr, "NRQ OK")
 				except KeyError:
 					self._reply (addr, "ERR No such sensor: %s" % name)
@@ -482,8 +487,11 @@ class CommandListener (object):
 					print >> sys.stderr, "Socket error: %s" % str (ex)
 			else:
 				# Periodically process notifications
+				self._nrLock.acquire ()
 				for nrq in self.notificationRequests:
 					nrq.process ()
+				self._nrLock.release ()
+
 				# Also send periodic server advertisement
 				nTimeouts += 1
 				if self.advertiseInterval != 0 and nTimeouts >= self.advertiseInterval:
