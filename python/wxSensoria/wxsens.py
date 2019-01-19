@@ -41,6 +41,7 @@ class Config (object):
 		self.formatStrings = {}
 		self.viewDetails = False
 		self.groupByGenre = True
+		self.minimizeToTray = False
 
 	def getFilename (self):
 		if "XDG_CONFIG_HOME" in os.environ and len (os.environ["XDG_CONFIG_HOME"]) > 0:
@@ -64,6 +65,7 @@ class Config (object):
 				self.formatStrings[tname] = fmt
 			self.viewDetails = cfgp.getboolean ('View', 'Details')
 			self.groupByGenre = cfgp.getboolean ('View', 'Group')
+			self.minimizeToTray = cfgp.getboolean ('View', 'MinimizeToTray')
 		except ConfigParser.Error as ex:
 			# Never mind, we'll just use defaults
 			pass
@@ -90,6 +92,7 @@ class Config (object):
 		cfgp.add_section ('View')
 		cfgp.set ('View', 'Details', self.viewDetails)
 		cfgp.set ('View', 'Group', self.groupByGenre)
+		cfgp.set ('View', 'MinimizeToTray', self.minimizeToTray)
 
 		# Note that ConfigParser does not support Unicode strings, at least not in 2.6
 		with open (self.getFilename (), 'wb') as configfile:
@@ -927,6 +930,11 @@ class MenuBar (wx.MenuBar):
 		if self._frame.config.groupByGenre:
 			m32.Check ()
 		self._frame.Bind (wx.EVT_MENU, self.onGroupToggle, m32)
+		m33 = m3.AppendSeparator ()
+		m34 = m3.Append (wx.NewId (), "Keep Running in Tray on Close	", kind = wx.ITEM_CHECK)
+		if self._frame.config.minimizeToTray:
+			m34.Check ()
+		self._frame.Bind (wx.EVT_MENU, self.onMinimizeToTray, m34)
 		self.Append (m3, "&View")
 
 		menu = wx.Menu ()
@@ -975,6 +983,13 @@ class MenuBar (wx.MenuBar):
 		self._frame.config.groupByGenre = not self._frame.config.groupByGenre
 		self._frame.forceRedraw ()
 
+	def onMinimizeToTray (self, event):
+		self._frame.config.minimizeToTray = not self._frame.config.minimizeToTray
+		if self._frame.config.minimizeToTray:
+			self._frame.trayIcon.enable ()
+		else:
+			self._frame.trayIcon.disable ()
+
 class AutoStatusBar (wx.StatusBar):
 	DEFAULT_DURATION = 3
 
@@ -1012,6 +1027,41 @@ class AutoStatusBar (wx.StatusBar):
 		elif changed:
 			self.SetStatusText ("")
 
+class TrayIcon (wx.TaskBarIcon):
+	def __init__ (self, frame):
+		super (TrayIcon, self).__init__ ()
+		self._frame = frame
+
+		img = wx.Image ("logo.png", wx.BITMAP_TYPE_ANY)
+		bmp = wx.BitmapFromImage(img)
+		self._icon = wx.IconFromBitmap (bmp)
+
+	def enable (self):
+		self.SetIcon (self._icon, self._frame.GetTitle ())
+		self.Bind (wx.EVT_TASKBAR_LEFT_DOWN, self.OnTaskBarLeftClick)
+
+	def disable (self):
+		self.RemoveIcon ()
+
+	# ~ def OnTaskBarActivate (self, evt):
+		# ~ print "OnTaskBarActivate"
+
+	def OnTaskBarClose (self, evt):
+		"""
+		Destroy the taskbar icon and frame from the taskbar icon itself
+		"""
+		self._frame.Close ()
+
+	def OnTaskBarLeftClick (self, evt):
+		"""
+		Create the right-click menu
+		"""
+		if self._frame.IsShown ():
+			self._frame.Hide ()
+		else:
+			self._frame.Show ()
+			self._frame.Restore ()
+
 class Frame (wx.Frame):
 	EVT_SET_FORMAT = wx.NewId ()
 	EVT_COPY = wx.NewId ()
@@ -1047,6 +1097,21 @@ class Frame (wx.Frame):
 
 		self._panel.SetSizer (self._box)
 		self._panel.Layout ()
+
+		img = wx.Image ("logo.png", wx.BITMAP_TYPE_ANY)
+		bmp = wx.BitmapFromImage(img)
+		icon = wx.IconFromBitmap (bmp)
+		self.SetIcon (icon)
+
+		# Tray icon
+		self.trayIcon = TrayIcon (self)
+		if self.config.minimizeToTray:
+			self.trayIcon.enable ()
+		else:
+			self.trayIcon.disable ()
+		# ~ self.Bind(wx.EVT_ICONIZE, self.onMinimize)
+		self.Bind (wx.EVT_CLOSE, self.onClose)
+
 
 		self._sensoria = Sensoria.Client (servers = self.config.servers)
 		self.transducerList = TransducerList (self._sensoria, self.config)
@@ -1200,6 +1265,21 @@ class Frame (wx.Frame):
 			# Use default interval
 			self._statusBar.push (msg)
 
+	# ~ def onMinimize(self, event):
+		# ~ """
+		# ~ When minimizing, hide the frame so it "minimizes to tray"
+		# ~ """
+		# ~ if self.IsIconized () and self.config.minimizeToTray:
+			# ~ self.Hide ()
+
+	def onClose (self, evt):
+		"""
+		Destroy the taskbar icon and the frame
+		"""
+		if self.config.minimizeToTray:
+			self.Hide ()
+		else:
+			self.onQuit (evt)
 
 	def onQuit (self, event):
 		self.config.winPos = self.GetPosition ()
@@ -1210,6 +1290,8 @@ class Frame (wx.Frame):
 			if t.outputFormat:
 				self.config.formatStrings[t.name] = t.outputFormat
 		self.config.save ()
+		self.trayIcon.disable ()
+		self.trayIcon.Destroy ()
 		self.Destroy ()
 
 	def onItemDoubleClicked (self, event):
