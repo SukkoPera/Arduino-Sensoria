@@ -1,29 +1,31 @@
 package com.sensoria.typhosoft.sensapp.service;
 
-import android.app.IntentService;
+import android.app.Service;
 import android.content.Intent;
+import android.os.IBinder;
+import android.support.annotation.Nullable;
 
 /**
  * Created by santonocitom on 26/06/17.
  */
 
-public class SensAppService extends IntentService {
+public class SensAppService extends Service {
 
-    /**
-     * Creates an IntentService.  Invoked by your subclass's constructor.
-     *
-     * @param name Used to name the worker thread, important only for debugging.
-     */
-    public SensAppService(String name) {
-        super(name);
+    public SensAppService() {
+        super();
     }
 
     @Override
-    protected void onHandleIntent(Intent workIntent) {
-        // Gets data from the incoming Intent
-        String dataString = workIntent.getDataString();
-
-        // Do work here, based on the contents of dataString
-
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        //TODO do something useful
+        return Service.START_STICKY;
     }
+
+    @Nullable
+    @Override
+    public IBinder onBind(Intent intent) {
+        return null;
+    }
+
+
 }

@@ -1,16 +1,19 @@
-package com.sensoria.typhosoft.sensapp.custom.adapter;
+package com.sensoria.typhosoft.sensapp.core;
+
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
 
 import com.sensoria.typhosoft.sensapp.datamodel.ESensStereotype;
-import com.sensoria.typhosoft.sensapp.datamodel.ESensType;
+import com.sensoria.typhosoft.sensapp.network.SensClient;
 
 /**
  * Created by santonocitom on 15/01/18.
  */
 
-public interface ISensAdapterItems {
+public interface ISensAdapterItems extends Comparable {
 
-    ESensType getType();
+    View getView(LayoutInflater inflater, View convertView, ViewGroup parent, SensClient client);
+
     ESensStereotype getStereoType();
-    String getName();
-    String getDescriptor();
 }

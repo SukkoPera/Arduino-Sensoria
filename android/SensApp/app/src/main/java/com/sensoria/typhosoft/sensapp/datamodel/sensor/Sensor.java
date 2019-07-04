@@ -1,19 +1,18 @@
-package com.sensoria.typhosoft.sensapp.datamodel;
+package com.sensoria.typhosoft.sensapp.datamodel.sensor;
+
+import com.sensoria.typhosoft.sensapp.datamodel.ATransducer;
+import com.sensoria.typhosoft.sensapp.datamodel.ESensStereotype;
+import com.sensoria.typhosoft.sensapp.datamodel.ESensType;
 
 /**
  * Created by santonocitom on 27/06/17.
  */
 
-public class Sensor extends ATransducer {
+public abstract class Sensor extends ATransducer {
     private String data;
 
-    public Sensor(String command) {
-        super(ESensorType.SENSOR);
-        parse(command);
-    }
-
-    protected void parse(String command) {
-        super.parse(command);
+    public Sensor(String name, ESensStereotype stereotype, String description) {
+        super(name, ESensType.SENSOR, stereotype, description);
     }
 
     public String getData() {

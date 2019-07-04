@@ -1,8 +1,6 @@
 package com.sensoria.typhosoft.sensapp;
 
-import android.content.Intent;
 import android.content.res.Configuration;
-import android.net.Uri;
 import android.os.Bundle;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBarDrawerToggle;
@@ -12,25 +10,28 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.CheckBox;
+import android.widget.CompoundButton;
 import android.widget.EditText;
 import android.widget.ListView;
 
-import com.sensoria.typhosoft.sensapp.custom.adapter.SensAdapter;
-import com.sensoria.typhosoft.sensapp.datamodel.SensModel;
+import com.sensoria.typhosoft.sensapp.core.SensAdapter;
 import com.sensoria.typhosoft.sensapp.network.SensClient;
-import com.sensoria.typhosoft.sensapp.service.SensAppService;
+import com.sensoria.typhosoft.sensapp.network.SensDiscovery;
 
 public class SensActivity extends AppCompatActivity {
     private SensAdapter adapter;
     private SensClient sensClient;
     private EditText cmd;
+    private CheckBox autoDiscovery;
     private ListView listView;
     private ListView navListView;
     private ArrayAdapter<String> menuAdapter;
     private ActionBarDrawerToggle drawerToggle;
     private DrawerLayout drawerLayout;
     private String activityTitle;
-    private Intent serviceIntent;
+    private SensDiscovery discovery;
+    //private Intent serviceIntent;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -42,18 +43,34 @@ public class SensActivity extends AppCompatActivity {
         navListView = (ListView) findViewById(R.id.navList);
         initMenu();
         cmd = (EditText) findViewById(R.id.editTextCMD);
-
+        autoDiscovery = (CheckBox) findViewById(R.id.autoDiscover);
+        autoDiscovery.setChecked(true);
+        autoDiscovery.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                if (isChecked) {
+                    discovery.pause();
+                } else {
+                    discovery.pause();
+                }
+            }
+        });
         sensClient = new SensClient(this);
-        adapter = new SensAdapter(this, R.id.list, SensModel.getInstance().getItems(), sensClient);
+        adapter = new SensAdapter(this, R.id.list, sensClient);
 
         listView = (ListView) findViewById(R.id.list);
         listView.setAdapter(adapter);
 
-        // serviceIntent = new Intent(this, SensAppService.class);
-        // serviceIntent.setData(Uri.parse("sens://sensapp"));
-        // startService(serviceIntent);
 
-        sensClient.start();
+        // use this to start and trigger a service
+        //    serviceIntent = new Intent(this, SensAppService.class);
+        // potentially add data to the intent
+        //    serviceIntent.putExtra("KEY1", "Value to be used by the service");
+        //    startService(serviceIntent);
+
+
+        discovery = new SensDiscovery(sensClient, autoDiscovery);
+        discovery.start();
     }
 
     private void setupDrawer() {
@@ -102,10 +119,7 @@ public class SensActivity extends AppCompatActivity {
     protected void onPostCreate(Bundle savedInstanceState) {
         super.onPostCreate(savedInstanceState);
         drawerToggle.syncState();
-
-        sensClient.sendMessage(getResources().getString(R.string.command));
     }
-
 
 
     @Override
@@ -145,4 +159,49 @@ public class SensActivity extends AppCompatActivity {
             }
         });
     }
+
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        if (sensClient == null) {
+            sensClient = new SensClient(this);
+            adapter.setClient(sensClient);
+            discovery.setClient(sensClient);
+            sensClient.start();
+        }
+
+        discovery.OnResume();
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        discovery.OnPause();
+        if (sensClient != null) {
+        }
+        sensClient = null;
+    }
+
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        discovery.OnPause();
+        sensClient = null;
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (sensClient == null) {
+            sensClient = new SensClient(this);
+            adapter.setClient(sensClient);
+            discovery.setClient(sensClient);
+            sensClient.start();
+        }
+
+        discovery.OnResume();
+    }
+
 }

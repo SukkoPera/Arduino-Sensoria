@@ -1,4 +1,7 @@
-package com.sensoria.typhosoft.sensapp.datamodel;
+package com.sensoria.typhosoft.sensapp.core;
+
+import com.sensoria.typhosoft.sensapp.datamodel.ATransducer;
+import com.sensoria.typhosoft.sensapp.datamodel.Node;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -10,15 +13,16 @@ import java.util.concurrent.locks.ReentrantLock;
  * Created by santonocitom on 29/06/17.
  */
 
-public class SensModel {
-    private static final SensModel ourInstance = new SensModel();
+public class SensController {
+    private static final SensController ourInstance = new SensController();
+    protected final ArrayList<ISensAdapterItems> adapterItems = new ArrayList<>();
     private final ArrayList<Node> items = new ArrayList<>();
     private Lock lock = new ReentrantLock();
 
-    private SensModel() {
+    private SensController() {
     }
 
-    public static SensModel getInstance() {
+    public static SensController getInstance() {
         return ourInstance;
     }
 
@@ -67,6 +71,14 @@ public class SensModel {
         try {
             if (!items.contains(node)) {
                 items.add(node);
+                adapterItems.add(node);
+                adapterItems.addAll(node.getTransducers());
+            } else {
+                Node oldNode = items.get(items.indexOf(node));
+                if (oldNode.getTransducers().size() != node.getTransducers().size()) {
+                    // TODO: WOW! you are unlucky :-(
+
+                }
             }
         } finally {
             lock.unlock();
@@ -74,6 +86,10 @@ public class SensModel {
     }
 
     public void read(String name, String sentence) {
-        findItemsByName(name).read(sentence);
+        ATransducer item = findItemsByName(name);
+        if (item != null)
+            item.read(sentence);
+        else
+            System.out.println("unable find: " + name);
     }
 }

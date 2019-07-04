@@ -1,11 +1,11 @@
 package com.sensoria.typhosoft.sensapp.network;
 
 import com.sensoria.typhosoft.sensapp.SensActivity;
-import com.sensoria.typhosoft.sensapp.core.SensParser;
+import com.sensoria.typhosoft.sensapp.core.SensController;
+import com.sensoria.typhosoft.sensapp.core.SensNewParser;
+import com.sensoria.typhosoft.sensapp.datamodel.ATransducer;
+import com.sensoria.typhosoft.sensapp.datamodel.ESensCommand;
 import com.sensoria.typhosoft.sensapp.datamodel.Node;
-import com.sensoria.typhosoft.sensapp.datamodel.SensCommandEnum;
-import com.sensoria.typhosoft.sensapp.datamodel.SensModel;
-import com.sensoria.typhosoft.sensapp.datamodel.Transducer;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
@@ -15,7 +15,6 @@ import java.net.InterfaceAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.net.UnknownHostException;
-import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
 
@@ -27,14 +26,13 @@ public class SensClient extends Thread {
 
     private final InetAddress broadcast;
     private final SensActivity main;
-    private int UdpPort = 9999;
-    private DatagramSocket listenerSocket = null;
+    private boolean isFinish = false;
 
     public SensClient(SensActivity main) {
         super("SensApp client");
         this.main = main;
         broadcast = getBroadcast();
-
+        setDaemon(true);
     }
 
     private static boolean isThisMyIpAddress(InetAddress addr) {
@@ -55,9 +53,10 @@ public class SensClient extends Thread {
             message.concat("\r");
             byte[] buf = message.getBytes();
 
-            DatagramPacket packet = new DatagramPacket(buf, 0, buf.length, broadcast, UdpPort);
-            listenerSocket.send(packet);
-            System.out.println("Message sent: " + message);
+            DatagramPacket packet = new DatagramPacket(buf, 0, buf.length, broadcast, SesSocketSingleton.UdpPort);
+
+            new SensNetworkTask().execute(packet);
+
         } catch (Exception e) {
             System.err.println("Sending failed. " + e.getMessage());
         }
@@ -84,18 +83,12 @@ public class SensClient extends Thread {
     @Override
     public void run() {
         try {
-            listenerSocket = new DatagramSocket(UdpPort);
-            // listenerSocket.bind(new InetSocketAddress(UdpPort));
-            listenerSocket.setBroadcast(true);
-            listenerSocket.setReuseAddress(true);
-            byte[] receiveData = new byte[listenerSocket.getReceiveBufferSize()];
-            DatagramPacket receivePacket = new DatagramPacket(receiveData,
-                    receiveData.length);
+            byte[] receiveData = new byte[SesSocketSingleton.getInstance().getListenerSocket().getReceiveBufferSize()];
+            DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
 
-            while (true) {
-                listenerSocket.receive(receivePacket);
-                final String sentence = new String(receivePacket.getData(), 0,
-                        receivePacket.getLength());
+            while (!isFinish) {
+                SesSocketSingleton.getInstance().getListenerSocket().receive(receivePacket);
+                final String sentence = new String(receivePacket.getData(), 0, receivePacket.getLength());
                 if (!isThisMyIpAddress(receivePacket.getAddress())) {
                     parse(clean(sentence));
                 }
@@ -106,8 +99,12 @@ public class SensClient extends Thread {
             e.printStackTrace();
         } catch (IOException e) {
             e.printStackTrace();
+        } finally {
+            System.out.println("SensClient Thread is stopped!");
         }
     }
+
+
 
     private String clean(String sentence) {
         return sentence.trim();
@@ -115,37 +112,22 @@ public class SensClient extends Thread {
 
     private synchronized void parse(String sentence) {
         boolean mustUpdate = true;
-        SensCommandEnum sensCmd = SensParser.parseCommand(sentence);
+        ESensCommand sensCmd = SensNewParser.parseCommand(sentence);
         if (sensCmd != null) {
-            ArrayList<Transducer> items = SensModel.getInstance().getItems();
             switch (sensCmd) {
                 case VER:
                     break;
                 case HLO:
-                    //SensModel.getInstance().getItems().clear();
-                    Node node = SensParser.makeNode(sentence);
-                    if (!items.contains(node))
-                        items.add(node);
-                    for (Transducer item : node.getTransducers()) {
-                        if (!items.contains(item)) {
-                            items.add(item);
-                        }
-                    }
-                    requestREA(items);
+                    Node node = SensNewParser.parseHLO(sentence);
+                    SensController.getInstance().addUpdateNode(node);
+                    requestREA(node.getTransducers());
                     break;
                 case WRI:
                     mustUpdate = false;
                     break;
-                case QRY:
-                    List<Transducer> transducers = SensParser.makeSensors(sentence);
-                    for (Transducer item : transducers) {
-                        if (!items.contains(item)) {
-                            items.add(item);
-                        }}
-                    requestREA(items);
-                    break;
                 case REA:
-                    SensParser.parseREA(sentence);
+                    String name = SensNewParser.parseTransducerName(sentence);
+                    SensController.getInstance().read(name, sentence);
                     break;
                 case NRQ:
                     break;
@@ -157,10 +139,9 @@ public class SensClient extends Thread {
         }
     }
 
-    private void requestREA(List<Transducer> retVal) {
-        for (Transducer sensor : retVal) {
-            sendMessage("REA " + sensor.getName());
+    private void requestREA(List<ATransducer> retVal) {
+        for (ATransducer sensor : retVal) {
+            sendMessage(ESensCommand.REA.getCmd().concat(" ").concat(sensor.getName()));
         }
     }
-
 }

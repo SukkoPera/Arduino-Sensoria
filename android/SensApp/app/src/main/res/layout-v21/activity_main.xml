@@ -12,23 +12,36 @@
     android:layout_height="fill_parent"
     xmlns:tools="http://schemas.android.com/tools">
 
-        <EditText
+        <LinearLayout
+            android:id="@+id/topLayout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:inputType="textPersonName"
-            android:layout_below="@+id/editTextIP"
-            android:text="@string/command"
-            android:ems="10"
-            android:id="@+id/editTextCMD"
-            style="@android:style/Widget.Material.EditText"
-            tools:text="@string/command" />
+            android:orientation="horizontal">
+
+            <EditText
+                android:id="@+id/editTextCMD"
+                style="@android:style/Widget.Material.EditText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:ems="10"
+                android:inputType="textPersonName"
+                android:text="@string/command" />
+
+            <CheckBox
+                android:id="@+id/autoDiscover"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:ems="10"
+                android:text="@string/checkbox" />
+
+        </LinearLayout>
 
         <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
             xmlns:tools="http://schemas.android.com/tools"
             android:id="@+id/activity_main"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_below="@+id/editTextCMD"
+            android:layout_below="@+id/topLayout"
             android:layout_above="@+id/button"
             android:orientation="vertical"
             android:paddingBottom="@dimen/activity_vertical_margin"
@@ -50,7 +63,6 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="@string/button"
-            tools:text="@string/button"
             style="@android:style/Widget.Material.Button"
             android:layout_alignParentBottom="true"
             android:layout_alignParentLeft="true"

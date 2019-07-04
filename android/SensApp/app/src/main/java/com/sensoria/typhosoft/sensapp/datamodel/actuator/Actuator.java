@@ -1,38 +1,18 @@
-package com.sensoria.typhosoft.sensapp.datamodel;
+package com.sensoria.typhosoft.sensapp.datamodel.actuator;
+
+import com.sensoria.typhosoft.sensapp.datamodel.ATransducer;
+import com.sensoria.typhosoft.sensapp.datamodel.ESensStereotype;
+import com.sensoria.typhosoft.sensapp.datamodel.ESensType;
 
 /**
  * Created by santonocitom on 29/06/17.
  */
 
-public class Actuator extends ATransducer {
+public abstract class Actuator extends ATransducer {
 
-    private Boolean onOff;
-    private Boolean autoManual;
-
-    public Actuator(String string) {
-        super(ESensorType.ACTUATOR);
-        parse(string);
+    public Actuator(String name, ESensStereotype stereotype, String description) {
+        super(name, ESensType.ACTUATOR, stereotype, description);
     }
 
-    protected void parse(String command){
-        super.parse(command);
-        onOff = false;
-        autoManual = false;
-    }
-
-    public Boolean getOnOff() {
-        return onOff;
-    }
-
-    public void setOnOff(Boolean onOff) {
-        this.onOff = onOff;
-    }
-
-    public boolean getAutoManual() {
-        return autoManual;
-    }
-
-    public void setAutoManual(Boolean autoManual) {
-        this.autoManual = autoManual;
-    }
+    public abstract String write();
 }

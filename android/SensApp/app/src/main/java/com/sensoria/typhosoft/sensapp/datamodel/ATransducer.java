@@ -2,23 +2,29 @@ package com.sensoria.typhosoft.sensapp.datamodel;
 
 import android.support.annotation.NonNull;
 
+import com.sensoria.typhosoft.sensapp.core.ISensAdapterItems;
+
 import java.io.Serializable;
 
 /**
  * Created by santonocitom on 29/06/17.
  */
 
-public abstract class Transducer implements Serializable, Comparable<Transducer> {
-    protected String name;
-    protected SensorTypeEnum type;
+public abstract class ATransducer implements Serializable, Cloneable, ISensAdapterItems {
+    protected final String name;
+    protected final ESensType type;
+    protected final ESensStereotype stereotype;
+    protected String description;
     protected String descriptor;
-    protected SensStereotypeEnum stereoType;
 
-    public Transducer(SensorTypeEnum type) {
+    public ATransducer(String name, ESensType type, ESensStereotype stereotype, String description) {
+        this.name = name;
         this.type = type;
+        this.stereotype = stereotype;
+        this.description = description;
     }
 
-    public SensorTypeEnum getType() {
+    public ESensType getType() {
         return type;
     }
 
@@ -26,34 +32,22 @@ public abstract class Transducer implements Serializable, Comparable<Transducer>
         return name;
     }
 
-    public void setName(String name) {
-        this.name = name;
-    }
-
     public String getDescriptor() {
         return descriptor;
     }
 
-    protected void parse(String command) {
-        if (command.length() >= 2) {
-            name = command.substring(0, 2);
-        }
-
-        if (command.length() >= 7) {
-            stereoType = SensStereotypeEnum.convert(command.substring(5, 7));
-        }
-        if (command.length() >= 8) {
-            descriptor = command.substring(8);
-        }
-    }
-
-    public SensStereotypeEnum getStereoType() {
-        return stereoType;
+    public ESensStereotype getStereoType() {
+        return stereotype;
     }
 
     @Override
-    public int compareTo(@NonNull Transducer t) {
-        return this.name.compareTo(t.getName());
+    public int compareTo(@NonNull Object t) {
+        if (t instanceof ATransducer)
+            return this.name.compareTo(((ATransducer) t).getName());
+        else if (t instanceof Node)
+            return this.name.compareTo(((Node) t).getName());
+
+        return 0;
     }
 
     @Override
@@ -63,9 +57,16 @@ public abstract class Transducer implements Serializable, Comparable<Transducer>
 
     @Override
     public boolean equals(Object obj) {
-        if (obj instanceof Transducer)
-            return this.name.equalsIgnoreCase(((Transducer) obj).name);
+        if (obj instanceof ATransducer)
+            return this.name.equalsIgnoreCase(((ATransducer) obj).name);
 
         return false;
     }
+
+    @Override
+    public ATransducer clone() throws CloneNotSupportedException {
+        return (ATransducer) super.clone();
+    }
+
+    public abstract void read(String sentence);
 }

@@ -4,7 +4,7 @@ package com.sensoria.typhosoft.sensapp.datamodel;
  * Created by santonocitom on 29/06/17.
  */
 
-public enum SensCommandEnum {
+public enum ESensCommand {
     VER("VER"),
     HLO("HLO"),
     REA("REA"),
@@ -15,11 +15,19 @@ public enum SensCommandEnum {
 
     private final String cmd;
 
-    SensCommandEnum(String cmd) {
+    ESensCommand(String cmd) {
         this.cmd = cmd;
     }
 
     public final String getCmd() {
         return cmd;
+    }
+
+    public static ESensCommand convert(String cmd){
+        for (ESensCommand c: ESensCommand.values()) {
+            if(c.cmd.equalsIgnoreCase(cmd))
+                return c;
+        }
+        return null;
     }
 }
