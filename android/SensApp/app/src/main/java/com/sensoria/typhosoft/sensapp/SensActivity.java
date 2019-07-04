@@ -1,6 +1,7 @@
 package com.sensoria.typhosoft.sensapp;
 
 import android.content.res.Configuration;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBarDrawerToggle;
@@ -18,6 +19,7 @@ import android.widget.ListView;
 import com.sensoria.typhosoft.sensapp.core.SensAdapter;
 import com.sensoria.typhosoft.sensapp.network.SensClient;
 import com.sensoria.typhosoft.sensapp.network.SensDiscovery;
+import com.sensoria.typhosoft.sensapp.network.SesSocketSingleton;
 
 public class SensActivity extends AppCompatActivity {
     private SensAdapter adapter;
@@ -56,6 +58,7 @@ public class SensActivity extends AppCompatActivity {
             }
         });
         sensClient = new SensClient(this);
+        sensClient.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
         adapter = new SensAdapter(this, R.id.list, sensClient);
 
         listView = (ListView) findViewById(R.id.list);
@@ -69,7 +72,7 @@ public class SensActivity extends AppCompatActivity {
         //    startService(serviceIntent);
 
 
-        discovery = new SensDiscovery(sensClient, autoDiscovery);
+        discovery = new SensDiscovery(autoDiscovery);
         discovery.start();
     }
 
@@ -148,7 +151,7 @@ public class SensActivity extends AppCompatActivity {
     }
 
     public void sendUdpPacket(View view) {
-        sensClient.sendMessage(cmd.getText().toString() + "\n");
+        SesSocketSingleton.getInstance().sendMessage(cmd.getText().toString() + "\n");
     }
 
     public void updateSens() {
@@ -164,11 +167,13 @@ public class SensActivity extends AppCompatActivity {
     @Override
     protected void onStart() {
         super.onStart();
+        resume();
+    }
+
+    private void resume() {
         if (sensClient == null) {
             sensClient = new SensClient(this);
-            adapter.setClient(sensClient);
-            discovery.setClient(sensClient);
-            sensClient.start();
+            sensClient.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
         }
 
         discovery.OnResume();
@@ -178,8 +183,7 @@ public class SensActivity extends AppCompatActivity {
     protected void onStop() {
         super.onStop();
         discovery.OnPause();
-        if (sensClient != null) {
-        }
+        sensClient.exit();
         sensClient = null;
     }
 
@@ -188,20 +192,12 @@ public class SensActivity extends AppCompatActivity {
     protected void onPause() {
         super.onPause();
         discovery.OnPause();
-        sensClient = null;
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        if (sensClient == null) {
-            sensClient = new SensClient(this);
-            adapter.setClient(sensClient);
-            discovery.setClient(sensClient);
-            sensClient.start();
-        }
-
-        discovery.OnResume();
+        resume();
     }
 
 }

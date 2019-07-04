@@ -40,7 +40,7 @@ public class WeatherData extends Sensor{
     }
 
     @Override
-    public View getView(LayoutInflater inflater, View convertView, ViewGroup parent, SensClient client) {
+    public View getView(LayoutInflater inflater, View convertView, ViewGroup parent) {
         if (view == null || convertView == null) {
             view = convertView;
             if (convertView == null) {

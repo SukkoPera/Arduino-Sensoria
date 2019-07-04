@@ -13,7 +13,7 @@ import com.sensoria.typhosoft.sensapp.network.SensClient;
 
 public interface ISensAdapterItems extends Comparable {
 
-    View getView(LayoutInflater inflater, View convertView, ViewGroup parent, SensClient client);
+    View getView(LayoutInflater inflater, View convertView, ViewGroup parent);
 
     ESensStereotype getStereoType();
 }

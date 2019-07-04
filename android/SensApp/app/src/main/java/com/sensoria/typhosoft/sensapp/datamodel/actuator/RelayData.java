@@ -11,6 +11,7 @@ import com.sensoria.typhosoft.sensapp.R;
 import com.sensoria.typhosoft.sensapp.datamodel.ESensCommand;
 import com.sensoria.typhosoft.sensapp.datamodel.ESensStereotype;
 import com.sensoria.typhosoft.sensapp.network.SensClient;
+import com.sensoria.typhosoft.sensapp.network.SesSocketSingleton;
 
 /**
  * Created by santonocitom on 15/01/18.
@@ -46,7 +47,7 @@ public class RelayData extends Actuator {
     }
 
     @Override
-    public View getView(LayoutInflater inflater, View convertView, ViewGroup parent, final SensClient client) {
+    public View getView(LayoutInflater inflater, View convertView, ViewGroup parent) {
         if (view == null || convertView == null) {
             view = convertView;
             if (convertView == null) {
@@ -62,7 +63,7 @@ public class RelayData extends Actuator {
             descriptionText = (TextView) view.findViewById(R.id.textRow22);
             onOffSwitch = (Switch) view.findViewById(R.id.switch1);
             autoManualSwitch = (Switch) view.findViewById(R.id.switch2);
-            onOffSwitchListener = new OnOffSwitchListener(client);
+            onOffSwitchListener = new OnOffSwitchListener();
         }
 
         typeText.setText(type.getDescription());
@@ -110,10 +111,8 @@ public class RelayData extends Actuator {
     }
 
     private class OnOffSwitchListener implements CompoundButton.OnCheckedChangeListener {
-        private final SensClient client;
 
-        public OnOffSwitchListener(SensClient client) {
-            this.client = client;
+        public OnOffSwitchListener() {
         }
 
         @Override
@@ -124,13 +123,13 @@ public class RelayData extends Actuator {
                 case ON:
                     if (!isChecked) {
                         status = EStatus.OFF;
-                        client.sendMessage(write());
+                        SesSocketSingleton.getInstance().sendMessage(write());
                     }
                     break;
                 case OFF:
                     if (isChecked) {
                         status = EStatus.ON;
-                        client.sendMessage(write());
+                        SesSocketSingleton.getInstance().sendMessage(write());
                     }
                     break;
             }

@@ -8,13 +8,11 @@ import android.widget.CheckBox;
 
 public class SensDiscovery extends Thread {
     private boolean isFinish = false;
-    private SensClient client;
     private CheckBox autoDiscovery;
     private boolean isPause = false;
 
-    public SensDiscovery(final SensClient client, CheckBox autoDiscovery) {
+    public SensDiscovery(CheckBox autoDiscovery) {
         super(SensDiscovery.class.getSimpleName());
-        this.client = client;
         this.autoDiscovery = autoDiscovery;
         setDaemon(true);
     }
@@ -23,7 +21,7 @@ public class SensDiscovery extends Thread {
     public void run() {
         while (!isFinish) {
             if (!isPause) {
-                getClient().sendMessage("HLO");
+                SesSocketSingleton.getInstance().sendMessage("HLO");
             }
             try {
                 Thread.sleep(10000);
@@ -50,11 +48,5 @@ public class SensDiscovery extends Thread {
     public void OnResume() {
         isPause = !autoDiscovery.isChecked();
     }
-    public void setClient(SensClient client) {
-        this.client = client;
-    }
 
-    public SensClient getClient() {
-        return client;
-    }
 }

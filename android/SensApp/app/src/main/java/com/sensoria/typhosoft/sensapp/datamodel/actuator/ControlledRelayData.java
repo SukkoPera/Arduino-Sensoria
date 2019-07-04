@@ -12,6 +12,7 @@ import com.sensoria.typhosoft.sensapp.core.SensNewParser;
 import com.sensoria.typhosoft.sensapp.datamodel.ESensCommand;
 import com.sensoria.typhosoft.sensapp.datamodel.ESensStereotype;
 import com.sensoria.typhosoft.sensapp.network.SensClient;
+import com.sensoria.typhosoft.sensapp.network.SesSocketSingleton;
 
 import java.util.Arrays;
 import java.util.Map;
@@ -61,24 +62,24 @@ public class ControlledRelayData extends Actuator {
     }
 
     @Override
-    public View getView(LayoutInflater inflater, View convertView, ViewGroup parent, final SensClient client) {
+    public View getView(LayoutInflater inflater, View convertView, ViewGroup parent) {
         if (view == null || convertView == null) {
             view = convertView;
             if (convertView == null) {
                 view = inflater.inflate(R.layout.sensadapter_a_cr_item_layout, parent, false);
-            toBind = true;
+                toBind = true;
+            }
         }
-    }
 
         if (toBind) {
-        toBind = false;
+            toBind = false;
             typeText = (TextView) view.findViewById(R.id.textRow1);
             nameText = (TextView) view.findViewById(R.id.textRow21);
             descriptionText = (TextView) view.findViewById(R.id.textRow22);
             onOffSwitch = (Switch) view.findViewById(R.id.switch1);
             autoManualSwitch = (Switch) view.findViewById(R.id.switch2);
-            onOffSwitchListener = new OnOffSwitchListener(client);
-            autoManualSwitchListener = new  AutoManualSwitchListener(client);
+            onOffSwitchListener = new OnOffSwitchListener();
+            autoManualSwitchListener = new AutoManualSwitchListener();
         }
 
         typeText.setText(type.getDescription());
@@ -165,10 +166,8 @@ public class ControlledRelayData extends Actuator {
 
 
     private class AutoManualSwitchListener implements CompoundButton.OnCheckedChangeListener {
-        private final SensClient client;
 
-        public AutoManualSwitchListener(SensClient client) {
-            this.client = client;
+        public AutoManualSwitchListener() {
         }
 
         @Override
@@ -179,14 +178,14 @@ public class ControlledRelayData extends Actuator {
                 case AUT:
                     if (isChecked) {
                         auto = EAuto.MAN;
-                        client.sendMessage(write());
+                        SesSocketSingleton.getInstance().sendMessage(write());
                         onOffSwitch.setEnabled(true);
                     }
                     break;
                 case MAN:
                     if (!isChecked) {
                         auto = EAuto.AUT;
-                        client.sendMessage(write());
+                        SesSocketSingleton.getInstance().sendMessage(write());
                         onOffSwitch.setEnabled(false);
                     }
                     break;
@@ -195,10 +194,9 @@ public class ControlledRelayData extends Actuator {
     }
 
     private class OnOffSwitchListener implements CompoundButton.OnCheckedChangeListener {
-        private final SensClient client;
 
-        public OnOffSwitchListener(SensClient client) {
-            this.client = client;
+        public OnOffSwitchListener() {
+
         }
 
         @Override
@@ -209,13 +207,13 @@ public class ControlledRelayData extends Actuator {
                 case ON:
                     if (!isChecked && auto.equals(EAuto.MAN)) {
                         status = EStatus.OFF;
-                        client.sendMessage(write());
+                        SesSocketSingleton.getInstance().sendMessage(write());
                     }
                     break;
                 case OFF:
                     if (isChecked && auto.equals(EAuto.MAN)) {
                         status = EStatus.ON;
-                        client.sendMessage(write());
+                        SesSocketSingleton.getInstance().sendMessage(write());
                     }
                     break;
             }

@@ -49,7 +49,7 @@ public class Node implements ISensAdapterItems {
     }
 
     @Override
-    public View getView(LayoutInflater inflater, View convertView, ViewGroup parent, SensClient client) {
+    public View getView(LayoutInflater inflater, View convertView, ViewGroup parent) {
         View vi = convertView;
         if (vi == null) {
             vi = inflater.inflate(R.layout.sensadapter_node_item_layout, parent, false);

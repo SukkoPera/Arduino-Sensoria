@@ -11,7 +11,7 @@ class SensNetworkTask extends AsyncTask<DatagramPacket, Integer, String> {
     protected String doInBackground(DatagramPacket[] messages) {
 
             try {
-                SesSocketSingleton.getInstance().getListenerSocket().send(messages[0]);
+                SesSocketSingleton.getInstance().send(messages[0]);
             } catch (IOException e) {
                 e.printStackTrace();
             }

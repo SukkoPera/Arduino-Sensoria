@@ -24,11 +24,9 @@ import com.sensoria.typhosoft.sensapp.network.SensClient;
 public class SensAdapter extends ArrayAdapter<ISensAdapterItems> {
 
     public final LayoutInflater inflater;
-    private SensClient client;
 
     public SensAdapter(SensActivity context, int resource, SensClient sensClient) {
         super(context, resource, SensController.getInstance().adapterItems);
-        this.client = sensClient;
         setNotifyOnChange(true);
         inflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
     }
@@ -49,10 +47,6 @@ public class SensAdapter extends ArrayAdapter<ISensAdapterItems> {
     public View getView(int position, View convertView, ViewGroup parent) {
         ISensAdapterItems currentRowItem = getItem(position);
         //TODO: remove porcata sensClient
-        return currentRowItem.getView(inflater, convertView,parent, client);
-    }
-
-    public void setClient(SensClient client) {
-        this.client = client;
+        return currentRowItem.getView(inflater, convertView,parent);
     }
 }
