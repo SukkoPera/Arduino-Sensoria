@@ -9,7 +9,7 @@ private:
 
 public:
 	boolean begin (FlashString name, FlashString description, DallasTemperature *_sensors, DeviceAddress _sensorAddress) {
-		if (_sensors != NULL && Sensor::begin (name, F("WD"), description, F("20160320"))) {
+		if (_sensors != NULL && Sensor::begin (name, F("WD"), description)) {
 			sensors = _sensors;
 
 			// Maybe the DallasTemperature library should provide a copyAddress() method...

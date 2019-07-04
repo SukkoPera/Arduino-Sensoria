@@ -49,65 +49,99 @@ char *floatToString (double val, char *outstr) {
 // Modifed by SukkoPera to reflect the avrlibc function behavior, i.e.:
 // The utoa() function returns the pointer passed as s.
 char *itoa(int value, char *ssp, int radix) {
-		char tmp[16];// be careful with the length of the buffer
-		char *tp = tmp;
-		char *sp = ssp;
-		int i;
-		unsigned v;
+	char tmp[16];// be careful with the length of the buffer
+	char *tp = tmp;
+	char *sp = ssp;
+	int i;
+	unsigned v;
 
-		int sign = (radix == 10 && value < 0);
-		if (sign)
-				v = -value;
-		else
-				v = (unsigned) value;
+	int sign = (radix == 10 && value < 0);
+	if (sign)
+			v = -value;
+	else
+			v = (unsigned) value;
 
-		while (v || tp == tmp)
-		{
-				i = v % radix;
-				v /= radix;
-				if (i < 10)
-					*tp++ = i + '0';
-				else
-					*tp++ = i + 'a' - 10;
-		}
-
-		if (sign)
-				*sp++ = '-';
-
-		while (tp > tmp)
-				*sp++ = *--tp;
-
-		*sp = '\0';
-
-		return ssp;
-}
-
-// Modified version of the above that handles unsigned int's
-// By SukkoPera
-char *utoa(unsigned int v, char *ssp, int radix) {
-		char tmp[16];// be careful with the length of the buffer
-		char *tp = tmp;
-		char *sp = ssp;
-		int i;
-
-		while (v || tp == tmp) {
+	while (v || tp == tmp)
+	{
 			i = v % radix;
 			v /= radix;
 			if (i < 10)
 				*tp++ = i + '0';
 			else
 				*tp++ = i + 'a' - 10;
-		}
+	}
 
-		while (tp > tmp)
+	if (sign)
+			*sp++ = '-';
+
+	while (tp > tmp)
 			*sp++ = *--tp;
 
-		*sp = '\0';
+	*sp = '\0';
 
-		return ssp;
+	return ssp;
 }
 
+// Modified version of the above that handles unsigned int's
+// By SukkoPera
+char *utoa(unsigned int v, char *ssp, int radix) {
+	char tmp[16];// be careful with the length of the buffer
+	char *tp = tmp;
+	char *sp = ssp;
+	int i;
+
+	while (v || tp == tmp) {
+		i = v % radix;
+		v /= radix;
+		if (i < 10)
+			*tp++ = i + '0';
+		else
+			*tp++ = i + 'a' - 10;
+	}
+
+	while (tp > tmp)
+		*sp++ = *--tp;
+
+	*sp = '\0';
+
+	return ssp;
+}
+
+// Reworked from Arduino's Print.h
+char *ultoa(unsigned long n, char *sp, int radix) {
+	char buf[8 * sizeof(long) + 1]; // Assumes 8-bit chars plus zero byte.
+	char *str = &buf[sizeof(buf) - 1];
+
+	*str = '\0';
+
+	// prevent crash if called with base == 1
+	if (radix < 2) radix = 10;
+
+	do {
+		char c = n % radix;
+		n /= radix;
+
+		*--str = c < 10 ? c + '0' : c + 'A' - 10;
+	} while(n);
+
+	while (*str)
+		*sp++ = *str++;
+	*sp = '\0';
+
+	return sp;
+}
 #endif	// ARDUINO_ARCH_STM32F1
+
+static char *strchr_escaped (char *s, int c) {
+	static const char ESCAPE_CHAR = '\\';
+
+	char prev = ' ';
+	while (*s && (*s != c || prev == ESCAPE_CHAR)) {
+			prev = *s++;
+	}
+
+	return *s ? s : NULL;
+}
 
 int splitString (char *str, char **parts, size_t n, const char sep) {
 	size_t i;
@@ -117,7 +151,7 @@ int splitString (char *str, char **parts, size_t n, const char sep) {
 		parts[i] = str;
 
 		// Find next separator
-		if ((c = strchr (str, sep))) {
+		if ((c = strchr_escaped (str, sep))) {
 			*c = '\0';	// Terminate
 
 			// Find next non-separator

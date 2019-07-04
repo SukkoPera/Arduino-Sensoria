@@ -1,3 +1,17 @@
+/* To make this fit on a Nano, as of 04/06/2018:
+ * - AllStereotypes.{h,cpp}: Comment out all stereotypes except WD;
+ * - common.h: Do not enable ENABLE_NOTIFICATIONS;
+ * - Server.h: Set OUT_BUF_SIZE = 144;
+ * - ESPWifi.h: Set IN_BUF_SIZE = 128 and N_ADDRESSES = 4.
+ *
+ * This results in 27804 byte (86%) flash and 1629 byte (79%) RAM with Arduino
+ * 1.8.5 and seems to work reliably, even though the HLO reply gets partially
+ * cut (i.e.: "Outdoor Pr").
+ *
+ * Probably it would be better to set IN_BUF_SIZE = 64 (or even 32, we only get
+ * short REA commands here) and leave OUT_BUF_SIZE = 192.
+ */
+
 #include <Sensoria.h>
 
 // Digital Light Sensor
@@ -158,7 +172,7 @@ void setup (void) {
 	//Serial.println (F("GO!"));
 	pinMode (LED_BUILTIN, OUTPUT);
 
-	for (int i = 0; i < 3; i++) {
+	for (byte i = 0; i < 3; i++) {
 		digitalWrite (LED_BUILTIN, HIGH);
 		delay (100);
 		digitalWrite (LED_BUILTIN, LOW);

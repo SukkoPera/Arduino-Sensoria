@@ -11,7 +11,7 @@ public:
 	}
 
 	bool begin (FlashString name, FlashString description, BH1750& _lightMeter) {
-		if (Sensor::begin (name, F("WD"), description, F("20160320"))) {
+		if (Sensor::begin (name, F("WD"), description)) {
 			lightMeter = &_lightMeter;
 			return true;
 		} else {

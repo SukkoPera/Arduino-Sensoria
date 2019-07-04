@@ -17,7 +17,7 @@ public:
   }
 
   boolean begin (FlashString name, FlashString description, byte _pin, boolean invertedLogic = false, State initialState = RelayData::STATE_OFF) {
-    if (Actuator::begin (name, F("RS"), description, F("20160320")) && _pin != NO_PIN) {
+    if (Actuator::begin (name, F("RS"), description) && _pin != NO_PIN) {
       pin = _pin;
       inverted = invertedLogic;
       state = initialState;

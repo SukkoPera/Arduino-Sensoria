@@ -7,8 +7,11 @@
 #include <SensoriaCore/utils.h>
 #include <SensoriaCore/debug.h>
 
+#ifdef ARDUINO_ARCH_STM32F1
+#define IN_BUF_SIZE 768
+#else
 #define IN_BUF_SIZE 192
-
+#endif
 
 
 class SensoriaEthernetUIPCommunicator: public SensoriaCommunicator {
@@ -154,6 +157,7 @@ public:
 		}
 	}
 
+#ifdef ENABLE_NOTIFICATIONS
 	virtual SensoriaAddress* getNotificationAddress (const SensoriaAddress* client) override {
 		UdpAddress* addr = reinterpret_cast<UdpAddress*> (getAddress ());
 		if (addr) {
@@ -164,6 +168,7 @@ public:
 
 		return addr;
 	}
+#endif
 
 	/*****/
 
@@ -264,13 +269,15 @@ public:
 		boolean ret = false;
 
 		while (!ret && millis () - lastBroadcastTime < timeout) {
-			UdpAddress addr;
-			ret = receiveGeneric (udpMain, reply, addr.ip, addr.port);
+			IPAddress ip;
+			uint16_t port;
+			ret = receiveGeneric (udpMain, reply, ip, port);
 			if (ret) {
 				// Got something
 				UdpAddress* senderUdp = reinterpret_cast<UdpAddress*> (getAddress ());
 				if (senderUdp) {
-					*senderUdp = addr;
+					senderUdp -> ip = ip;
+					senderUdp -> port = port;			// Don't touch the inUse flag!
 					sender = senderUdp;
 				} else {
 					DPRINTLN (F("Cannot allocate address for broadcast reply"));
@@ -282,11 +289,13 @@ public:
 		return ret;
 	}
 
+#ifdef ENABLE_NOTIFICATIONS
 	boolean receiveNotification (char*& notification) override {
 		IPAddress ip;
 		uint16_t port;
 		return receiveGeneric (udpNot, notification, ip, port);
 	}
+#endif
 };
 
 #endif

@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+# TODO: Handle unmarshalling failures
+
 import sys
 
 from common import *
@@ -45,6 +47,36 @@ class TransducerProxy (object):
 			# Already setup
 			return True
 
+	def stopNotify (self, typ):
+		typeStrings = {
+			PERIODIC: "PRD",
+			ON_CHANGE: "CHA"
+		}
+
+		assert self.server is not None
+		assert typ in typeStrings
+
+		reply = self.server.send ("NDL %s %s" % (self.name, typeStrings[typ]))
+		if reply.upper () == "OK":
+			# FIXME
+			# ~ self.notificationClients.append (callback)
+			return True
+		else:
+			raise Error, "Unexpected NDL reply: '%s'" % reply
+			return False
+
+	def cancelAllNotifications (self):
+		assert self.server is not None
+
+		reply = self.server.send ("NCL")
+		if reply.upper () == "OK":
+			# FIXME
+			# ~ self.notificationClients.append (callback)
+			return True
+		else:
+			raise Error, "Unexpected NCL reply: '%s'" % reply
+			return False
+
 	# This can only be called from Client
 	def _processNotification (self, marshaledData):
 			data = self.stereoclass.unmarshalStatic (marshaledData)
@@ -69,8 +101,20 @@ class SensorProxy (TransducerProxy):
 			parts = reply.split (" ", 1)
 			if len (parts) != 2:
 				raise Error, "Unexpected REA reply: '%s'" % reply
-			name, rest = parts
-			assert name == self.name
+			
+			if self.server.protocolVersion == 0:
+				name, rest = parts
+				assert name == self.name, "REA sensor name mismatch: '%s' vs '%s'" % (name, self.name)
+			elif self.server.protocolVersion == 1:
+				status, rest = parts
+				if status.upper () != "OK":
+					if len (parts) > 1:
+						raise Error (parts[1])
+					else:
+						raise Error ()
+			else:
+				raise Error, "Unsupported protocol version for REA"
+				
 			if raw:
 				return rest
 			else:
@@ -90,17 +134,27 @@ class ActuatorProxy (TransducerProxy):
 	def __init__ (self, name, typ, stereotype, description, stereoclass, srv):
 		super (ActuatorProxy, self).__init__ (srv, ACTUATOR, name, stereotype, stereoclass, description, "N/A")
 
-	def write (self, what):
+	def write (self, what, raw = False):
 		assert self.server is not None
 		marshalled = what.marshal ()
 		rep = self.server.send ("WRI %s %s" % (self.name, marshalled))
 		parts = rep.split (" ", 1)
 		rep0 = parts[0].upper ()
-		if rep0 != "OK":
+		if rep0 == "OK":
 			if len (parts) > 1:
-				raise Error, "Write failed: %s" % parts[1]
+				# New transducer status follows
+				rest = parts[1]
+				if raw:
+					return rest
+				else:
+					return self.stereoclass.unmarshalStatic (rest)
 			else:
-				raise Error, "Write failed"
+				return None
+		else:
+			if len (parts) > 1:
+				raise Error (parts[1])
+			else:
+				raise Error ()
 
 	def read (self, raw = False):
 		assert self.server is not None
@@ -108,8 +162,20 @@ class ActuatorProxy (TransducerProxy):
 		parts = reply.split (" ", 1)
 		if len (parts) != 2:
 			raise Error, "Unexpected REA reply: '%s'" % reply
-		name, rest = parts
-		assert name == self.name
+		
+		if self.server.protocolVersion == 0:
+			name, rest = parts
+			assert name == self.name, "REA actuator name mismatch: '%s' vs '%s'" % (name, self.name)
+		elif self.server.protocolVersion == 1:
+			status, rest = parts
+			if status.upper () != "OK":
+				if len (parts) > 1:
+					raise Error (parts[1])
+				else:
+					raise Error ()
+		else:
+			raise Error, "Unsupported protocol version for REA"
+			
 		if raw:
 			return rest
 		else:

@@ -21,7 +21,7 @@ public:
   boolean begin (FlashString name, FlashString description, byte _pin, boolean invertedLogic = false,
                  State initialState = ControlledRelayData::STATE_OFF,
                  Controller initialController = ControlledRelayData::CTRL_AUTO) {
-    if (Actuator::begin (name, F("CR"), description, F("20170128")) && _pin != NO_PIN) {
+    if (Actuator::begin (name, F("CR"), description) && _pin != NO_PIN) {
       pin = _pin;
       inverted = invertedLogic;
       state = initialState;

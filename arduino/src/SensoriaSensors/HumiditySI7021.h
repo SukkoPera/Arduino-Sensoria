@@ -11,7 +11,7 @@ public:
 	}
 
 	bool begin (FlashString name, FlashString description) {
-		if (Sensor::begin (name, F("WD"), description, F("20160320"))) {
+		if (Sensor::begin (name, F("WD"), description)) {
 #ifdef ARDUINO_ARCH_ESP8266
       if (!sensor.begin (D3, D4)) {
 #else

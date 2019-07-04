@@ -19,7 +19,8 @@ private:
 
 	boolean parseHloReply (char *reply, char*& serverName, char** transducerList);
 
-	ServerProxy* realizeServer (SensoriaAddress* addr, char*& serverName, char** transducerList, uint16_t crc);
+	void realizeServer (ServerProxy* srvpx, const char*& serverName,
+		const byte protocolVersion, char** transducerList, uint16_t crc);
 
 	friend class SensoriaIterator;
 

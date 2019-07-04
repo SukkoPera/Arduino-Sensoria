@@ -53,7 +53,7 @@ public:
 	}
 
 	bool begin (FlashString name, FlashString description, SFE_TSL2561 &_lightMeter, boolean _gain, unsigned int _ms) {
-		if (Sensor::begin (name, F("WD"), description, F("20160320"))) {
+		if (Sensor::begin (name, F("WD"), description)) {
 			lightMeter = &_lightMeter;
 			gain = _gain;
 			ms = _ms;

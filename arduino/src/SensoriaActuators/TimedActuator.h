@@ -98,7 +98,7 @@ public:
 	}
 
 	boolean begin (FlashString name, FlashString description) {
-		if (Actuator::begin (name, F("TC"), description, F("20180507"))) {
+		if (Actuator::begin (name, F("TC"), description)) {
 			return true;
 		} else {
 			return false;
@@ -118,6 +118,14 @@ public:
 	}
 
 	boolean read (TimeControlData& rd) override {
-		return false;	// FIXME
+		boolean ret = true;
+
+		for (byte d = 0; d < DAYS_PER_WEEK; ++d) {
+			for (byte h = 0; h < HOURS_PER_DAY; ++h) {
+				rd.data[d][h] = getValue (d, h);
+			}
+		}
+
+		return ret;
 	}
 };

@@ -9,6 +9,9 @@ import time
 import math
 import urllib
 import urllib2
+import logging
+import signal
+import argparse
 
 import Sensoria
 
@@ -19,9 +22,48 @@ WU_STATION_ID = ""
 WU_STATION_KEY = ""
 WU_UPLOAD_URL = "https://weatherstation.wunderground.com/weatherstation/updateweatherstation.php"
 
-print "Logging data every %d minutes" % DEFAULT_INTERVAL
+KEEP_GOING = True
 
-sensoria = Sensoria.Client (autodiscInterval = 5 * 60)
+def sigHandler (signum, frame):
+	global KEEP_GOING
+
+	print 'Received signal', signum
+	KEEP_GOING = False
+
+signal.signal (signal.SIGHUP, sigHandler)
+signal.signal (signal.SIGTERM, sigHandler)
+
+
+parser = argparse.ArgumentParser (description = 'Send data to WeatherUnderground')
+parser.add_argument ('--interval', "-i", action = 'store', type = int, default = DEFAULT_INTERVAL,
+					 help = "Data log interval", metavar = "MINUTES")
+parser.add_argument ('--no-discovery', "-n", action = 'store_true', default = False,
+					 help = "Do not discover transducers at startup")
+parser.add_argument ('--autodiscovery', "-A", action = 'store', type = int, default = None,
+					 help = "Autodiscovery interval", metavar = "SECONDS")
+parser.add_argument ('--verbose', "-v", action = 'count',
+					 help = "Enable debugging messages")
+
+args = parser.parse_args ()
+if args.verbose == 2:
+	logging.basicConfig (level = logging.DEBUG_COMMS, format = '[%(asctime)s - %(levelname)s:%(filename)s:%(lineno)d] %(message)s')
+elif args.verbose == 1:
+	logging.basicConfig (level = logging.DEBUG, format = '[%(asctime)s - %(levelname)s:%(filename)s:%(lineno)d] %(message)s')
+else:
+	logging.basicConfig (level = logging.INFO, format = '[%(asctime)s] %(message)s')
+
+# ~ sensoria = Sensoria.Client (servers = args.addresses)
+sensoria = Sensoria.Client ()
+if args.no_discovery and args.autodiscovery:
+	# Someone must be losing his/her mind...
+	parser.print_help ()
+	sys.exit (1)
+elif not args.no_discovery:
+	sensoria.discover ()
+	if args.autodiscovery is not None:
+		sensoria.enableAutodiscovery (args.autodiscovery)
+
+print "Logging data every %d minutes" % args.interval
 
 def celsius2fahrenheit (t):
 	return float (t) *  9 / 5 + 32

@@ -19,6 +19,10 @@ char *floatToString (double val, char *outstr);
 #ifdef ARDUINO_ARCH_STM32F1
 char *itoa(int value, char *sp, int radix);
 char *utoa(unsigned int value, char *sp, int radix);
+
+// Please make sure that sp is large enough (i.e: at least 11 chars if longs are
+// 32-bit)
+char *ultoa(unsigned long n, char *sp, int radix);
 #endif
 
 // WARNING: str is updated in-place

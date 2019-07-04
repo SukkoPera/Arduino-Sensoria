@@ -44,7 +44,7 @@ public:
 	}
 
 	bool begin (FlashString name, FlashString description, DHT& _dht) {
-		if (Sensor::begin (name, F("WD"), description, F("20171121"))) {
+		if (Sensor::begin (name, F("WD"), description)) {
 			dht = &_dht;
 			return true;
 		} else {

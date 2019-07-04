@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import sys
 import argparse
 import time
 import datetime
@@ -20,31 +21,37 @@ signal.signal (signal.SIGHUP, sigHandler)
 signal.signal (signal.SIGTERM, sigHandler)
 
 
-parser = argparse.ArgumentParser (description = 'Query Sensoria devices')
+parser = argparse.ArgumentParser (description = 'Log data from Sensoria transducers')
 parser.add_argument ('--address', metavar = "ADDRESS", nargs = '*', default = [], dest = "addresses",
-										 help = "Address of node to query")
+										 help = "Address of node to query (Can be used multiple times)")
 parser.add_argument ('--read-actuators', "-a", action = 'store_true', default = False,
 										 help = "Read Actuators too")
 parser.add_argument ('--interval', "-i", action = 'store', type = int, default = 0,
 										 help = "Keep reading transducers periodically", metavar = "SECONDS")
-parser.add_argument ('--autodiscover', "-A", action = 'store', type = int, default = None,
-										 help = "Autodiscover interval (0 to disable)", metavar = "SECONDS")
-parser.add_argument ('--verbose', "-v", action = 'store_true', default = False,
+parser.add_argument ('--no-discovery', "-n", action = 'store_true', default = False,
+										 help = "Do not discover transducers at startup")
+parser.add_argument ('--autodiscovery', "-A", action = 'store', type = int, default = None,
+										 help = "Autodiscovery interval", metavar = "SECONDS")
+parser.add_argument ('--verbose', "-v", action = 'count',
 										 help = "Enable debugging messages")
 
 args = parser.parse_args ()
-if args.verbose:
-	# ~ logging.basicConfig (filename='example.log',level=logging.DEBUG)
-	logging.basicConfig (level = logging.DEBUG)
+if args.verbose == 2:
+	logging.basicConfig (level = logging.DEBUG_COMMS, format = '[%(asctime)s - %(levelname)s:%(filename)s:%(lineno)d] %(message)s')
+elif args.verbose == 1:
+	logging.basicConfig (level = logging.DEBUG, format = '[%(asctime)s - %(levelname)s:%(filename)s:%(lineno)d] %(message)s')
 else:
-	logging.basicConfig (level = logging.INFO)
+	logging.basicConfig (level = logging.INFO, format = '[%(asctime)s] %(message)s')
 
-if args.autodiscover is None:
-	sensoria = Sensoria.Client (servers = args.addresses)
-elif args.autodiscover > 0:
-	sensoria = Sensoria.Client (servers = args.addresses, autodiscInterval = args.autodiscover)
-else:
-	sensoria = Sensoria.Client (servers = args.addresses, autodiscover = False)
+sensoria = Sensoria.Client (servers = args.addresses)
+if args.no_discovery and args.autodiscovery:
+	# Someone must be losing his/her mind...
+	parser.print_help ()
+	sys.exit (1)
+elif not args.no_discovery:
+	sensoria.discover ()
+	if args.autodiscovery is not None:
+		sensoria.enableAutodiscovery (args.autodiscovery)
 
 db = Sensoria.DB ()
 
@@ -78,7 +85,10 @@ while KEEP_GOING:
 					print ex
 
 		# All readings done, save to DB
-		db.insert (now, data, commit = True)
+		try:
+			db.insert (now, data, commit = True)
+		except Sensoria.Error as ex:
+			print "Error while saving to DB: %s"  % str (ex)
 
 	print "--- READ COMPLETE ---"
 

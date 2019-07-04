@@ -14,11 +14,22 @@
 #include "common.h"
 #include "debug.h"
 
-//~ #define ENABLE_CMD_QRY
+//~ #define ENABLE_CMD_DIE
+//~ #define ENABLE_CMD_RST
+
+#define ENABLE_DETAILED_ERRORS
+
 
 class SensoriaServer {
+public:
+	static const byte PROTOCOL_VERSION = 1;
+
 private:
+#ifdef ARDUINO_ARCH_STM32F1
+	static const word OUT_BUF_SIZE = 512;
+#else
 	static const byte OUT_BUF_SIZE = 192;
+#endif
 
 	SensoriaCommunicator* comm;
 
@@ -30,6 +41,10 @@ private:
 	byte nNotificationReqs;
 
 	NotificationRequest notificationReqs[MAX_NOTIFICATION_REQS];
+#endif
+
+#ifdef ENABLE_CMD_DIE
+	boolean running;
 #endif
 
 	char outBufRaw[OUT_BUF_SIZE];
@@ -47,16 +62,14 @@ private:
 #ifdef ENABLE_NOTIFICATIONS
 	int findNotification (const SensoriaAddress* clientAddr, NotificationType type, char* tName);
 
+	void deleteNotification (byte i);
+
 	NotificationType parseNotificationTypeStr (char *nTypeStr);
 
 	void handleNotificationReqs ();
 #endif
 
 	void cmd_hlo (const SensoriaAddress* clientAddr, char *args);
-
-#ifdef ENABLE_CMD_QRY
-	void cmd_qry (const SensoriaAddress* clientAddr, char *args);
-#endif
 
 	void cmd_rea (const SensoriaAddress* clientAddr, char *args);
 
@@ -70,6 +83,14 @@ private:
 	void cmd_ncl (const SensoriaAddress* clientAddr, char *args);
 #endif
 
+#ifdef ENABLE_CMD_DIE
+	void cmd_die (const SensoriaAddress* clientAddr, char *args);
+#endif
+
+#ifdef ENABLE_CMD_RST
+	void cmd_rst (const SensoriaAddress* clientAddr, char *args);
+#endif
+
 protected:
 	void process_cmd (char *buffer, const SensoriaAddress* senderAddr);
 
@@ -77,6 +98,8 @@ public:
 	SensoriaServer ();
 
 	boolean begin (FlashString _serverName, SensoriaCommunicator& _comm);
+
+	boolean end ();
 
 	void loop ();
 

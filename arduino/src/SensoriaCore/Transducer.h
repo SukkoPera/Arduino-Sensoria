@@ -18,21 +18,18 @@ public:
 	FlashString name;
 	FlashString stereotype;
 	FlashString description;
-	FlashString version;
 
 	Transducer (Type _type): type (_type) {
 		name = NULL;
 		description = NULL;
-		version = NULL;
 		stereotype = NULL;
 	}
 
-	virtual boolean begin (FlashString _name, FlashString _stereotype, FlashString _description, FlashString _version) {
+	virtual boolean begin (FlashString _name, FlashString _stereotype, FlashString _description) {
 		if (_name != NULL && _description != NULL && strlen_P (F_TO_PSTR (_name)) == 2) {
 			name = _name;
 			stereotype = _stereotype;
 			description = _description;
-			version = _version;
 
 			DPRINT (F("New transducer: "));
 			DPRINT (name);

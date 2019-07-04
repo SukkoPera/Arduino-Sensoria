@@ -12,9 +12,12 @@
 //~ #define DEBUG_COMMS
 #define CMD_LEN 3
 
+// FIXME: Not sure this works on AVRs
+static FlashString OK_STR PROGMEM = "OK";
 
 ServerProxy::ServerProxy (SensoriaCommunicator* _comm, SensoriaAddress* _address):
-		nFailures (0), comm (_comm), address (_address), nTransducers (0) {
+	protocolVersion (0), nFailures (0), comm (_comm), address (_address),
+	nTransducers (0) {
 
 	name[0] = '\0';
 }
@@ -112,15 +115,15 @@ boolean ServerProxy::read (TransducerProxy& t) {
 		if (splitString (r, p, 2) != 2) {
 			DPRINT (F("Unexpected REA reply: "));
 			DPRINTLN (r);
-		} else if (strcmp (p[0], t.name) != 0) {
-			DPRINT (F("Wrong transducer in REA reply: "));
-			DPRINTLN (r);
+		} else if (strcmp_P (p[0], OK_STR) != 0) {
+			DPRINT (F("Read failed"));
 		} else {
 			char *reply = p[1];
 			t.stereotype -> clear ();
 			ret = t.stereotype -> unmarshal (reply);
 		}
 	} else if (res == SensoriaCommunicator::SEND_TIMEOUT) {
+		DPRINTLN (F("Read timeout"));
 		nFailures++;
 	}
 
@@ -129,6 +132,7 @@ boolean ServerProxy::read (TransducerProxy& t) {
 
 #define SZ 32
 
+// UNTESTED!
 boolean ServerProxy::write (ActuatorProxy& a, Stereotype& st) {
 	boolean ret = false;
 
@@ -142,10 +146,19 @@ boolean ServerProxy::write (ActuatorProxy& a, Stereotype& st) {
 	if (tmp) {
 		SensoriaCommunicator::SendResult res = sendcmd (buf, tmp);
 		if (res > 0) {
-			ret = true;
+			char *p[2];
+			if (splitString (tmp, p, 2) < 1) {
+				DPRINT (F("Unexpected WRI reply: "));
+				DPRINTLN (tmp);
+			} else if (strcmp_P (p[0], OK_STR) != 0) {
+				DPRINT (F("Write failed"));
+			}
 		} else if (res == SensoriaCommunicator::SEND_TIMEOUT) {
+			DPRINTLN (F("Write timeout"));
 			nFailures++;
 		}
+	} else {
+		DPRINTLN (F("Marshalling failed"));
 	}
 
 	return ret;

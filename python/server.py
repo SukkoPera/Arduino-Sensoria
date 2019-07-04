@@ -9,14 +9,18 @@ import os
 import threading
 import time
 import copy
+import binascii
 
 import Sensoria
+import Sensoria.stereotypes as stereotypes2		# FIXME!
 from Sensoria.stereotypes.WeatherData import WeatherData
 from Sensoria.stereotypes.RelayData import RelayData
 from Sensoria.stereotypes.ControlledRelayData import ControlledRelayData
+from Sensoria.stereotypes.MotionData import MotionData
 from Sensoria.stereotypes.DateTimeData import DateTimeData
 from Sensoria.stereotypes.TimeControlData import TimeControlData
 from Sensoria.stereotypes.ValueSetData import ValueSetData
+from Sensoria.stereotypes.InstantMessageData import InstantMessageData
 
 LISTEN_PORT = 9999
 NOTIFICATION_PORT = 9998
@@ -141,14 +145,10 @@ class TimedActuator (Actuator):
 		tmp = TimeControlData ()
 		self.schedule = copy.deepcopy (tmp.schedule)
 
-	def write (self, rawdata):		# FIXME: Get this unmarshaled earlier!
-		data = TimeControlData ()
-		if data.unmarshal (rawdata):
-			self.schedule = copy.deepcopy (data.schedule)
-			ret = True, "Schedule updated"
-		else:
-			ret = False, "Unmarshal failed"
-		return ret
+	def write (self, data):
+		assert isinstance (data, TimeControlData)
+		self.schedule = copy.deepcopy (data.schedule)
+		return True, "Schedule updated"
 
 	def read (self):
 		data = TimeControlData ()
@@ -160,14 +160,10 @@ class ValueSetActuator (Actuator):
 		super (ValueSetActuator, self).__init__ (name, ValueSetData.getIdString (), description, version)
 		self.values = [None] * ValueSetData.NVALUES
 
-	def write (self, rawdata):		# FIXME: Get this unmarshaled earlier!
-		data = ValueSetData ()
-		if data.unmarshal (rawdata):
-			self.values = copy.deepcopy (data.values)
-			ret = True, "Values updated"
-		else:
-			ret = False, "Unmarshal failed"
-		return ret
+	def write (self, data):
+		assert isinstance (data, ValueSetData)
+		self.values = copy.deepcopy (data.values)
+		return True, "Values updated"
 
 	def read (self):
 		data = ValueSetData ()
@@ -192,13 +188,11 @@ class RelayActuator (Actuator):
 		    rd.state = RelayData.OFF
 		return rd
 
-	def write (self, rawdata):		# FIXME: Get this unmarshaled earlier!
-		data = RelayData ()
-		data.unmarshal (rawdata)
-
-		if data.state == RelayData.ON:
+	def write (self, rd):
+		assert isinstance (rd, RelayData)
+		if rd.state == RelayData.ON:
 			self.state = RelayActuator.State.ON
-		elif data.state == RelayData.OFF:
+		elif rd.state == RelayData.OFF:
 			self.state = RelayActuator.State.OFF
 		return True, "Relay is now %s" % self.state
 
@@ -231,12 +225,11 @@ class ControlledRelayActuator (Actuator):
 
 		return crd
 
-	def write (self, rawdata):		# FIXME: Get this unmarshaled earlier!
-		# Don't set fields to UNKNOWN!
-
-		data = ControlledRelayData ()
-		data.unmarshal (rawdata)
-
+	def write (self, data):
+		assert isinstance (data, ControlledRelayData)
+		
+		# NEVER set fields to UNKNOWN!
+		
 		if data.state == ControlledRelayData.ON:
 			self.state = ControlledRelayActuator.State.ON
 		elif data.state == ControlledRelayData.OFF:
@@ -251,17 +244,36 @@ class ControlledRelayActuator (Actuator):
 
 
 class CommandListener (object):
+	PROTOCOL_VERSION = 1
+	DEFAULT_ADVERTISE_INTERVAL = 60		# Seconds
+
 	def __init__ (self, name, port = LISTEN_PORT):
+		self._load_stereotypes ()
 		self.serverName = name
 		self.sensors = {}
 		self.notificationRequests = []
+		self._nrLock = threading.RLock ()
 		self._thread = None
+		self.advertiseInterval = CommandListener.DEFAULT_ADVERTISE_INTERVAL
 
 		self._sock = socket.socket (socket.AF_INET, socket.SOCK_DGRAM)
-		server_address = ('0', port)
+		server_address = ('', port)
 
-		print >> sys.stderr, 'Starting up on %s port %s' % server_address
+		print >> sys.stderr, 'Starting up on %s port %u' % ("INADDR_ANY" if not server_address[0] else server_address[0], server_address[1])
 		self._sock.bind (server_address)
+
+	def _load_stereotypes (self):
+		# Load stereotypes (Hmmm... A bit of a hack?)
+		self.stereotypes = {}
+		for clsname in stereotypes2.__all__:
+			# ~ exec ("import stereotypes.%s" % clsname)
+			cls = eval ("stereotypes2.%s.%s" % (clsname, clsname))
+			id_ = cls.getIdString ()
+			print "Registering stereotype: %s (%s)" % (clsname, id_)
+			if id_ in self.stereotypes:
+				print "Duplicate stereotype: %s" % id_
+			else:
+				self.stereotypes[cls.getIdString ()] = cls
 
 	def register_sensor (self, sensor):
 		if sensor.name in self.sensors:
@@ -277,30 +289,40 @@ class CommandListener (object):
 			del self.sensors[sensor.name]
 			print "Unregistered sensor %s" % (sensor.name)
 
+	def setAdvertiseInterval (self, sec):
+		self.advertiseInterval = sec
 
 	def _reply (self, addr, what):
 		if DEBUG:
 			print "%s:%s <-- %s" % (addr[0], addr[1], what)
 		self._sock.sendto (what + "\r\n", addr)
 
+	def _getServerId (self):
+		idStr = "%s %s" % (CommandListener.PROTOCOL_VERSION, "|".join (("%s %s %s %s" % (sensor.name, sensor.get_type_string (), sensor.stereotype, sensor.description)).rstrip () for sensor in self.sensors.itervalues ()))
+		return "%08x" % (binascii.crc32 (idStr) & 0xffffffff)
+
+	def _advertise (self):
+		try:
+			advMsg = "ADV %s %s %u" % (self.serverName, self._getServerId (), LISTEN_PORT)
+			s = socket.socket (socket.AF_INET, socket.SOCK_DGRAM)
+			s.setsockopt (socket.SOL_SOCKET,socket.SO_BROADCAST, 1)
+			# ~ s.sendto (advMsg, ('<broadcast>', NOTIFICATION_PORT))
+			s.sendto (advMsg, ('127.0.0.1', NOTIFICATION_PORT))
+		except Exception as ex:
+			print >> sys.stderr, "Periodic advertisement failed: %s" % str (ex)
+
 	def _qry (self, addr, args):
-		if args is not None and len (args) > 0:
-			name = args.upper ()
-			try:
-				sensor = self.sensors[name]
-				self._reply (addr, "QRY %s|%s|%s|%s|%s" % (sensor.name, sensor.get_type_string (), sensor.stereotype, sensor.description, sensor.version))
-			except KeyError:
-				self._reply (addr, "ERR No such transducer: %s" % name)
-		else:
-			# List all sensors
-			self._reply (addr, "QRY %s" % "|".join ("%s %s %s %s" % (sensor.name, sensor.get_type_string (), sensor.stereotype, sensor.description) for sensor in self.sensors.itervalues ()))
+		transducerList = "|".join (("%s %s %s %s" % (sensor.name, sensor.get_type_string (), sensor.stereotype, sensor.description)).rstrip () for sensor in self.sensors.itervalues ())
+		self._reply (addr, "QRY %s %d %s %s" % (self.serverName, CommandListener.PROTOCOL_VERSION, self._getServerId (), transducerList))
 
 	def _ver (self, addr, args):
 		self._reply (addr, "VER %s" % self.serverName)
 
 	def _hlo (self, addr, args):
-		self._reply (addr, "HLO %s %s" % (self.serverName, "|".join (("%s %s %s %s" % (sensor.name, sensor.get_type_string (), sensor.stereotype, sensor.description)).rstrip () for sensor in self.sensors.itervalues ())))
+		self._reply (addr, "HLO %s %d %s" % (self.serverName, CommandListener.PROTOCOL_VERSION, "|".join (("%s %s %s %s" % (sensor.name, sensor.get_type_string (), sensor.stereotype, sensor.description)).rstrip () for sensor in self.sensors.itervalues ())))
 
+	def _who (self, addr, args):
+		self._advertise ()
 
 	def _rea (self, addr, args):
 		if args is not None and len (args) > 0:
@@ -308,40 +330,62 @@ class CommandListener (object):
 			try:
 				sensor = self.sensors[name]
 				val = sensor.read ()
-				#~ if ts is not None:
-					#~ self._reply (addr, "REA %s %s %s" % (name, str (val), ts))
-				#~ else:
-				self._reply (addr, "REA %s %s" % (name, str (val.marshal ())))
-				#~ else:
-					#~ self._reply (addr, "ERR Sensor is not readable")
+				if val is not None:
+					self._reply (addr, "REA OK %s" % str (val.marshal ()))
+				else:
+					self._reply (addr, "REA ERR Read failed")
 			except KeyError:
-				self._reply (addr, "ERR No such sensor: %s" % name)
+				self._reply (addr, "REA ERR No such sensor: %s" % name)
+			except Exception as ex:
+				reason = str (ex)
+				if len (reason) > 0:
+					self._reply (addr, "REA ERR Read failed: %s" % reason)
+				else:
+					self._reply (addr, "REA ERR Read failed")
 		else:
-			self._reply (addr, "ERR Missing sensor number")
+			self._reply (addr, "REA ERR Missing transducer name")
 
 	def _wri (self, addr, args):
 		if args is not None and len (args) > 0:
 			parts = args.split (" ", 1)
 			name = parts[0].upper ()
-			val = parts[1]
+			rawdata = parts[1]
 			try:
 				sensor = self.sensors[name]
 				if sensor.type == Sensor.Type.ACTUATOR:
-					ok, msg = sensor.write (val)
-					if ok:
-						st = "OK"
+					stereoclass = self.stereotypes[sensor.stereotype]
+					data = stereoclass ()
+					if data.unmarshal (rawdata):
+						ok, msg = sensor.write (data)		# FIXME: Discard msg
+						if ok:
+							# Write succeeded, try to read back new status
+							try:
+								val = sensor.read ()
+								if val is not None:
+									# Read ok, append result to reply
+									self._reply (addr, "WRI OK %s" % str (val.marshal ()))
+								else:
+									# Write succeded but subsequent Read failed,
+									# WTF??? Report success and leave it to the
+									# client to sort out the situation.
+									self._reply (addr, "WRI OK")
+							except Exception as ex:
+								# Write succeded but marshaling the new
+								# status failed, report success anyway, the
+								# client can always try a new Read.
+								print >> sys.stderr, "Read after Write failed: %s" % str (ex)
+								self._reply (addr, "WRI OK")
+						else:
+							# Write failed
+							self._reply (addr, "WRI ERR Write failed")
 					else:
-						st = "ERR"
-					if msg is not None:
-						self._reply (addr, "WRI %s %s" % (st, msg))
-					else:
-						self._reply (addr, "WRI %s" % st)
+						self._reply (addr, "WRI ERR Unmarshal failed")
 				else:
-					self._reply (addr, "ERR Sensor is not writable")
+					self._reply (addr, "WRI ERR Sensor is not writable")
 			except KeyError:
-				self._reply (addr, "ERR No such sensor: %s" % name)
+				self._reply (addr, "WRI ERR No such sensor: %s" % name)
 		else:
-			self._reply (addr, "ERR Missing or malformed args")
+			self._reply (addr, "WRI ERR Missing or malformed args")
 
 	def _nrq (self, addr, args):
 		if args is not None and len (args) > 0:
@@ -355,16 +399,20 @@ class CommandListener (object):
 						#~ rest = parts[2:]
 						print >> sys.stderr, "Notifying on change of %s" % sensor.name
 						req = OnChangeNotificationRequest ((addr[0], NOTIFICATION_PORT), self._sock, sensor)
+						self._nrLock.acquire ()
 						self.notificationRequests.append (req)
+						self._nrLock.release ()
 						self._reply (addr, "NRQ OK")
 					elif typ == "PRD":
 						if len (parts) < 3:
-							self._reply (addr, "NRQ %s ERR No interval specified" % sensor.name)
+							self._reply (addr, "NRQ ERR No interval specified")
 						else:
 							intv = int (parts[2])
 							print >> sys.stderr, "Notifying values of %s every %d seconds" % (sensor.name, intv)
 							req = PeriodicNotificationRequest ((addr[0], NOTIFICATION_PORT), self._sock, sensor, intv)
+							self._nrLock.acquire ()
 							self.notificationRequests.append (req)
+							self._nrLock.release ()
 							self._reply (addr, "NRQ OK")
 				except KeyError:
 					self._reply (addr, "ERR No such sensor: %s" % name)
@@ -372,6 +420,12 @@ class CommandListener (object):
 				self._reply (addr, "ERR Missing or malformed args")
 		else:
 			self._reply (addr, "ERR Missing or malformed args")
+
+	def _ncl (self, addr, args):
+		self._nrLock.acquire ()
+		self.notificationRequests = []
+		self._nrLock.release ()
+		self._reply (addr, "NCL OK")
 
 	def start (self):
 		self._shallStop = False
@@ -383,14 +437,17 @@ class CommandListener (object):
 	def _serverThread (self):
 		handlers = {
 			"VER": self._ver,
+			"WHO": self._who,
 			"HLO": self._hlo,
 			"REA": self._rea,
 			"WRI": self._wri,
 			"QRY": self._qry,
-			"NRQ": self._nrq
+			"NRQ": self._nrq,
+			"NCL": self._ncl
 		}
 
-		print  >> sys.stderr, 'Waiting for commands...'
+		print >> sys.stderr, 'Waiting for commands...'
+		nTimeouts = 0
 		while not self._shallStop:
 			rlist = [self._sock, self._quitPipe[0]]
 			r, w, x = select.select (rlist, [], [], 1)
@@ -400,42 +457,54 @@ class CommandListener (object):
 				print "Server thread exiting!"
 				os.read (self._quitPipe[0], 1)
 			elif self._sock in r:
-				line, client_address = self._sock.recvfrom (RECV_BUFSIZE)
+				try:
+					line, client_address = self._sock.recvfrom (RECV_BUFSIZE)
 
-				if line == "":
-					break
-				else:
-					line = line.strip ()
-					self.msg_ip = client_address[0]
-					self.msg_port = int (client_address[1])
+					if line == "":
+						break
+					else:
+						line = line.strip ()
+						self.msg_ip = client_address[0]
+						self.msg_port = int (client_address[1])
 
-					for data in line.split ("\n"):
-						data = data.strip ()
-						if DEBUG:
-							print "%s:%s --> %s" % (self.msg_ip, self.msg_port, data)
+						for data in line.split ("\n"):
+							data = data.strip ()
+							if DEBUG:
+								print "%s:%s --> %s" % (self.msg_ip, self.msg_port, data)
 
-						parts = data.split (" ", 1)
-						if len (parts) < 1:
-							print >> sys.stderr, "Malformed command: '%s'" % data
-							self._reply (client_address, "ERR Malformed command: '%s'" % data)
-						else:
-							cmd = parts[0].upper ()
-
-							if len (parts) > 1:
-								args = parts[1]
+							parts = data.split (" ", 1)
+							if len (parts) < 1:
+								print >> sys.stderr, "Malformed command: '%s'" % data
+								self._reply (client_address, "ERR Malformed command: '%s'" % data)
 							else:
-								args = None
+								cmd = parts[0].upper ()
 
-							try:
-								handler = handlers[cmd]
-								handler (client_address, args)
-							except KeyError:
-								print >> sys.stderr, "Unknown command: '%s'" % cmd
-								self._reply (client_address, "ERR Unknown command: '%s'" % cmd)
+								if len (parts) > 1:
+									args = parts[1]
+								else:
+									args = None
+
+								try:
+									handler = handlers[cmd]
+									handler (client_address, args)
+								except KeyError:
+									print >> sys.stderr, "Unknown command: '%s'" % cmd
+									self._reply (client_address, "ERR Unknown command: '%s'" % cmd)
+				except Exception as ex:
+					print >> sys.stderr, "Socket error: %s" % str (ex)
 			else:
 				# Periodically process notifications
+				self._nrLock.acquire ()
 				for nrq in self.notificationRequests:
 					nrq.process ()
+				self._nrLock.release ()
+
+				# Also send periodic server advertisement
+				nTimeouts += 1
+				if self.advertiseInterval != 0 and nTimeouts >= self.advertiseInterval:
+					print "Sending periodic advertisement"
+					self._advertise ()
+					nTimeouts = 0
 		print "X"
 
 	def stop (self):

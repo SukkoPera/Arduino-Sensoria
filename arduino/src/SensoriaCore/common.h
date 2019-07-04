@@ -2,14 +2,19 @@
 #define _COMMON_H_INCLUDED
 
 // Size of marshaling buffer
+#ifdef ARDUINO_ARCH_STM32F1
+#define SENSOR_BUF_SIZE 256
+#else
 #define SENSOR_BUF_SIZE 32
+#endif
+
 
 // Uses ~1600b flash, ~120b RAM
 #define ENABLE_NOTIFICATIONS
 
 #if !defined(ARDUINO_ARCH_ESP8266) && !defined(ARDUINO_ARCH_STM32F1)
-  // Flash strings don't seem to work very well on ESP8266
-  #define ENABLE_FLASH_STRINGS
+	// Flash strings don't seem to work very well on ESP8266
+	#define ENABLE_FLASH_STRINGS
 #endif
 
 

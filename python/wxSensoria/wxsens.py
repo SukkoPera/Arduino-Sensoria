@@ -1,37 +1,47 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 import ConfigParser
 import os
 import sys
 import logging
 import datetime
+import copy
 import threading
 
 import wx
 from timerpanel import TimerEditDialog
 from settingspanel import SettingsEditDialog
+from sendmessagedialog import SendMessageDialog
 
 import Sensoria
 
 from ObjectListView import ObjectListView, GroupListView, ColumnDefn
+
+from threadpool import ThreadPool
 
 # For Python 2.6
 def timedelta_total_seconds (timedelta):
 	return (timedelta.microseconds + 0.0 + \
 		(timedelta.seconds + timedelta.days * 24 * 3600) * 10 ** 6) / 10 ** 6
 
+THREADPOOL = ThreadPool (num_threads = 4, qlen = 20)
+
 class Config (object):
 	FILENAME = "wxsens.ini"
 	SERVER_LIST_SEPARATOR = ','
+	DEFAULT_SIZE = (600, 400)
 
 	def __init__ (self):
-		self.winPos = None
-		self.winSize = None
-		self.transducerUpdateInterval = 5	# s
+		w, h = wx.DisplaySize ()
+		self.winPos = ((w - Config.DEFAULT_SIZE[0]) / 2, (h - Config.DEFAULT_SIZE[1]) / 2)
+		self.winSize = Config.DEFAULT_SIZE
+		self.transducerUpdateInterval = 30	# s
+		self.autodiscoverInterval = 60
 		self.servers = []
 		self.formatStrings = {}
 		self.viewDetails = False
 		self.groupByGenre = True
+		self.minimizeToTray = False
 
 	def getFilename (self):
 		if "XDG_CONFIG_HOME" in os.environ and len (os.environ["XDG_CONFIG_HOME"]) > 0:
@@ -47,12 +57,15 @@ class Config (object):
 			self.winPos = (cfgp.getint ('Window', 'x'), cfgp.getint ('Window', 'y'))
 			self.winSize = (cfgp.getint ('Window', 'width'), cfgp.getint ('Window', 'height'))
 			self.transducerUpdateInterval = cfgp.getint ('Transducers', 'UpdateInterval')
+			self.autodiscoverInterval = cfgp.getint ('Network', 'AutodiscoverInterval')
 			self.servers = cfgp.get ('Network', 'Servers').split (Config.SERVER_LIST_SEPARATOR)
+			self.servers = filter (len, self.servers)		# Filter out any empty lines
 			for tname, fmt in cfgp.items ('Format'):
 				tname = tname.upper ()		# ConfigParser lowercases everything
 				self.formatStrings[tname] = fmt
 			self.viewDetails = cfgp.getboolean ('View', 'Details')
 			self.groupByGenre = cfgp.getboolean ('View', 'Group')
+			self.minimizeToTray = cfgp.getboolean ('View', 'MinimizeToTray')
 		except ConfigParser.Error as ex:
 			# Never mind, we'll just use defaults
 			pass
@@ -69,6 +82,7 @@ class Config (object):
 		cfgp.set ('Transducers', 'UpdateInterval', self.transducerUpdateInterval)
 
 		cfgp.add_section ('Network')
+		cfgp.set ('Network', 'AutodiscoverInterval', self.autodiscoverInterval)
 		cfgp.set ('Network', 'Servers', Config.SERVER_LIST_SEPARATOR.join (self.servers))
 
 		cfgp.add_section ('Format')
@@ -78,36 +92,67 @@ class Config (object):
 		cfgp.add_section ('View')
 		cfgp.set ('View', 'Details', self.viewDetails)
 		cfgp.set ('View', 'Group', self.groupByGenre)
+		cfgp.set ('View', 'MinimizeToTray', self.minimizeToTray)
 
 		# Note that ConfigParser does not support Unicode strings, at least not in 2.6
 		with open (self.getFilename (), 'wb') as configfile:
 			cfgp.write (configfile)
 
 class TransducerWrapper (object):
+	FRAME = None
+
 	def __init__ (self, sensoria, transducer):
+		self._logger = logging.getLogger ('TransducerWrapper')
 		self.sensoria = sensoria
 		self.transducer = transducer
-		self._lastRead = None
-		self.updateTime = None
+		self._lastRead = None				# Stereotype from last successful read
+		self.updateTime = None				# Time of last successful read
+		self.failed = True					# True if last read failed
+		self.failMessage = "Not yet read"	# Contains error message if last read failed
+		self.lastAttemptTime = None			# Time of last read attempt, same as updateTime if it succeeded
 		self.outputFormat = None
 
 	def __repr__ (self):
-		return "<Transducer '%s'>" % self.transducer.name
+		return "<TransducerWrapper '%s'>" % self.transducer.name
 
-	def update (self):
+	def update (self, async = True):
+		if async:
+			try:
+				THREADPOOL.add_task (self._updateFunc, self.transducer.server)
+			except ThreadPool.Full:
+				self._logger.warning ("Thread pool is full, transducer update discarded")
+		else:
+			self._updateFunc ()
+
+	def _updateFunc (self):
+		self.lastAttemptTime = datetime.datetime.now ()
 		try:
 			self._lastRead = self.transducer.read ()
-			self.updateTime = datetime.datetime.now ()
+			self.updateTime = self.lastAttemptTime
+			self.failed = False
+			self.failMessage = None
 		except Sensoria.Error as ex:
-			print "ERROR: Cannot read %s: %s" % (self.name, str (ex))
-			self._lastRead = "ERROR: %s" % str (ex)
-		except KeyError as ex:
-			print "ERROR: No such transducer: %s" % self.name
-			self._lastRead = "ERROR: No such transducer: %s" % self.name
+			self.failed = True
+			self.failMessage = str (ex) if len (str (ex)) > 0 else "Unknown error"
+			self._logger.error ("Read failed - " + self.failMessage)
+		# ~ except KeyError as ex:
+			# ~ self.failed = True
+			# ~ self.failMessage = "No such transducer: %s" % self.name
+			# ~ self._logger.error ("Read failed - " + self.failMessage)
+		if TransducerWrapper.FRAME is not None:
+			TransducerWrapper.FRAME.forceRedraw ()
 
 	def enableChangeNotification (self):
 		if not self.transducer.notify (self.onChangeNotification, Sensoria.ON_CHANGE):
 			print "Enable notification failed"
+
+	def disableChangeNotification (self):
+		if not self.transducer.stopNotify (Sensoria.ON_CHANGE):
+			print "Disable notification failed"
+
+	def disableAllNotifications (self):
+		if not self.transducer.cancelAllNotifications ():
+			print "Disable all notifications failed"
 
 	def onChangeNotification (self, data):
 		print "Received notification for transducer %s: %s" % (self.name, str (data))
@@ -144,7 +189,10 @@ class TransducerWrapper (object):
 
 	@property
 	def lastRead (self):
-		if self.outputFormat is not None:
+		"Returns the result of the last reading in a somehow \"smart\" way"
+		if self.failed:
+			return "ERROR: %s" % self.failMessage
+		elif self.outputFormat is not None:
 			return self.formatReading (self.outputFormat)
 		else:
 			return self._lastRead
@@ -155,7 +203,13 @@ class TransducerWrapper (object):
 
 	def write (self, what):
 		if self.transducer.genre == Sensoria.ACTUATOR:
-			return self.transducer.write (what)
+			data = self.transducer.write (what)
+			if data is not None:
+				# We have new transducer status
+				self._lastRead = data
+				self.updateTime = datetime.datetime.now ()
+				self.failed = False
+				self.failMessage = None
 		else:
 			return False
 
@@ -274,6 +328,8 @@ class TransducerList (object):
 			self._changed = True
 		else:
 			self._logger.error ("Tried to add already-known transducer: %s", t.name)
+			tw = None
+		return tw
 
 	def remove (self, t):
 		tw = filter (lambda tt: tt.name == t.name, self.transducers)
@@ -315,10 +371,10 @@ class ReadOnlyTextCtrl (wx.TextCtrl):
 
 class InfoBox (wx.Dialog):
 	def __init__(self, t):
-		super (InfoBox, self).__init__ (None, -1, "%s %s" % ("Sensor" if t.genre == Sensoria.SENSOR else "Actuator", t.name), style = wx.DEFAULT_DIALOG_STYLE | wx.THICK_FRAME | wx.TAB_TRAVERSAL)
+		super (InfoBox, self).__init__ (None, -1, "%s %s" % ("Sensor" if t.genre == Sensoria.SENSOR else "Actuator", t.name), style = wx.DEFAULT_DIALOG_STYLE | wx.TAB_TRAVERSAL)
 		sizer = wx.BoxSizer (wx.VERTICAL)
 
-		gs = wx.FlexGridSizer (9, 2, 10, 5)
+		gs = wx.FlexGridSizer (12, 2, 10, 5)
 		gs.AddMany ([
 			(wx.StaticText (self, -1, 'Name:'), 0, wx.ALIGN_CENTER_VERTICAL),
 			(ReadOnlyTextCtrl (self, -1, t.name, style = wx.TE_CENTER), 1, wx.EXPAND),
@@ -334,10 +390,16 @@ class InfoBox (wx.Dialog):
 			(ReadOnlyTextCtrl (self, -1, "%s:%u" % (t.server.address, t.server.port), style = wx.TE_CENTER), 1, wx.EXPAND),
 			(wx.StaticText (self, -1, 'Last Reading:'), 0, wx.ALIGN_CENTER_VERTICAL),
 			(ReadOnlyTextCtrl (self, -1, "%s" % t.lastRead, style = wx.TE_CENTER), 1, wx.EXPAND),
-			(wx.StaticText (self, -1, 'Last Reading (Unformatted):'), 0, wx.ALIGN_CENTER_VERTICAL),
+			(wx.StaticText (self, -1, 'Last Reading (Raw):'), 0, wx.ALIGN_CENTER_VERTICAL),
 			(ReadOnlyTextCtrl (self, -1, "%s" % t.lastReadRaw, style = wx.TE_CENTER), 1, wx.EXPAND),
 			(wx.StaticText (self, -1, 'Last Update:'), 0, wx.ALIGN_CENTER_VERTICAL),
-			(ReadOnlyTextCtrl (self, -1, "%s" % t.updateTime.strftime ("%c") if t.updateTime else "N/A", style = wx.TE_CENTER), 1, wx.EXPAND)
+			(ReadOnlyTextCtrl (self, -1, "%s" % t.updateTime.strftime ("%c") if t.updateTime else "N/A", style = wx.TE_CENTER), 1, wx.EXPAND),
+			(wx.StaticText (self, -1, 'Last Read Attempt:'), 0, wx.ALIGN_CENTER_VERTICAL),
+			(ReadOnlyTextCtrl (self, -1, "%s" % t.lastAttemptTime.strftime ("%c") if t.lastAttemptTime else "N/A", style = wx.TE_CENTER), 1, wx.EXPAND),
+			(wx.StaticText (self, -1, 'Failed:'), 0, wx.ALIGN_CENTER_VERTICAL),
+			(ReadOnlyTextCtrl (self, -1, "%s" % t.failed, style = wx.TE_CENTER), 1, wx.EXPAND),
+			(wx.StaticText (self, -1, 'Fail Message:'), 0, wx.ALIGN_CENTER_VERTICAL),
+			(ReadOnlyTextCtrl (self, -1, "%s" % t.failMessage if t.failMessage else "N/A", style = wx.TE_CENTER), 1, wx.EXPAND)
 		])
 		gs.AddGrowableCol (1, 1)
 		sizer.Add (gs, 0, wx.EXPAND | wx.ALL, 30)
@@ -360,7 +422,7 @@ class InfoBox (wx.Dialog):
 
 class ServersBox (wx.Dialog):
 	def __init__(self, frame):
-		super (ServersBox, self).__init__ (None, -1, "Servers", style = wx.DEFAULT_DIALOG_STYLE | wx.THICK_FRAME | wx.TAB_TRAVERSAL)
+		super (ServersBox, self).__init__ (None, -1, "Servers", style = wx.DEFAULT_DIALOG_STYLE | wx.TAB_TRAVERSAL)
 		self._frame = frame
 
 		sizer = wx.BoxSizer (wx.VERTICAL)
@@ -394,7 +456,7 @@ class ServersBox (wx.Dialog):
 
 class DialogSetFormat (wx.Dialog):
 	def __init__(self, t):
-		super (DialogSetFormat, self).__init__ (None, -1, "Set format for transducer %s" % t.name, style = wx.DEFAULT_DIALOG_STYLE | wx.THICK_FRAME | wx.TAB_TRAVERSAL)
+		super (DialogSetFormat, self).__init__ (None, -1, "Set format for transducer %s" % t.name, style = wx.DEFAULT_DIALOG_STYLE | wx.TAB_TRAVERSAL)
 		self._transducer = t
 
 		sizer = wx.BoxSizer (wx.VERTICAL)
@@ -437,13 +499,18 @@ class DialogSetFormat (wx.Dialog):
 		event.Skip ()
 
 class PopupMenuTransducer (wx.Menu):
-	def __init__ (self, transducer, addSeparator = False):
+	def __init__ (self, frame, transducer, addSeparator = False):
 		super (PopupMenuTransducer, self).__init__ ()
+		self.frame = frame
 		self.transducer = transducer
 
 		item = wx.MenuItem (self, wx.ID_REFRESH, "&Update")
 		self.AppendItem (item)
 		self.Bind (wx.EVT_MENU, self.onUpdate, item)
+
+		item = wx.MenuItem (self, wx.ID_PROPERTIES, "Show &Info")
+		self.AppendItem (item)
+		self.Bind (wx.EVT_MENU, self.onInfo, item)
 
 		item = wx.MenuItem (self, wx.ID_EDIT, "&Set Format...\tCtrl+F")
 		self.AppendItem (item)
@@ -453,9 +520,32 @@ class PopupMenuTransducer (wx.Menu):
 		self.AppendItem (item)
 		self.Bind (wx.EVT_MENU, self.onCopy, item)
 
-		item = wx.MenuItem (self, wx.ID_REDO, "&Notify on Change")
-		self.AppendItem (item)
-		self.Bind (wx.EVT_MENU, self.onNotifyChange, item)
+		nSubMenu = wx.Menu ()
+		item = wx.MenuItem (self, wx.ID_REDO, "Notify on &Change")
+		nSubMenu.AppendItem (item)
+		nSubMenu.Bind (wx.EVT_MENU, self.onNotifyChange, item)
+
+		item = wx.MenuItem (self, wx.ID_UNDO, "Stop N&otifications on Change")
+		nSubMenu.AppendItem (item)
+		nSubMenu.Bind (wx.EVT_MENU, self.onCancelChangeNotifications, item)
+
+		nSubMenu.AppendSeparator ()
+
+		item = wx.MenuItem (self, wx.ID_REDO, "Notify &Periodically")
+		nSubMenu.AppendItem (item)
+		nSubMenu.Bind (wx.EVT_MENU, self.onNotifyPeriodic, item)
+
+		item = wx.MenuItem (self, wx.ID_UNDO, "Stop Periodic No&tifications")
+		nSubMenu.AppendItem (item)
+		nSubMenu.Bind (wx.EVT_MENU, self.onCancelPeriodicNotifications, item)
+
+		nSubMenu.AppendSeparator ()
+
+		item = wx.MenuItem (self, wx.ID_CANCEL, "Stop &ALL Notifications")
+		nSubMenu.AppendItem (item)
+		nSubMenu.Bind (wx.EVT_MENU, self.onCancelAllNotifications, item)
+
+		self.AppendMenu (wx.NewId (), "&Notifications", nSubMenu)
 
 		if addSeparator:
 			self.AppendSeparator ()
@@ -463,6 +553,11 @@ class PopupMenuTransducer (wx.Menu):
 	def onUpdate (self, event):
 		print "Shall update %s" % self.transducer.name
 		self.transducer.update ()
+
+	def onInfo (self, event):
+		dlg = InfoBox (self.transducer)
+		dlg.ShowModal ()
+		dlg.Destroy ()
 
 	def onSetFormat (self, event):
 		print "Shall set format for %s" % self.transducer.name
@@ -486,9 +581,29 @@ class PopupMenuTransducer (wx.Menu):
 		print "Shall get notifications on change of %s" % self.transducer.name
 		self.transducer.enableChangeNotification ()
 
+	def onCancelChangeNotifications (self, event):
+		print "Shall cancel notifications on change of %s" % self.transducer.name
+		self.transducer.disableChangeNotification ()
+
+	def onNotifyPeriodic (self, event):
+		print "Shall get periodic notifications of %s" % self.transducer.name
+		# ~ self.transducer.enableChangeNotification ()
+
+	def onCancelPeriodicNotifications (self, event):
+		print "Shall cancel periodic notifications of %s" % self.transducer.name
+		# ~ self.transducer.disableChangeNotification ()
+
+	def onCancelAllNotifications (self, event):
+		print "Shall cancel all notifications from %s" % self.transducer.name
+		self.transducer.disableAllNotifications ()
+
+	def defaultAction (self):
+		"""Action that is performed when transducer line is double-clicked"""
+		self.onInfo (None)
+
 class PopupMenuActuatorRS (PopupMenuTransducer):
-	def __init__ (self, transducer):
-		super (PopupMenuActuatorRS, self).__init__ (transducer, True)
+	def __init__ (self, frame, transducer):
+		super (PopupMenuActuatorRS, self).__init__ (frame, transducer, True)
 
 		# If state is unknown, show all possibilities
 		showOn = True
@@ -509,26 +624,44 @@ class PopupMenuActuatorRS (PopupMenuTransducer):
 
 	def onTurnOn (self, event):
 		print "Shall turn on %s" % self.transducer.name
-		d = self.transducer.lastRead
-		d.state = Sensoria.stereotypes.RelayData.RelayData.ON
-		self.transducer.write (d)
+		try:
+			d = copy.deepcopy (self.transducer.lastRead)		# Copy, don't modify original
+			d.state = Sensoria.stereotypes.RelayData.RelayData.ON
+			self.transducer.write (d)
+			self.frame.redraw ()
+		except Sensoria.Error as ex:
+			self.frame.setStatusBar ("Cannot turn on %s: %s" % (self.transducer.name, str (ex)))
 
 	def onTurnOff (self, event):
 		print "Shall turn off %s" % self.transducer.name
-		d = self.transducer.lastRead
-		d.state = Sensoria.stereotypes.RelayData.RelayData.OFF
-		self.transducer.write (d)
+		try:
+			d = copy.deepcopy (self.transducer.lastRead)		# Copy, don't modify original
+			d.state = Sensoria.stereotypes.RelayData.RelayData.OFF
+			self.transducer.write (d)
+			self.frame.redraw ()
+		except Sensoria.Error as ex:
+			self.frame.setStatusBar ("Cannot turn off %s: %s" % (self.transducer.name, str (ex)))
+
+	def toggle (self):
+		if not self.transducer.failed and self.transducer.lastRead is not None:
+			if self.transducer.lastRead.state == Sensoria.stereotypes.RelayData.RelayData.ON:
+				self.onTurnOff (None)
+			elif self.transducer.lastRead.state == Sensoria.stereotypes.RelayData.RelayData.OFF:
+				self.onTurnOn (None)
+
+	def defaultAction (self):
+		self.toggle ()
 
 class PopupMenuActuatorCR (PopupMenuTransducer):
-	def __init__ (self, transducer):
-		super (PopupMenuActuatorCR, self).__init__ (transducer, True)
+	def __init__ (self, frame, transducer):
+		super (PopupMenuActuatorCR, self).__init__ (frame, transducer, True)
 
 		# If state is unknown, show all possibilities
 		showTakeCtrl = True
 		showRelCtrl = True
 		showOn = True
 		showOff = True
-		if transducer.lastRead is not None:
+		if not transducer.failed and transducer.lastRead is not None:
 			if transducer.lastRead.controller == Sensoria.stereotypes.ControlledRelayData.ControlledRelayData.AUTO:
 				showTakeCtrl = True
 				showRelCtrl = False
@@ -537,8 +670,8 @@ class PopupMenuActuatorCR (PopupMenuTransducer):
 			elif transducer.lastRead.controller == Sensoria.stereotypes.ControlledRelayData.ControlledRelayData.MANUAL:
 				showTakeCtrl = False
 				showRelCtrl = True
-				if transducer.lastRead.state != Sensoria.stereotypes.RelayData.RelayData.UNKNOWN:
-					showOn = transducer.lastRead.state == Sensoria.stereotypes.RelayData.RelayData.OFF
+				if transducer.lastRead.state != Sensoria.stereotypes.ControlledRelayData.ControlledRelayData.UNKNOWN:
+					showOn = transducer.lastRead.state == Sensoria.stereotypes.ControlledRelayData.ControlledRelayData.OFF
 					showOff = not showOn
 
 		if showTakeCtrl:
@@ -563,31 +696,57 @@ class PopupMenuActuatorCR (PopupMenuTransducer):
 
 	def onTakeCtrl (self, event):
 		print "Shall take control of %s" % self.transducer.name
-		d = self.transducer.lastRead
-		d.controller = Sensoria.stereotypes.ControlledRelayData.ControlledRelayData.MANUAL
-		self.transducer.write (d)
+		try:
+			d = copy.deepcopy (self.transducer.lastRead)		# Copy, don't modify original
+			d.controller = Sensoria.stereotypes.ControlledRelayData.ControlledRelayData.MANUAL
+			self.transducer.write (d)
+			self.frame.redraw ()
+		except Sensoria.Error as ex:
+			self.frame.setStatusBar ("Cannot take control of %s: %s" % (self.transducer.name, str (ex)))
 
 	def onReleaseCtrl (self, event):
 		print "Shall release control of %s" % self.transducer.name
-		d = self.transducer.lastRead
-		d.controller = Sensoria.stereotypes.ControlledRelayData.ControlledRelayData.AUTO
-		self.transducer.write (d)
+		try:
+			d = copy.deepcopy (self.transducer.lastRead)		# Copy, don't modify original
+			d.controller = Sensoria.stereotypes.ControlledRelayData.ControlledRelayData.AUTO
+			self.transducer.write (d)
+			self.frame.redraw ()
+		except Sensoria.Error as ex:
+			self.frame.setStatusBar ("Cannot release control of %s: %s" % (self.transducer.name, str (ex)))
 
 	def onTurnOn (self, event):
 		print "Shall turn on %s" % self.transducer.name
-		d = self.transducer.lastRead
-		d.state = Sensoria.stereotypes.ControlledRelayData.ControlledRelayData.ON
-		self.transducer.write (d)
+		try:
+			d = copy.deepcopy (self.transducer.lastRead)		# Copy, don't modify original
+			d.state = Sensoria.stereotypes.ControlledRelayData.ControlledRelayData.ON
+			self.transducer.write (d)
+			self.frame.redraw ()
+		except Sensoria.Error as ex:
+			self.frame.setStatusBar ("Cannot turn on %s: %s" % (self.transducer.name, str (ex)))
 
 	def onTurnOff (self, event):
 		print "Shall turn off %s" % self.transducer.name
-		d = self.transducer.lastRead
-		d.state = Sensoria.stereotypes.ControlledRelayData.ControlledRelayData.OFF
-		self.transducer.write (d)
+		try:
+			d = copy.deepcopy (self.transducer.lastRead)		# Copy, don't modify original
+			d.state = Sensoria.stereotypes.ControlledRelayData.ControlledRelayData.OFF
+			self.transducer.write (d)
+			self.frame.redraw ()
+		except Sensoria.Error as ex:
+			self.frame.setStatusBar ("Cannot turn off %s: %s" % (self.transducer.name, str (ex)))
+
+	def defaultAction (self):
+		if not self.transducer.failed and self.transducer.lastRead is not None:
+			if self.transducer.lastRead.controller == Sensoria.stereotypes.ControlledRelayData.ControlledRelayData.AUTO:
+				self.onTakeCtrl (None)
+			else:
+				if self.transducer.lastRead.state == Sensoria.stereotypes.ControlledRelayData.ControlledRelayData.ON:
+					self.onTurnOff (None)
+				elif self.transducer.lastRead.state == Sensoria.stereotypes.ControlledRelayData.ControlledRelayData.OFF:
+					self.onTurnOn (None)
 
 class PopupMenuActuatorTC (PopupMenuTransducer):
-	def __init__ (self, transducer):
-		super (PopupMenuActuatorTC, self).__init__ (transducer, True)
+	def __init__ (self, frame, transducer):
+		super (PopupMenuActuatorTC, self).__init__ (frame, transducer, True)
 
 		item = wx.MenuItem (self, wx.ID_PREFERENCES, "&Edit Schedule...")
 		self.AppendItem (item)
@@ -598,10 +757,14 @@ class PopupMenuActuatorTC (PopupMenuTransducer):
 		dlg = TimerEditDialog (self.transducer)
 		dlg.ShowModal ()
 		dlg.Destroy ()
+		self.frame.redraw ()
+
+	def defaultAction (self):
+		self.onEdit (None)
 
 class PopupMenuActuatorVS (PopupMenuTransducer):
-	def __init__ (self, transducer):
-		super (PopupMenuActuatorVS, self).__init__ (transducer, True)
+	def __init__ (self, frame, transducer):
+		super (PopupMenuActuatorVS, self).__init__ (frame, transducer, True)
 
 		item = wx.MenuItem (self, wx.ID_PREFERENCES, "&Edit Settings...")
 		self.AppendItem (item)
@@ -612,13 +775,36 @@ class PopupMenuActuatorVS (PopupMenuTransducer):
 		dlg = SettingsEditDialog (self.transducer)
 		dlg.ShowModal ()
 		dlg.Destroy ()
+		self.frame.redraw ()
+
+	def defaultAction (self):
+		self.onEdit (None)
+
+class PopupMenuActuatorIM (PopupMenuTransducer):
+	def __init__ (self, frame, transducer):
+		super (PopupMenuActuatorIM, self).__init__ (frame, transducer, True)
+
+		item = wx.MenuItem (self, wx.ID_JUMP_TO, "&Send Message...")
+		self.AppendItem (item)
+		self.Bind (wx.EVT_MENU, self.onSend, item)
+
+	def onSend (self, event):
+		print "Shall send message through %s" % self.transducer.name
+		dlg = SendMessageDialog (self.transducer)
+		dlg.ShowModal ()
+		dlg.Destroy ()
+		self.frame.redraw ()
+
+	def defaultAction (self):
+		self.onSend (None)
 
 # Map stereotypes to popup menus
 stereoTypeToMenu = {
 	"RS": PopupMenuActuatorRS,
 	"CR": PopupMenuActuatorCR,
 	"TC": PopupMenuActuatorTC,
-	"VS": PopupMenuActuatorVS
+	"VS": PopupMenuActuatorVS,
+	"IM": PopupMenuActuatorIM
 }
 
 class MyAutodiscoveryHandler (Sensoria.AutodiscoveryHandler):
@@ -630,10 +816,6 @@ class MyAutodiscoveryHandler (Sensoria.AutodiscoveryHandler):
 		self._frame.setStatusBar ("Autodiscovery started")
 		self._frame.forceRedraw ()
 
-	def onAutodiscoveryCompleted (self):
-		self._frame.setStatusBar ("Autodiscovery complete")
-		self._frame.forceRedraw ()
-
 	def onTransducersAdded (self, ts):
 		if len (ts) == 1:
 			self._frame.setStatusBar ("Found new transducer: %s" % ts[0].name)
@@ -643,10 +825,12 @@ class MyAutodiscoveryHandler (Sensoria.AutodiscoveryHandler):
 		self._transducerList.lock ()
 		for t in ts:
 			print "NEW: %s" % t.name
-			self._transducerList.add (t)
+			tw = self._transducerList.add (t)
+			if tw is not None:
+				tw.update ()
 		self._transducerList.unlock ()
 		self._frame.forceRedraw ()
-		self._frame.forceUpdate ()
+		# ~ self._frame.forceUpdate ()
 
 	def onTransducersRemoved (self, ts):
 		if len (ts) == 1:
@@ -669,6 +853,12 @@ class MenuBar (wx.MenuBar):
 	MENUITEM_UPD_5MIN = wx.NewId ()
 	MENUITEM_FORCE_UPD = wx.ID_REFRESH
 
+	MENUITEM_DSCV_DISABLED = wx.NewId ()
+	MENUITEM_DSCV_30SEC = wx.NewId ()
+	MENUITEM_DSCV_1MIN = wx.NewId ()
+	MENUITEM_DSCV_5MIN = wx.NewId ()
+	MENUITEM_FORCE_DSCV = wx.NewId ()
+
 	itemIntervalMap = {
 		MENUITEM_UPD_5SEC: 5,
 		MENUITEM_UPD_15SEC: 15,
@@ -677,17 +867,40 @@ class MenuBar (wx.MenuBar):
 		MENUITEM_UPD_5MIN: 60 * 5
 	}
 
+	itemDiscoveryIntervalMap = {
+		MENUITEM_DSCV_DISABLED: 0,
+		MENUITEM_DSCV_30SEC: 30,
+		MENUITEM_DSCV_1MIN: 60,
+		MENUITEM_DSCV_5MIN: 60 * 5
+	}
+
 	def __init__ (self, frame):
 		super (MenuBar, self).__init__ ()
 		self._logger = logging.getLogger ('MenuBar')
 		self._frame = frame
 
 		m1 = wx.Menu ()
-		m11 = m1.Append (wx.ID_ADD, "&Servers\tAlt-S", "Configure manual servers")
-		self._frame.Bind (wx.EVT_MENU, self.onServers, m11)
-		m12 = m1.AppendSeparator ()
-		m13 = m1.Append (wx.ID_EXIT, "E&xit\tAlt-X", "Close window and exit program")
-		self._frame.Bind (wx.EVT_MENU, self.onQuit, m13)
+		adSubmenu = wx.Menu ()
+		ad1 = adSubmenu.Append (MenuBar.MENUITEM_FORCE_DSCV, "&Now!\tF6")
+		self._frame.Bind (wx.EVT_MENU, self.onForceDiscovery, ad1)
+		ad2 = adSubmenu.AppendSeparator ()
+		ad3 = adSubmenu.Append (MenuBar.MENUITEM_DSCV_DISABLED, "&Disabled", kind = wx.ITEM_RADIO)
+		ad4 = adSubmenu.Append (MenuBar.MENUITEM_DSCV_30SEC, "Every &30 seconds", kind = wx.ITEM_RADIO)
+		ad5 = adSubmenu.Append (MenuBar.MENUITEM_DSCV_1MIN, "Every minute", kind = wx.ITEM_RADIO)
+		ad6 = adSubmenu.Append (MenuBar.MENUITEM_DSCV_5MIN, "Every 5 minutes", kind = wx.ITEM_RADIO)
+		for m in [ad3, ad4, ad5, ad6]:
+			id_ = m.GetId ()
+			assert id_ in MenuBar.itemDiscoveryIntervalMap
+			t = MenuBar.itemDiscoveryIntervalMap[id_]
+			if t == self._frame.config.autodiscoverInterval:
+				m.Check ()
+			self._frame.Bind (wx.EVT_MENU, self.onAutodiscoveryIntervalChanged, m)
+		m11 = m1.AppendMenu (wx.NewId (), "&Autodiscovery", adSubmenu)
+		m12 = m1.Append (wx.ID_ADD, "&Servers\tAlt-S", "Configure manual servers")
+		self._frame.Bind (wx.EVT_MENU, self.onServers, m12)
+		m13 = m1.AppendSeparator ()
+		m14 = m1.Append (wx.ID_EXIT, "E&xit\tAlt-X", "Close window and exit program")
+		self._frame.Bind (wx.EVT_MENU, self.onQuit, m14)
 		self.Append (m1, "&File")
 
 		m2 = wx.Menu ()
@@ -717,6 +930,11 @@ class MenuBar (wx.MenuBar):
 		if self._frame.config.groupByGenre:
 			m32.Check ()
 		self._frame.Bind (wx.EVT_MENU, self.onGroupToggle, m32)
+		m33 = m3.AppendSeparator ()
+		m34 = m3.Append (wx.NewId (), "Keep Running in Tray on Close	", kind = wx.ITEM_CHECK)
+		if self._frame.config.minimizeToTray:
+			m34.Check ()
+		self._frame.Bind (wx.EVT_MENU, self.onMinimizeToTray, m34)
 		self.Append (m3, "&View")
 
 		menu = wx.Menu ()
@@ -735,6 +953,19 @@ class MenuBar (wx.MenuBar):
 	def onQuit (self, event):
 		wx.CallAfter (self._frame.onQuit, event)
 
+	def onAutodiscoveryIntervalChanged (self, event):
+		assert event.Id in MenuBar.itemDiscoveryIntervalMap
+		t = MenuBar.itemDiscoveryIntervalMap[event.Id]
+		self._logger.info ("Setting autodiscovery interval to %u seconds" % t)
+		self._frame.config.autodiscoverInterval = t
+		if t == 0:
+			self._frame._sensoria.disableAutodiscovery ()
+		else:
+			self._frame._sensoria.enableAutodiscovery (t)
+
+	def onForceDiscovery (self, event):
+		THREADPOOL.add_task (self._frame._sensoria.discover, None)
+
 	def onUpdateIntervalChanged (self, event):
 		assert event.Id in MenuBar.itemIntervalMap
 		t = MenuBar.itemIntervalMap[event.Id]
@@ -751,6 +982,13 @@ class MenuBar (wx.MenuBar):
 	def onGroupToggle (self, event):
 		self._frame.config.groupByGenre = not self._frame.config.groupByGenre
 		self._frame.forceRedraw ()
+
+	def onMinimizeToTray (self, event):
+		self._frame.config.minimizeToTray = not self._frame.config.minimizeToTray
+		if self._frame.config.minimizeToTray:
+			self._frame.trayIcon.enable ()
+		else:
+			self._frame.trayIcon.disable ()
 
 class AutoStatusBar (wx.StatusBar):
 	DEFAULT_DURATION = 3
@@ -789,6 +1027,41 @@ class AutoStatusBar (wx.StatusBar):
 		elif changed:
 			self.SetStatusText ("")
 
+class TrayIcon (wx.TaskBarIcon):
+	def __init__ (self, frame):
+		super (TrayIcon, self).__init__ ()
+		self._frame = frame
+
+		img = wx.Image ("logo.png", wx.BITMAP_TYPE_ANY)
+		bmp = wx.BitmapFromImage(img)
+		self._icon = wx.IconFromBitmap (bmp)
+
+	def enable (self):
+		self.SetIcon (self._icon, self._frame.GetTitle ())
+		self.Bind (wx.EVT_TASKBAR_LEFT_DOWN, self.OnTaskBarLeftClick)
+
+	def disable (self):
+		self.RemoveIcon ()
+
+	# ~ def OnTaskBarActivate (self, evt):
+		# ~ print "OnTaskBarActivate"
+
+	def OnTaskBarClose (self, evt):
+		"""
+		Destroy the taskbar icon and frame from the taskbar icon itself
+		"""
+		self._frame.Close ()
+
+	def OnTaskBarLeftClick (self, evt):
+		"""
+		Create the right-click menu
+		"""
+		if self._frame.IsShown ():
+			self._frame.Hide ()
+		else:
+			self._frame.Show ()
+			self._frame.Restore ()
+
 class Frame (wx.Frame):
 	EVT_SET_FORMAT = wx.NewId ()
 	EVT_COPY = wx.NewId ()
@@ -820,21 +1093,49 @@ class Frame (wx.Frame):
 		self._lc = self._makeListView (self._panel)
 		self._box.Add (self._lc, 1, wx.ALL | wx.EXPAND)
 
+		TransducerWrapper.FRAME = self
+
 		self._panel.SetSizer (self._box)
 		self._panel.Layout ()
 
-		#~ self._sensoria = Sensoria.Client (servers = ["localhost"], autodiscover = False)
-		self._sensoria = Sensoria.Client (autodiscInterval = 60 * 3)
-		self._sensoria.enableNotifications ()
+		img = wx.Image ("logo.png", wx.BITMAP_TYPE_ANY)
+		bmp = wx.BitmapFromImage(img)
+		icon = wx.IconFromBitmap (bmp)
+		self.SetIcon (icon)
+
+		# Tray icon
+		self.trayIcon = TrayIcon (self)
+		if self.config.minimizeToTray:
+			self.trayIcon.enable ()
+		else:
+			self.trayIcon.disable ()
+		# ~ self.Bind(wx.EVT_ICONIZE, self.onMinimize)
+		self.Bind (wx.EVT_CLOSE, self.onClose)
+
+
+		self._sensoria = Sensoria.Client (servers = self.config.servers)
 		self.transducerList = TransducerList (self._sensoria, self.config)
 		self._lc.SetObjects (self.transducerList.transducers)
+		self.transducerList.lock ()
+		for t in self._sensoria.transducers.itervalues ():
+			print "FOUND TRANSDUCER (Manual): %s" % t.name
+			tw = self.transducerList.add (t)
+			if tw is not None:
+				tw.update ()
+		self.transducerList.unlock ()
+
+		self._sensoria.enableNotifications ()
+
 		self._adHandler = MyAutodiscoveryHandler (self, self.transducerList)
 		self._sensoria.registerHandler (self._adHandler)
+		if self.config.autodiscoverInterval != 0:
+			self._sensoria.enableAutodiscovery (self.config.autodiscoverInterval)
+			THREADPOOL.add_task (self._sensoria.discover, None)
 
 		self._lastTransducerUpdate = None
 
 		self.currentListViewType = (self.config.viewDetails, self.config.groupByGenre)
-		self._redrawLock = threading.RLock ()
+		# ~ self._redrawLock = threading.RLock ()
 		self._updateLock = threading.RLock ()
 		self.timer = wx.Timer (self)
 		self.Bind (wx.EVT_TIMER, self.update, self.timer)
@@ -912,7 +1213,7 @@ class Frame (wx.Frame):
 
 	@staticmethod
 	def rowFormatter (listItem, t):
-		if type (t.lastRead) is str and t.lastRead.startswith ("ERROR"):
+		if t.failed:
 			listItem.SetTextColour (wx.RED)
 
 	# This is safe to be called from other threads
@@ -924,17 +1225,19 @@ class Frame (wx.Frame):
 		wx.CallAfter (self.update, force = True)
 
 	def update (self, event = None, force = False):
+		self._updateLock.acquire ()
 		if force or self._lastTransducerUpdate is None or timedelta_total_seconds (datetime.datetime.now () - self._lastTransducerUpdate) >= self.config.transducerUpdateInterval:
-			self._updateLock.acquire ()
 			print "Updating (%s)" % ("forced" if force else "periodic")
+			self.setStatusBar ("Updating all transducers...")
+			self.forceRedraw ()
 			self.transducerList.massUpdate ()
 			self._lastTransducerUpdate = datetime.datetime.now ()
-			self._updateLock.release ()
-			self.redraw ()
+		self._updateLock.release ()
+		self.redraw ()
 
 	def redraw (self, event = None):
-		self._redrawLock.acquire ()
-		print "Redrawing"
+		# ~ self._redrawLock.acquire ()
+		# ~ print "Redrawing"
 
 		if self.currentListViewType != (self.config.viewDetails, self.config.groupByGenre):
 			print "Changing ListView"
@@ -952,7 +1255,7 @@ class Frame (wx.Frame):
 		else:
 			self._lc.RefreshObjects (self.transducerList.transducers)
 
-		self._redrawLock.release ()
+		# ~ self._redrawLock.release ()
 
 	# This is safe to be called from other threads
 	def setStatusBar (self, msg, duration = None):
@@ -962,6 +1265,21 @@ class Frame (wx.Frame):
 			# Use default interval
 			self._statusBar.push (msg)
 
+	# ~ def onMinimize(self, event):
+		# ~ """
+		# ~ When minimizing, hide the frame so it "minimizes to tray"
+		# ~ """
+		# ~ if self.IsIconized () and self.config.minimizeToTray:
+			# ~ self.Hide ()
+
+	def onClose (self, evt):
+		"""
+		Destroy the taskbar icon and the frame
+		"""
+		if self.config.minimizeToTray:
+			self.Hide ()
+		else:
+			self.onQuit (evt)
 
 	def onQuit (self, event):
 		self.config.winPos = self.GetPosition ()
@@ -972,14 +1290,23 @@ class Frame (wx.Frame):
 			if t.outputFormat:
 				self.config.formatStrings[t.name] = t.outputFormat
 		self.config.save ()
+		self.trayIcon.disable ()
+		self.trayIcon.Destroy ()
 		self.Destroy ()
 
 	def onItemDoubleClicked (self, event):
 		t = self._lc.GetSelectedObject ()
 		if t is not None:
-			dlg = InfoBox (t)
-			dlg.ShowModal ()
-			dlg.Destroy ()
+			menu = None
+			if t.stereotype in stereoTypeToMenu:
+				menuClass = stereoTypeToMenu[t.stereotype]
+				menu = menuClass (self, t)
+				menu.defaultAction ()
+			else:
+				# Fallback, just in case
+				dlg = InfoBox (t)
+				dlg.ShowModal ()
+				dlg.Destroy ()
 
 	def onItemRightClicked (self, event):
 		t = self._lc.GetSelectedObject ()
@@ -987,9 +1314,9 @@ class Frame (wx.Frame):
 			menu = None
 			if t.stereotype in stereoTypeToMenu:
 				menuClass = stereoTypeToMenu[t.stereotype]
-				menu = menuClass (t)
+				menu = menuClass (self, t)
 			else:
-				menu = PopupMenuTransducer (t)
+				menu = PopupMenuTransducer (self, t)
 
 			if menu is not None:
 				self.PopupMenu (menu, event.GetPoint ())

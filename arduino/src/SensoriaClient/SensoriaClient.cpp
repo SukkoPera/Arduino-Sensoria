@@ -48,30 +48,29 @@ void SensoriaClient::discover () {
 #endif
 
 			boolean add = false;
-			char *p[3];
-			int n = splitString (reply, p, 3);
-			if (n < 2) {
+			char *p[4];
+			int n = splitString (reply, p, 4);
+			if (n != 4) {
 				DPRINT (F("Unexpected HLO reply: "));
 				DPRINTLN (reply);
 			} else {
-				strupr (p[0]);
+				strupr (p[0]);		// p[0] should be "HLO"
 				if (strcmp_P (p[0], PSTR ("ERR")) == 0) {
 					DPRINTLN (F("Node does not support HLO"));
 				} else if (strcmp_P (p[0], PSTR ("HLO")) != 0) {
 					DPRINT (F("Unexpected HLO reply: "));
 					DPRINTLN (reply);
 				} else {
-					char* serverName = p[1];
+					const char* serverName = p[1];
+					const byte protoVer = atoi (p[2]);
+					char* transducerListStr = p[3];
 
-					// p[2] will be modified by the splitString() below, so do this now
-					uint16_t crc = crc16_update_str (0, p[2]);
+					// transducerListStr will be modified by the splitString() below, so do this now
+					uint16_t crc = crc16_update_str (0, transducerListStr);
 
-					char* transducerList[MAX_TRANSDUCERS];
-					int n = splitString (p[2], transducerList, MAX_TRANSDUCERS, '|');
-					if (n < MAX_TRANSDUCERS) {
-						// Terminate list
-						transducerList[n] = NULL;
-					}
+					char* transducerList[MAX_TRANSDUCERS + 1];
+					int n = splitString (transducerListStr, transducerList, MAX_TRANSDUCERS, '|');
+					transducerList[n] = NULL;	// Terminate list, n is definitely n < MAX_TRANSDUCERS + 1
 
 					ServerProxy* srvpx = getServer (serverName);
 					if (srvpx) {
@@ -96,7 +95,8 @@ void SensoriaClient::discover () {
 
 					if (add) {
 						if (nServers < MAX_SERVERS) {
-							ServerProxy* srvpx = realizeServer (sender, serverName, transducerList, crc);
+							ServerProxy* srvpx = new ServerProxy (comm, sender);
+							realizeServer (srvpx, serverName, protoVer, transducerList, crc);
 							servers[nServers++] = srvpx;
 						} else {
 							DPRINTLN (F("Too many servers registered, skipping"));
@@ -116,46 +116,53 @@ void SensoriaClient::discover () {
 	}
 }
 
-ServerProxy* SensoriaClient::realizeServer (SensoriaAddress* addr, char*& serverName, char** transducerList, uint16_t crc) {
-	DPRINT (F("Found node '"));
-	DPRINT (serverName);
-	DPRINTLN (F("' with:"));
+void SensoriaClient::realizeServer (ServerProxy* srvpx, const char*& serverName,
+	const byte protocolVersion, char** transducerList, uint16_t crc) {
 
-	ServerProxy* srvpx = new ServerProxy (comm, addr);
 	strlcpy (srvpx -> name, serverName, MAX_SERVER_NAME);
 	srvpx -> checksum = crc;
+	srvpx -> protocolVersion = protocolVersion;
 
 	for (int i = 0; i < MAX_TRANSDUCERS && transducerList[i]; i++) {
 		strstrip (transducerList[i]);
-		char *t[3];
-		int m = splitString (transducerList[i], t, 3);
-		if (m != 3) {
-			DPRINTLN (F("Cannot parse transducer info"));
+		char *t[4];
+		int m = splitString (transducerList[i], t, 4);
+		if (m < 3) {
+			DPRINT (F("Cannot parse transducer info: '"));
+			DPRINT (transducerList[i]);
+			DPRINTLN ('\'');
 		} else {
+			const char* tName = t[0];
+			const char tType = t[1][0];
+			const char* tStereo = t[2];
+			const char* tDesc = NULL;
+			if (m == 4)
+				tDesc = t[3];
+
 			Stereotype *st = NULL;
 			for (int j = 0; !st && j < N_STEREOTYPES; j++) {
 				if (strcmp (stereotypes[j] -> tag, t[2]) == 0)
 					st = stereotypes[j];
 			}
 
-			DPRINT (F("- Found "));
-			DPRINT (t[1][0] == 'S' ? F("sensor ") : F("actuator "));
-			DPRINT (t[0]);
+			DPRINT (F("- "));
+			DPRINT (tType == 'S' ? F("Sensor ") : F("Actuator "));
+			DPRINT (tName);
 			DPRINT (F(" using stereotype "));
-			DPRINT (t[2]);
+			DPRINT (tStereo);
 			DPRINTLN (st ? F(" (Available)") : F(" (Not available)"));
 
 			if (t[1][0] == 'S') {
 				// We got a sensor
 				// FIXME: Remove dynamic allocation
-				SensorProxy *spx = new SensorProxy (srvpx, t[0], st);
+				SensorProxy *spx = new SensorProxy (srvpx, t[0], st, tDesc);
 				if (!srvpx -> addTransducer (spx)) {
 					DPRINT (F("Cannot register sensor: "));
 					DPRINTLN (t[0]);
 				}
 			} else if (t[1][0] == 'A') {
 				// Actuator
-				ActuatorProxy *apx = new ActuatorProxy (srvpx, t[0], st);
+				ActuatorProxy *apx = new ActuatorProxy (srvpx, t[0], st, tDesc);
 				if (!srvpx -> addTransducer (apx)) {
 					DPRINT (F("Cannot register actuator: "));
 					DPRINTLN (t[0]);
@@ -166,14 +173,12 @@ ServerProxy* SensoriaClient::realizeServer (SensoriaAddress* addr, char*& server
 			}
 		}
 	}
-
-	return srvpx;
 }
 
 boolean SensoriaClient::registerNode (SensoriaAddress* addr) {
 	boolean ret = false;
 
-	if (comm && nServers < MAX_SERVERS - 1) {
+	if (comm && nServers < MAX_SERVERS) {
 		char *reply;
 
 		// FIXME: Remove dynamic allocation
@@ -186,67 +191,29 @@ boolean SensoriaClient::registerNode (SensoriaAddress* addr) {
 			DPRINTLN ("'");
 #endif
 
-			char *p[2];
-			int n = splitString (reply, p, 2);
+			char *p[3];
+			int n = splitString (reply, p, 3);
 			if (n == 0) {
 				DPRINT (F("Unexpected HLO reply: "));
 				DPRINTLN (reply);
 			} else {
+				const char* serverName = p[0];
+				const byte protoVer = atoi (p[1]);
+				char* transducerListStr = p[2];
+
+				// transducerListStr will be modified by the splitString() below, so do this now
+				uint16_t crc = crc16_update_str (0, transducerListStr);
+
 				DPRINT (F("Registering node '"));
-				DPRINT (p[0]);
-				DPRINTLN (F("'"));
-				strlcpy (srvpx -> name, p[0], MAX_SERVER_NAME);
+				DPRINT (serverName);
+				DPRINTLN ('\'');
+				strlcpy (srvpx -> name, serverName, MAX_SERVER_NAME);
 
-				char *q[MAX_TRANSDUCERS + 1];
-				int n = splitString (p[1], q, MAX_TRANSDUCERS + 1, '|');
-				DPRINT (F("Found "));
-				DPRINT (n);
-				DPRINTLN (F(" transducer(s):"));
+				char *transducerList[MAX_TRANSDUCERS + 1];
+				int n = splitString (transducerListStr, transducerList, MAX_TRANSDUCERS, '|');
+				transducerList[n] = NULL;	// Terminate list, n is definitely n < MAX_TRANSDUCERS + 1
 
-				// FIXME: Replace with realizeServer()???
-				for (int i = 0; i < n; i++) {
-					strstrip (q[i]);
-					char *t[3];
-					int m = splitString (q[i], t, 3);
-					if (m != 3) {
-						DPRINTLN (F("Cannot parse transducer info"));
-					} else {
-						Stereotype *st = NULL;
-						for (int j = 0; !st && j < N_STEREOTYPES; j++) {
-							if (strcmp (stereotypes[j] -> tag, t[2]) == 0)
-								st = stereotypes[j];
-						}
-
-						DPRINT (F("- Found "));
-						DPRINT (t[1][0] == 'S' ? F("sensor ") : F("actuator "));
-						DPRINT (t[0]);
-						DPRINT (F(" using stereotype "));
-						DPRINT (t[2]);
-						DPRINTLN (st ? F(" (Available)") : F(" (Not available)"));
-
-						if (t[1][0] == 'S') {
-							// We got a sensor
-							// FIXME: Remove dynamic allocation
-							SensorProxy *spx = new SensorProxy (srvpx, t[0], st);
-							if (!srvpx -> addTransducer (spx)) {
-								DPRINT (F("Cannot register sensor: "));
-								DPRINTLN (t[0]);
-							}
-						} else if (t[1][0] == 'A') {
-							// Actuator
-							ActuatorProxy *apx = new ActuatorProxy (srvpx, t[0], st);
-							if (!srvpx -> addTransducer (apx)) {
-								DPRINT (F("Cannot register actuator: "));
-								DPRINTLN (t[0]);
-							}
-						} else {
-							DPRINT (F("Unsupported transducer type: "));
-							DPRINTLN (t[1][0]);
-						}
-					}
-				}
-
-				// Register server
+				realizeServer (srvpx, serverName, protoVer, transducerList, crc);
 				servers[nServers++] = srvpx;
 
 				ret = true;
