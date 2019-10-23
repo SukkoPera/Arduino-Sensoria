@@ -26,6 +26,7 @@ public:
 		transducer = other.transducer;
 		period = other.period;
 		timeLastSent = other.timeLastSent;
+		ttl = other.ttl;
 
 		return *this;
 	}
