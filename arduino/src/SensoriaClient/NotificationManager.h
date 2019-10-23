@@ -91,7 +91,7 @@ public:
 		(void) senderPort;
 
 		char *p[3];
-		if (splitString (buffer, p, 3) != 3) {
+		if (splitString (buffer, p, 4) != 4) {
 			DPRINT (F("Error parsing notification: \""));
 			DPRINT (buffer);
 			DPRINTLN ("\"");
@@ -103,12 +103,13 @@ public:
 			int interested = 0;
 			for (byte i = 0; i < nRec; i++) {
 				GenericNotificationReceiver& rec = *receivers[i];
-				if (strcmp (p[1], rec.transducer -> name) == 0) {
+				if (strcmp (p[2], rec.transducer -> name) == 0) {
 					DPRINT (F("Found interested NotificationReceiver: "));
 					DPRINTLN (i);
 
 					rec.transducer -> stereotype -> clear ();
-					if (rec.transducer -> stereotype -> unmarshal (p[2])) {
+					if (rec.transducer -> stereotype -> unmarshal (p[3])) {
+						// FIXME: If TTL == 1, autorenew if the following returns true
 						rec.onGenericNotification (rec.transducer -> stereotype);
 					} else {
 						DPRINT (F("Unmarshaling failed, cannot deliver notification to interested NotificationReceiver"));
