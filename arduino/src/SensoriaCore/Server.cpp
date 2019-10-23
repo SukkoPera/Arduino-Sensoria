@@ -3,6 +3,8 @@
 #include "Server.h"
 #include "common.h"
 
+// Default notification Time-To-Live
+const byte DEFAULT_TTL = 100;
 
 #define OK_STR "OK"
 static const char _OK[] PROGMEM = OK_STR;
@@ -236,14 +238,24 @@ void SensoriaServer::handleNotificationReqs () {
 
 						outBuf.begin ();
 						outBuf.print (F("NOT "));
+						outBuf.print (req.ttl);
+						outBuf.print (' ');
 						outBuf.print (req.transducer -> name);
 						outBuf.print (' ');
 						outBuf.print (buf);
 						outBuf.print ('\n');
 						comm -> notify ((const char *) outBuf, req.destAddr);
 
-						req.transducer -> setLastReading (*st);
-						req.timeLastSent = millis ();
+						if (--req.ttl == 0) {
+							// Notification expired
+							DPRINT (F("Notification expired"));
+							deleteNotification (i);
+							--i;	// GIANT HACK! We're iterating, hopefully this won't break anything
+						} else {
+							// There will be more
+							req.transducer -> setLastReading (*st);
+							req.timeLastSent = millis ();
+						}
 					} else {
 						DPRINTLN (F("ERR Notification marshaling failed"));
 					}
@@ -460,8 +472,10 @@ void SensoriaServer::cmd_nrq (const SensoriaAddress* clientAddr, char *args) {
 				if (notAddr) {
 					const int i = findNotification (notAddr, type, tName);
 					if (i >= 0) {
-						// Request already exists, assume client lost track of it and return success
-						DPRINTLN (F("NRQ already exists"));
+						// Request already exists, assume client lost track of it or just wants to renew the TTL
+						NotificationRequest& req = notificationReqs[i];
+						req.ttl = DEFAULT_TTL;
+						DPRINTLN (F("NRQ already exists, TTL renewed"));
 						outBuf.print (OK_FSTR);
 					} else {
 						Transducer *t = getTransducer (tName);
@@ -471,6 +485,7 @@ void SensoriaServer::cmd_nrq (const SensoriaAddress* clientAddr, char *args) {
 								req.destAddr = notAddr;
 								req.type = type;
 								req.transducer = t;
+								req.ttl = DEFAULT_TTL;
 								req.timeLastSent = 0;
 								added = true;
 
