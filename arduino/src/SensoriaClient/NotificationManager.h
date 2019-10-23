@@ -21,7 +21,8 @@ public:
 template <typename T>
 class NotificationReceiver: public GenericNotificationReceiver {
 public:
-	boolean onGenericNotification (Stereotype *st) override {
+	boolean onGenericNotification (Stereotype *st, byte ttl) override {
+		(void) ttl;		// Not exposed to receiver for the moment
 		T& data = *static_cast<T*> (st);
 		return onNotification (data);
 	}
@@ -109,8 +110,13 @@ public:
 
 					rec.transducer -> stereotype -> clear ();
 					if (rec.transducer -> stereotype -> unmarshal (p[3])) {
-						// FIXME: If TTL == 1, autorenew if the following returns true
-						rec.onGenericNotification (rec.transducer -> stereotype);
+						byte ttl = atoi (p[2]);
+						if (rec.onGenericNotification (rec.transducer -> stereotype, ttl) && ttl == 1) {
+							// Force renewal
+							DPRINT (F("Notification expired"));
+							rec.registered = false;
+							rec.lastRegAttemptTime = 0;
+						}	
 					} else {
 						DPRINT (F("Unmarshaling failed, cannot deliver notification to interested NotificationReceiver"));
 					}
