@@ -11,6 +11,7 @@ public:
 	SensoriaAddress* destAddr;
 	NotificationType type;
 	Transducer* transducer;
+	byte ttl;
 
 	unsigned long period;	// ms
 
