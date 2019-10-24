@@ -83,11 +83,11 @@ class Client (object):
 
 	def _notificationNot (self, addr, args):
 		logger = logging.getLogger ("client.notifications")
-		parts = args.split (" ", 1)
-		if len (parts) < 2:
+		parts = args.split (" ", 2)
+		if len (parts) != 3:
 			logger.error ("Malformed notification: '%s'", data)
 		else:
-			name, rest = parts
+			name, ttl, rest = parts
 			if name in self.transducers:
 				try:
 					trans = self.transducers[name]
