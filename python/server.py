@@ -421,12 +421,41 @@ class CommandListener (object):
 							self._nrLock.release ()
 							self._reply (addr, "NRQ OK")
 				except KeyError:
-					self._reply (addr, "ERR No such sensor: %s" % name)
+					self._reply (addr, "NRQ ERR No such sensor: %s" % name)
 			else:
-				self._reply (addr, "ERR Missing or malformed args")
+				self._reply (addr, "NRQ ERR Missing or malformed args")
 		else:
-			self._reply (addr, "ERR Missing or malformed args")
+			self._reply (addr, "NRQ ERR Missing or malformed args")
 
+	def _ndl (self, addr, args):
+		if args is not None and len (args) > 0:
+			parts = args.split (" ")
+			if len (parts) > 1:
+				name = parts[0].upper ()
+				typ = parts[1].upper ()
+				self._nrLock.acquire ()
+				# FIXME: Check type as well
+				reqs = filter (lambda nrq: nrq.sensor.name == name, self.notificationRequests)
+				if len (reqs) == 1:
+					print "Found notification to delete: %s" % str (reqs[0])
+					try:
+						self.notificationRequests.remove (reqs[0])
+						self._reply (addr, "NDL OK")
+					except ValueError as ex:
+						print "Cannot delete notification: %s" % str (ex)
+						self._reply (addr, "NDL ERR")
+				elif len (reqs) == 0:
+					print "No such notification"
+					self._reply (addr, "NDL ERR")
+				else:
+					print "WTF!?!?"
+					self._reply (addr, "NDL ERR")
+				self._nrLock.release ()
+			else:
+				self._reply (addr, "NDL ERR Missing or malformed args")
+		else:
+			self._reply (addr, "NDL ERR Missing or malformed args")
+				
 	def _ncl (self, addr, args):
 		self._nrLock.acquire ()
 		self.notificationRequests = []
@@ -449,13 +478,15 @@ class CommandListener (object):
 			"WRI": self._wri,
 			"QRY": self._qry,
 			"NRQ": self._nrq,
+			"NDL": self._ndl,
 			"NCL": self._ncl
 		}
 
 		print >> sys.stderr, 'Waiting for commands...'
 		nTimeouts = 0
 		while not self._shallStop:
-			rlist = [self._sock, self._quitPipe[0]]
+			# ~ rlist = [self._sock, self._quitPipe[0]]
+			rlist = [self._sock]
 			r, w, x = select.select (rlist, [], [], 1)
 
 			if self._quitPipe[0] in r:
