@@ -28,6 +28,7 @@ RECV_BUFSIZE = 16384
 DEBUG = True
 
 class NotificationRequest (object):
+	DEFAULT_TTL = 16
 	class Type:
 		PERIODIC, ON_CHANGE = xrange (0, 2)
 
@@ -36,11 +37,16 @@ class NotificationRequest (object):
 		self.sensor = sensor
 		self.typ = typ
 		self._sock = sock
+		self.ttl = NotificationRequest.DEFAULT_TTL
 
 	def _notify (self, reading):
 		r = reading.marshal ()
-		print "[NOT %s:%u] %s %s" % (self.dest[0], self.dest[1], self.sensor.name, r)
-		self._sock.sendto ("NOT %s %s\r\n" % (self.sensor.name, r), self.dest)
+		print "[NOT %s:%u TTL=%u] %s %s" % (self.dest[0], self.dest[1], self.ttl, self.sensor.name, r)
+		self._sock.sendto ("NOT %u %s %s\r\n" % (self.ttl, self.sensor.name, r), self.dest)
+		self.ttl -= 1
+		
+	def expired (self):
+		return self.ttl <= 0
 
 	def isDue (self):
 		raise NotImplementedError
