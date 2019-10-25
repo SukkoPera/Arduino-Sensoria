@@ -87,11 +87,12 @@ class Client (object):
 		if len (parts) != 3:
 			logger.error ("Malformed notification: '%s'", data)
 		else:
-			name, ttl, rest = parts
+			ttl, name, rest = parts
+			ttl = int (ttl)
 			if name in self.transducers:
 				try:
 					trans = self.transducers[name]
-					trans._processNotification (rest)
+					trans._processNotification (ttl, rest)
 				except Error as ex:
 					logger.error ("ERROR while processing notification: %s", str (ex))
 			else:
@@ -166,7 +167,8 @@ class Client (object):
 		logger = logging.getLogger ("client.notifications")
 		logger.debug ('Waiting for notifications...')
 		while not self._shallStop:
-			rlist = [self._notificationSocket, self._quitPipe[0]]
+			rlist = [self._notificationSocket]
+			# ~ rlist = [self._notificationSocket, self._quitPipe[0]]
 			r, w, x = select.select (rlist, [], [], 5)
 
 			if self._quitPipe[0] in r:
