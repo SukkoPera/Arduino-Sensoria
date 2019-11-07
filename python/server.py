@@ -28,6 +28,7 @@ RECV_BUFSIZE = 16384
 DEBUG = True
 
 class NotificationRequest (object):
+	DEFAULT_TTL = 3
 	class Type:
 		PERIODIC, ON_CHANGE = xrange (0, 2)
 
@@ -36,11 +37,16 @@ class NotificationRequest (object):
 		self.sensor = sensor
 		self.typ = typ
 		self._sock = sock
+		self.ttl = NotificationRequest.DEFAULT_TTL
 
 	def _notify (self, reading):
 		r = reading.marshal ()
-		print "[NOT %s:%u] %s %s" % (self.dest[0], self.dest[1], self.sensor.name, r)
-		self._sock.sendto ("NOT %s %s\r\n" % (self.sensor.name, r), self.dest)
+		print "[NOT %s:%u TTL=%u] %s %s" % (self.dest[0], self.dest[1], self.ttl, self.sensor.name, r)
+		self._sock.sendto ("NOT %u %s %s\r\n" % (self.ttl, self.sensor.name, r), self.dest)
+		self.ttl -= 1
+		
+	def expired (self):
+		return self.ttl <= 0
 
 	def isDue (self):
 		raise NotImplementedError
@@ -130,12 +136,17 @@ class Clock (Sensor):
 class TemperatureSensor (Sensor):
 	def __init__ (self, name, description = "", version = ""):
 		super (TemperatureSensor, self).__init__ (name, "WD", description, version)
+		self.temperature = random.randrange (-1000, 3500) / 100.0
+		self.humidity = random.randrange (4000, 9000) / 100.0
 
 	def read (self):
 		wd = WeatherData ()
-		wd.temperature = random.randrange (-1000, 3500) / 100.0
-		wd.humidity = random.randrange (-1000, 3500) / 100.0
-		#~ ts = datetime.datetime.now ().strftime ("%Y-%m-%dT%H:%M:%S")    # ISO 8601
+		wd.temperature = self.temperature
+		wd.humidity = self.humidity
+		
+		self.temperature += random.randrange (-150, +150) / 100.0
+		self.humidity += random.randrange (-500, +500) / 100.0
+		
 		return wd
 
 class TimedActuator (Actuator):
@@ -257,6 +268,7 @@ class CommandListener (object):
 		self.advertiseInterval = CommandListener.DEFAULT_ADVERTISE_INTERVAL
 
 		self._sock = socket.socket (socket.AF_INET, socket.SOCK_DGRAM)
+		self._sock.setsockopt (socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 		server_address = ('', port)
 
 		print >> sys.stderr, 'Starting up on %s port %u' % ("INADDR_ANY" if not server_address[0] else server_address[0], server_address[1])
@@ -306,8 +318,8 @@ class CommandListener (object):
 			advMsg = "ADV %s %s %u" % (self.serverName, self._getServerId (), LISTEN_PORT)
 			s = socket.socket (socket.AF_INET, socket.SOCK_DGRAM)
 			s.setsockopt (socket.SOL_SOCKET,socket.SO_BROADCAST, 1)
-			# ~ s.sendto (advMsg, ('<broadcast>', NOTIFICATION_PORT))
-			s.sendto (advMsg, ('127.0.0.1', NOTIFICATION_PORT))
+			s.sendto (advMsg, ('<broadcast>', NOTIFICATION_PORT))
+			# ~ s.sendto (advMsg, ('127.0.0.1', NOTIFICATION_PORT))
 		except Exception as ex:
 			print >> sys.stderr, "Periodic advertisement failed: %s" % str (ex)
 
@@ -395,32 +407,75 @@ class CommandListener (object):
 				typ = parts[1].upper ()
 				try:
 					sensor = self.sensors[name]
-					if typ == "CHA":
-						#~ rest = parts[2:]
-						print >> sys.stderr, "Notifying on change of %s" % sensor.name
-						req = OnChangeNotificationRequest ((addr[0], NOTIFICATION_PORT), self._sock, sensor)
-						self._nrLock.acquire ()
-						self.notificationRequests.append (req)
-						self._nrLock.release ()
+					# FIXME: Check type too
+					self._nrLock.acquire ()
+					reqs = filter (lambda n: n.dest == (addr[0], NOTIFICATION_PORT) and n.sensor == sensor, self.notificationRequests)
+					self._nrLock.release ()
+					if len (reqs) == 1:
+						# Notification already present, renew TTL
+						req = reqs[0]
+						print "Renewing TTL for NRQ %s" % str (req)
+						req.ttl = NotificationRequest.DEFAULT_TTL
 						self._reply (addr, "NRQ OK")
-					elif typ == "PRD":
-						if len (parts) < 3:
-							self._reply (addr, "NRQ ERR No interval specified")
-						else:
-							intv = int (parts[2])
-							print >> sys.stderr, "Notifying values of %s every %d seconds" % (sensor.name, intv)
-							req = PeriodicNotificationRequest ((addr[0], NOTIFICATION_PORT), self._sock, sensor, intv)
+					else:
+						print "New NRQ"
+						if typ == "CHA":
+							#~ rest = parts[2:]
+							print >> sys.stderr, "Notifying on change of %s" % sensor.name
+							req = OnChangeNotificationRequest ((addr[0], NOTIFICATION_PORT), self._sock, sensor)
 							self._nrLock.acquire ()
 							self.notificationRequests.append (req)
 							self._nrLock.release ()
 							self._reply (addr, "NRQ OK")
+						elif typ == "PRD":
+							if len (parts) < 3:
+								self._reply (addr, "NRQ ERR No interval specified")
+							else:
+								intv = int (parts[2])
+								print >> sys.stderr, "Notifying values of %s every %d seconds" % (sensor.name, intv)
+								req = PeriodicNotificationRequest ((addr[0], NOTIFICATION_PORT), self._sock, sensor, intv)
+								self._nrLock.acquire ()
+								self.notificationRequests.append (req)
+								self._nrLock.release ()
+								self._reply (addr, "NRQ OK")
+						else:
+							self._reply (addr, "NRQ ERR Missing or malformed args")
 				except KeyError:
-					self._reply (addr, "ERR No such sensor: %s" % name)
+					self._reply (addr, "NRQ ERR No such sensor: %s" % name)
 			else:
-				self._reply (addr, "ERR Missing or malformed args")
+				self._reply (addr, "NRQ ERR Missing or malformed args")
 		else:
-			self._reply (addr, "ERR Missing or malformed args")
+			self._reply (addr, "NRQ ERR Missing or malformed args")
 
+	def _ndl (self, addr, args):
+		if args is not None and len (args) > 0:
+			parts = args.split (" ")
+			if len (parts) > 1:
+				name = parts[0].upper ()
+				typ = parts[1].upper ()
+				self._nrLock.acquire ()
+				# FIXME: Check type as well
+				reqs = filter (lambda nrq: nrq.sensor.name == name, self.notificationRequests)
+				if len (reqs) == 1:
+					print "Found notification to delete: %s" % str (reqs[0])
+					try:
+						self.notificationRequests.remove (reqs[0])
+						self._reply (addr, "NDL OK")
+					except ValueError as ex:
+						print "Cannot delete notification: %s" % str (ex)
+						self._reply (addr, "NDL ERR")
+				elif len (reqs) == 0:
+					print "No such notification"
+					self._reply (addr, "NDL ERR")
+				else:
+					print "WTF!?!?"
+					self._reply (addr, "NDL ERR")
+				self._nrLock.release ()
+			else:
+				self._reply (addr, "NDL ERR Missing or malformed args")
+		else:
+			self._reply (addr, "NDL ERR Missing or malformed args")
+				
 	def _ncl (self, addr, args):
 		self._nrLock.acquire ()
 		self.notificationRequests = []
@@ -443,13 +498,15 @@ class CommandListener (object):
 			"WRI": self._wri,
 			"QRY": self._qry,
 			"NRQ": self._nrq,
+			"NDL": self._ndl,
 			"NCL": self._ncl
 		}
 
 		print >> sys.stderr, 'Waiting for commands...'
 		nTimeouts = 0
 		while not self._shallStop:
-			rlist = [self._sock, self._quitPipe[0]]
+			# ~ rlist = [self._sock, self._quitPipe[0]]
+			rlist = [self._sock]
 			r, w, x = select.select (rlist, [], [], 1)
 
 			if self._quitPipe[0] in r:
@@ -495,8 +552,14 @@ class CommandListener (object):
 			else:
 				# Periodically process notifications
 				self._nrLock.acquire ()
+				delenda = []
 				for nrq in self.notificationRequests:
 					nrq.process ()
+					if nrq.expired ():
+						delenda.append (nrq)
+				for nrq in delenda:
+					print "Deleting expired notification request: %s" % str (nrq)
+					self.notificationRequests.remove (nrq)
 				self._nrLock.release ()
 
 				# Also send periodic server advertisement

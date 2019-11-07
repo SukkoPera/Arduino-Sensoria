@@ -21,7 +21,8 @@ public:
 template <typename T>
 class NotificationReceiver: public GenericNotificationReceiver {
 public:
-	boolean onGenericNotification (Stereotype *st) override {
+	boolean onGenericNotification (Stereotype *st, byte ttl) override {
+		(void) ttl;		// Not exposed to receiver for the moment
 		T& data = *static_cast<T*> (st);
 		return onNotification (data);
 	}
@@ -91,7 +92,7 @@ public:
 		(void) senderPort;
 
 		char *p[3];
-		if (splitString (buffer, p, 3) != 3) {
+		if (splitString (buffer, p, 4) != 4) {
 			DPRINT (F("Error parsing notification: \""));
 			DPRINT (buffer);
 			DPRINTLN ("\"");
@@ -103,13 +104,19 @@ public:
 			int interested = 0;
 			for (byte i = 0; i < nRec; i++) {
 				GenericNotificationReceiver& rec = *receivers[i];
-				if (strcmp (p[1], rec.transducer -> name) == 0) {
+				if (strcmp (p[2], rec.transducer -> name) == 0) {
 					DPRINT (F("Found interested NotificationReceiver: "));
 					DPRINTLN (i);
 
 					rec.transducer -> stereotype -> clear ();
-					if (rec.transducer -> stereotype -> unmarshal (p[2])) {
-						rec.onGenericNotification (rec.transducer -> stereotype);
+					if (rec.transducer -> stereotype -> unmarshal (p[3])) {
+						byte ttl = atoi (p[2]);
+						if (rec.onGenericNotification (rec.transducer -> stereotype, ttl) && ttl == 1) {
+							// Force renewal
+							DPRINT (F("Notification expired"));
+							rec.registered = false;
+							rec.lastRegAttemptTime = 0;
+						}	
 					} else {
 						DPRINT (F("Unmarshaling failed, cannot deliver notification to interested NotificationReceiver"));
 					}

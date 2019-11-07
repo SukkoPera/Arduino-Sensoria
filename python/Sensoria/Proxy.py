@@ -8,6 +8,11 @@ from common import *
 from ServerProxy import ServerProxy
 
 class TransducerProxy (object):
+	TYPE_STRINGS = {
+		PERIODIC: "PRD",
+		ON_CHANGE: "CHA"
+	}
+	
 	def __init__ (self, server, genre, name, stereotype, stereoclass, description, version):
 		assert not "|" in name and not "|" in description
 		self.genre = genre
@@ -23,22 +28,21 @@ class TransducerProxy (object):
 		raise NotImplementedError
 
 	def notify (self, callback, typ, args = None):
-		typeStrings = {
-			PERIODIC: "PRD",
-			ON_CHANGE: "CHA"
-		}
-
+		active = self._requestNotification (callback, typ, args)
+		self.notificationClients.append ((typ, args, callback, active))
+		return active
+		
+	def _requestNotification (self, callback, typ, args = None):
 		assert callable (callback)
 		assert self.server is not None
-		assert typ in typeStrings
+		assert typ in TransducerProxy.TYPE_STRINGS
 
 		if callback not in self.notificationClients:
 			if args is not None:
-				reply = self.server.send ("NRQ %s %s %s" % (self.name, typeStrings[typ], args))
+				reply = self.server.send ("NRQ %s %s %s" % (self.name, TransducerProxy.TYPE_STRINGS[typ], args))
 			else:
-				reply = self.server.send ("NRQ %s %s" % (self.name, typeStrings[typ]))
+				reply = self.server.send ("NRQ %s %s" % (self.name, TransducerProxy.TYPE_STRINGS[typ]))
 			if reply.upper () == "OK":
-				self.notificationClients.append (callback)
 				return True
 			else:
 				raise Error, "Unexpected NRQ reply: '%s'" % reply
@@ -48,23 +52,23 @@ class TransducerProxy (object):
 			return True
 
 	def stopNotify (self, typ):
-		typeStrings = {
-			PERIODIC: "PRD",
-			ON_CHANGE: "CHA"
-		}
-
 		assert self.server is not None
-		assert typ in typeStrings
+		assert typ in TransducerProxy.TYPE_STRINGS
 
-		reply = self.server.send ("NDL %s %s" % (self.name, typeStrings[typ]))
-		if reply.upper () == "OK":
-			# FIXME
-			# ~ self.notificationClients.append (callback)
-			return True
-		else:
-			raise Error, "Unexpected NDL reply: '%s'" % reply
+		reqs = filter (lambda (ntyp, args, callback, active): ntyp == typ, self.notificationClients)
+		if len (reqs) != 1:
+			print "No such NRQ (or multiple ones!!!)"
 			return False
+		else:
+			reply = self.server.send ("NDL %s %s" % (self.name, TransducerProxy.TYPE_STRINGS[typ]))
+			if reply.upper () == "OK":
+				self.notificationClients.remove (reqs[0])
+				return True
+			else:
+				raise Error, "Unexpected NDL reply: '%s'" % reply
+				return False
 
+	# FIXME: Isn't this out of place?
 	def cancelAllNotifications (self):
 		assert self.server is not None
 
@@ -78,10 +82,18 @@ class TransducerProxy (object):
 			return False
 
 	# This can only be called from Client
-	def _processNotification (self, marshaledData):
+	def _processNotification (self, ttl, marshaledData):
 			data = self.stereoclass.unmarshalStatic (marshaledData)
-			for callback in self.notificationClients:
-				callback (data)
+			for typ, args, callback, active in self.notificationClients:
+				renew = callback (self, data)
+				if ttl <= 2:		# Renew before the last one
+					if renew:
+						print "Renewing NRQ"
+						if not self._requestNotification (callback, typ, args):
+							print "Renewal failed"
+							active = False		# FIXME: I don't think this is this a reference...							
+					else:
+						print "NRQ expired and was not renewed"
 
 
 class SensorProxy (TransducerProxy):
